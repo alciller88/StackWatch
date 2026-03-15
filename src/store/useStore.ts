@@ -5,9 +5,11 @@ import type {
   FlowNode,
   FlowEdge,
   UserConfig,
+  AISettings,
+  AIProvider,
 } from '../types';
 
-type ActivePanel = 'services' | 'dependencies' | 'flow';
+type ActivePanel = 'services' | 'dependencies' | 'flow' | 'settings';
 
 interface StoreState {
   services: Service[];
@@ -19,6 +21,7 @@ interface StoreState {
   activePanel: ActivePanel;
   config: UserConfig | null;
   error: string | null;
+  aiSettings: AISettings | null;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
@@ -27,6 +30,9 @@ interface StoreState {
   saveConfig: (config: UserConfig) => Promise<void>;
   openFolder: () => Promise<void>;
   clearError: () => void;
+  loadAISettings: () => Promise<void>;
+  saveAISettings: (settings: AISettings) => Promise<void>;
+  testAIConnection: (provider: AIProvider) => Promise<{ ok: boolean; error?: string }>;
 }
 
 function mergeServices(
@@ -53,6 +59,7 @@ export const useStore = create<StoreState>((set, get) => ({
   activePanel: 'services',
   config: null,
   error: null,
+  aiSettings: null,
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
@@ -115,7 +122,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const config = await window.stackwatch.loadConfig(repoPath);
       set({ config });
     } catch {
-      // Config may not exist yet — not an error
+      // Config may not exist yet
     }
   },
 
@@ -151,5 +158,34 @@ export const useStore = create<StoreState>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  loadAISettings: async () => {
+    if (!window.stackwatch) return;
+    try {
+      const settings = await window.stackwatch.getAISettings();
+      set({ aiSettings: settings });
+    } catch {
+      // Settings may not exist yet
+    }
+  },
+
+  saveAISettings: async (settings: AISettings) => {
+    if (!window.stackwatch) return;
+    try {
+      await window.stackwatch.setAISettings(settings);
+      set({ aiSettings: settings });
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  },
+
+  testAIConnection: async (provider: AIProvider) => {
+    if (!window.stackwatch) {
+      return { ok: false, error: 'Not running in Electron' };
+    }
+    return window.stackwatch.testAIConnection(provider);
   },
 }));

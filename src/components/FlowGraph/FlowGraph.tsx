@@ -5,8 +5,14 @@ import { useLayoutNodes } from './useLayoutNodes'
 import { getNodeColor, getNodeIcon } from './flowUtils'
 
 export const FlowGraph: React.FC = () => {
-  const { flowNodes, flowEdges } = useStore()
+  const { flowNodes, flowEdges, services } = useStore()
   const { nodes, edges } = useLayoutNodes(flowNodes, flowEdges)
+
+  // Build a map of serviceId -> confidence for node styling
+  const confidenceMap = new Map<string, string>()
+  for (const s of services) {
+    confidenceMap.set(s.id, s.confidence ?? 'high')
+  }
 
   if (flowNodes.length === 0) {
     return (
@@ -32,21 +38,40 @@ export const FlowGraph: React.FC = () => {
             <span className="text-gray-400">{item.label}</span>
           </div>
         ))}
+        <div className="border-t border-gray-700 pt-1.5 mt-1.5">
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-0.5 border-t border-dashed border-orange-500 inline-block" />
+            <span className="text-gray-400">Low confidence</span>
+          </div>
+        </div>
       </div>
 
       <ReactFlow
-        nodes={nodes.map((n) => ({
-          ...n,
-          data: {
-            ...n.data,
-            label: (
-              <div className="flex items-center gap-2">
-                <span>{getNodeIcon(n.data.nodeType)}</span>
-                <span className="truncate">{n.data.label}</span>
-              </div>
-            ),
-          },
-        }))}
+        nodes={nodes.map((n) => {
+          const serviceId = n.data.serviceId
+          const confidence = serviceId ? confidenceMap.get(serviceId) : 'high'
+          const isLowConfidence = confidence === 'low'
+
+          return {
+            ...n,
+            style: isLowConfidence ? {
+              ...n.style,
+              borderStyle: 'dashed',
+              borderColor: '#c2410c',
+              opacity: 0.8,
+            } : n.style,
+            data: {
+              ...n.data,
+              label: (
+                <div className="flex items-center gap-2" title={isLowConfidence ? 'Low confidence detection' : undefined}>
+                  <span>{getNodeIcon(n.data.nodeType)}</span>
+                  <span className="truncate">{n.data.label}</span>
+                  {isLowConfidence && <span className="text-orange-400 text-[10px]">?</span>}
+                </div>
+              ),
+            },
+          }
+        })}
         edges={edges}
         fitView
         attributionPosition="bottom-left"

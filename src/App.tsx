@@ -5,11 +5,13 @@ import { Dashboard } from './components/Dashboard/Dashboard'
 import { ServicesPanel } from './components/ServicesPanel/ServicesPanel'
 import { DepsPanel } from './components/DepsPanel/DepsPanel'
 import { FlowGraph } from './components/FlowGraph/FlowGraph'
+import { Settings } from './components/Settings/Settings'
 
 export default function App() {
   const { repoPath, activePanel, error, clearError } = useStore()
 
   const renderPanel = () => {
+    if (activePanel === 'settings') return <Settings />
     if (!repoPath) return <Dashboard />
     switch (activePanel) {
       case 'services':

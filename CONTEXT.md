@@ -20,34 +20,30 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.1 funcional — scaffolding completo con todos los módulos implementados
-- **Último hito**: implementación completa del proyecto (2026-03-15)
-  - Scaffolding: package.json, tsconfig, vite.config, tailwind, electron-builder
-  - Proceso Electron: main.ts, preload.ts, types.ts con IPC completo
-  - 11 analizadores: packageJson, envFile, dockerCompose, githubWorkflows, configFiles, pythonDeps, rustDeps, goDeps, terraform, flowInference, index
-  - UI React: Dashboard, ServicesPanel (con ServiceCard y formulario Add), DepsPanel (tabla con filtros/sort/agrupación), FlowGraph (React Flow + dagre layout), Sidebar (colapsable), TopBar (con soporte GitHub)
-  - Store Zustand: estado global con análisis local/GitHub, merge de servicios manuales
-  - TypeScript compila sin errores (`tsc --noEmit` limpio)
-- **WSL support** (2026-03-15):
-  - `scripts/launch-electron.js` — detects WSL2 and uses `electron.exe` (Windows binary) directly, bypassing Linux binary entirely — no system libs needed
-  - Converts WSL paths (`/mnt/c/...`) to Windows paths (`C:\...`) so `electron.exe` can resolve the app root
-  - `npm run dev` now works on Windows native, WSL2, and macOS without manual intervention or library installation
-- **Fix: Electron dev launch** (2026-03-15):
-  - `npm run dev` now compiles Electron TS files (`tsc -p tsconfig.node.json`) before launching Electron — previously `dist-electron/` was missing, causing silent launch failure
-  - Added `window.stackwatch` guards in store (`analyzeLocal`, `analyzeGitHub`, `openFolder`) to show a clear error message instead of crashing when running outside Electron (e.g., opening Vite URL directly in browser)
-- **Fix: WSL2 auto-download + CommonJS** (2026-03-15):
-  - `scripts/launch-electron.js` now auto-downloads the Windows Electron binary on first run in WSL2 (re-runs `node_modules/electron/install.js` with `npm_config_platform=win32`) — no manual steps needed
-  - `tsconfig.node.json` changed from `ESNext`/`bundler` to `CommonJS`/`node` — fixes `ERR_MODULE_NOT_FOUND` caused by missing `.js` extensions in ESM imports; Electron main process runs in Node.js and works natively with CommonJS
-  - `npm run dev` now launches successfully on WSL2 end-to-end
-- **Feature: multi-ecosystem support** (2026-03-15):
-  - Expanded scope from web-only to any software project type
-  - 4 new analyzers: pythonDeps (requirements.txt, pyproject.toml, setup.py), rustDeps (Cargo.toml), goDeps (go.mod), terraform (*.tf)
-  - Expanded envFile.ts with 25+ new service patterns: AI (OpenAI, Anthropic, HuggingFace...), Mobile (Firebase, App Center...), Data (Snowflake, Pinecone...), Gaming (Steam, Discord...), Messaging (Kafka, RabbitMQ...), Support (Intercom, Zendesk...)
-  - 7 new service categories: ai, mobile, gaming, data, messaging, support, infra
-  - 5 new dependency ecosystems: go, dart, maven, gradle, gem
-  - 32 unit tests passing across 5 test files
-  - Both local and GitHub analysis paths updated with new analyzers
-- **Próximo paso**: validar build de producción (`npm run build`), añadir analizadores pendientes (pubspec.yaml, Gemfile, pom.xml, build.gradle, k8s, gitlab-ci)
+- **Fase**: v0.2 — detección heurística inteligente + IA opcional
+- **Último hito**: reingeniería completa del sistema de detección (2026-03-15)
+  - **ELIMINADOS:** Todos los analizadores con mapas hardcodeados (packageJson.ts, envFile.ts, dockerCompose.ts, githubWorkflows.ts, configFiles.ts, pythonDeps.ts, rustDeps.ts, goDeps.ts, terraform.ts + sus tests)
+  - **NUEVO:** Arquitectura de detección en dos capas:
+    - `electron/analyzers/extractor.ts` — extrae evidencias en bruto del repo (recursivo, respeta .gitignore con librería `ignore`)
+    - `electron/analyzers/heuristic.ts` — clasifica evidencias por semántica sin listas fijas. 19 categorías de servicio.
+    - `electron/analyzers/deduplicator.ts` — agrupa y deduplica servicios, merge de grupos relacionados por prefijo
+    - `electron/analyzers/index.ts` — orquesta: extract → classify → dedup → (optional AI) → flow inference
+  - **NUEVO:** `electron/ai/provider.ts` — cliente OpenAI-compatible con 5 presets (Ollama, LM Studio, Groq, OpenAI, Mistral) + Custom. Test de conexión. Fallback silencioso si falla.
+  - **NUEVO:** `src/components/Settings/Settings.tsx` — panel de configuración de IA con toggle, selector de proveedor, API key, base URL, modelo, botón "Test Connection"
+  - **ACTUALIZADO:** Service type con `confidence`, `needsReview`, `confidenceReasons`
+  - **ACTUALIZADO:** ServicesPanel con sección "Needs Review" al inicio, formulario Add Service expandido (url, cost, renewal, email, notes)
+  - **ACTUALIZADO:** ServiceCard con badges de confianza (amarillo "review", naranja "incomplete")
+  - **ACTUALIZADO:** FlowGraph con bordes discontinuos y color naranja para nodos de baja confianza
+  - **ACTUALIZADO:** Sidebar con navegación a Settings, Zustand store con AI settings
+  - **ACTUALIZADO:** electron/main.ts con IPC handlers para AI settings via electron-store
+  - **ACTUALIZADO:** electron/preload.ts con 3 nuevos canales IPC (getAISettings, setAISettings, testAIConnection)
+  - 19 tests passing (heuristic: 13, deduplicator: 6)
+- **Hitos anteriores**:
+  - v0.1: scaffolding completo, 11 analizadores hardcodeados, UI React completa, WSL support
+  - Multi-ecosistema: Python, Rust, Go, Terraform
+  - WSL2 auto-download de Electron binary
+  - CommonJS fix para Electron main process
+- **Próximo paso**: validar build de producción (`npm run build`), añadir más tests para el extractor
 
 ---
 
@@ -55,11 +51,14 @@ Spec completa: `SPEC.md`
 
 | Decisión | Alternativa descartada | Motivo |
 |---|---|---|
+| Heurística semántica sin mapas fijos | Mapas hardcodeados por servicio | Escalabilidad — detecta servicios nuevos sin actualizar código |
+| IA opcional con fallback silencioso | IA requerida | La app debe funcionar 100% offline sin config |
+| OpenAI-compatible API para IA | SDK específicos por proveedor | Un solo formato cubre Ollama, LM Studio, Groq, OpenAI, Mistral, Custom |
+| electron-store para AI settings | Fichero JSON manual | Integrado con Electron, sin I/O manual |
+| `ignore` (npm) para .gitignore | Regex manual | Edge cases resueltos, es el estándar |
 | `electron-store` para persistencia | SQLite | Suficiente para v1, sin dependencia nativa |
 | React Flow para el grafo | D3.js | Mejor DX con React, nodos React nativos |
-| Octokit para GitHub | fetch directo | Rate limiting, auth y paginación ya resueltos |
 | Zustand para estado global | Redux / Context | Menos boilerplate, suficiente para la escala |
-| Vite como bundler del renderer | CRA / webpack | Más rápido, mejor soporte ESM |
 
 ---
 
@@ -69,88 +68,55 @@ Spec completa: `SPEC.md`
 - **Nomenclatura**: camelCase para variables/funciones, PascalCase para componentes y tipos
 - **Imports**: rutas absolutas desde `src/` configuradas en `tsconfig.json`
 - **IPC**: todos los canales definidos en `electron/preload.ts`, nunca exponer `ipcRenderer` directamente
-- **Análisis**: cada analizador es una función pura `analyze(content: string): Partial<AnalysisResult>` — fácil de testear
-- **Sin secretos en el repo**: el token de GitHub lo guarda `electron-store` en el keychain del sistema
+- **Análisis**: flujo extract → classify → dedup → (AI) → flow. Cada paso es puro y testeable.
+- **Sin secretos en el repo**: el token de GitHub y la API key de IA se guardan con `electron-store`
 
 ---
 
 ## Ficheros clave que el agente debe conocer
 
 ```
-SPEC.md                          ← especificación completa
-CONTEXT.md                       ← este fichero
-stackwatch.config.json        ← config manual del usuario (en el repo analizado)
-electron/main.ts                 ← entry point del proceso principal
-electron/preload.ts              ← bridge IPC
-electron/analyzers/              ← módulos de análisis, uno por tipo de fichero/ecosistema
-electron/analyzers/__tests__/    ← tests unitarios para analizadores
-src/store/                       ← estado global Zustand
-scripts/launch-electron.js       ← launcher con detección WSL
-src/components/FlowGraph/        ← panel más complejo, usa React Flow
+SPEC.md                              ← especificación completa (v0.2)
+CONTEXT.md                           ← este fichero
+electron/types.ts                    ← todos los tipos: Service, Evidence, AIProvider, etc.
+electron/main.ts                     ← entry point + IPC handlers (análisis + AI settings)
+electron/preload.ts                  ← bridge IPC (8 canales)
+electron/analyzers/extractor.ts      ← extracción de evidencias del repo
+electron/analyzers/heuristic.ts      ← clasificación semántica
+electron/analyzers/deduplicator.ts   ← agrupación y deduplicación
+electron/analyzers/index.ts          ← orquestador del pipeline completo
+electron/analyzers/flowInference.ts  ← inferencia de grafo de flujo
+electron/ai/provider.ts              ← cliente IA OpenAI-compatible
+src/store/useStore.ts                ← estado global Zustand
+src/components/Settings/Settings.tsx ← configuración de IA
+src/components/ServicesPanel/        ← panel con badges de confianza
+src/components/FlowGraph/            ← grafo con indicadores de confianza
 ```
-
----
-
-## Patrones a seguir
-
-### Añadir un nuevo analizador
-
-1. Crear `electron/analyzers/miAnalizador.ts`
-2. Exportar función `analyze(content: string): Partial<AnalysisResult>` — función pura, sin I/O
-3. Importar y llamar en `electron/analyzers/index.ts` (análisis local) y en `electron/main.ts` (análisis GitHub)
-4. Añadir tests unitarios en `electron/analyzers/__tests__/miAnalizador.test.ts`
-5. Para ecosistemas no-npm: añadir el ecosistema al tipo `Dependency['ecosystem']` en ambos `types.ts` y en `ecosystemUrls` de `DepsPanel.tsx`
-
-### Añadir un nuevo servicio a la detección automática
-
-Editar el mapa de patrones en `electron/analyzers/envFile.ts`:
-
-```typescript
-const SERVICE_PATTERNS: Record<string, ServiceMeta> = {
-  'STRIPE_': { name: 'Stripe', category: 'payments' },
-  // añadir aquí
-}
-```
-
-### Añadir un panel nuevo al dashboard
-
-1. Crear carpeta en `src/components/NuevoPanel/`
-2. Registrar ruta en `src/App.tsx`
-3. Añadir entrada en la navegación lateral `src/components/Sidebar/`
 
 ---
 
 ## Lo que NO hacer (lecciones aprendidas)
 
-- **No usar `nodeIntegration: true`** en webPreferences — es inseguro. Todo IPC via `contextBridge`.
-- **No parsear `.env` con regex casero** — usar la librería `dotenv` para evitar edge cases.
-- **No bloquear el proceso principal** con análisis síncronos de ficheros grandes — usar `fs.promises`.
-- **No hardcodear rutas** — usar `path.join` siempre, la app corre en macOS, Windows y Linux.
+- **No usar mapas hardcodeados de servicios** — el sistema heurístico clasifica por semántica
+- **No usar `nodeIntegration: true`** en webPreferences — todo IPC via `contextBridge`
+- **No parsear `.env` con regex casero** — usar parseo line-by-line con split en `=`
+- **No bloquear el proceso principal** con análisis síncronos — usar `fs.promises`
+- **No hardcodear rutas** — usar `path.join` siempre
+- **No asumir IA disponible** — siempre fallback al resultado heurístico
 
 ---
 
 ## Contexto de producto (para decisiones de UX)
 
-- **Usuario objetivo**: cualquier desarrollador o equipo pequeño que gestiona un proyecto de software (web, mobile, data/ML, backend, infra, gaming...)
+- **Usuario objetivo**: cualquier desarrollador o equipo pequeño que gestiona un proyecto de software
 - **Dolor principal**: no saber qué servicios están activos, cuáles son de pago, cuándo renuevan
 - **Caso de uso más frecuente**: abrir la app al empezar el día para ver el estado del proyecto
-- **Caso de uso secundario**: incorporar a un nuevo desarrollador al equipo — exportar el mapa de servicios
+- **Caso de uso secundario**: incorporar a un nuevo desarrollador al equipo
 
 ---
 
 ## Preguntas abiertas (para próximas sesiones)
 
-- ¿El grafo de flujo lo define el usuario manualmente o lo inferimos también? ¿Cómo?
 - ¿Soporte para monorepos en v1 o v2?
 - ¿Alertas de renovación como notificaciones del sistema operativo?
-- ¿El `stackwatch.config.json` se cifra o va en claro al repo? (problema con `accountEmail`)
-
----
-
-## Cómo usar este fichero como agente
-
-Al inicio de cada sesión:
-1. Lee `CONTEXT.md` (este fichero) para entender el estado actual
-2. Lee `SPEC.md` para tener el contrato completo
-3. Pregunta al usuario qué quiere trabajar hoy
-4. Al terminar la sesión, propón al usuario actualizar la sección "Estado actual del desarrollo"
+- ¿El `stackwatch.config.json` se cifra o va en claro al repo?

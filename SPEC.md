@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Documento de especificación técnica. Fuente de verdad para agentes de IA y desarrolladores.
-> Última actualización: 2026-03-15 | Estado: borrador v0.1
+> Última actualización: 2026-03-15 | Estado: borrador v0.2
 
 ---
 
@@ -13,10 +13,11 @@
 Los proyectos modernos dependen de decenas de servicios externos (hosting, dominio, CI/CD, analytics, pagos, APIs...) distribuidos en múltiples cuentas y proveedores. No existe una vista unificada de todo ese ecosistema.
 
 ### Propuesta de valor
-- **Inferencia automática**: detecta servicios leyendo `package.json`, `.env.example`, `docker-compose.yml`, workflows de CI y otros ficheros del repo.
-- **Enriquecimiento manual**: el usuario añade lo que no se puede inferir (contraseñas, cuentas de pago, fechas de renovación, servicios sin rastro en el código).
-- **Vista unificada**: dashboard con tres paneles — servicios, dependencias y grafo de flujo de la aplicación.
-- **Portable y offline**: toda la información vive en el propio repo como ficheros de texto versionables.
+- **Inferencia automática inteligente**: detecta servicios mediante heurística semántica — sin listas hardcodeadas de servicios
+- **IA opcional**: mejora la detección de casos ambiguos con cualquier proveedor OpenAI-compatible, incluyendo modelos locales gratuitos (Ollama, LM Studio)
+- **Enriquecimiento manual**: el usuario añade lo que no se puede inferir (contraseñas, cuentas de pago, fechas de renovación, servicios sin rastro en el código)
+- **Vista unificada**: dashboard con tres paneles — servicios (con niveles de confianza), dependencias y grafo de flujo
+- **Portable y offline**: toda la información vive en el propio repo como ficheros de texto versionables
 
 ---
 
@@ -32,261 +33,216 @@ Los proyectos modernos dependen de decenas de servicios externos (hosting, domin
 | GitHub remoto | Octokit (`@octokit/rest`) | Cliente oficial, bien documentado |
 | Persistencia local | `electron-store` | JSON cifrable, sin necesidad de SQLite |
 | IPC | `contextBridge` + `ipcMain/ipcRenderer` | Separación segura main ↔ renderer |
+| .gitignore | `ignore` (npm) | Respetar exclusiones del repo en el escaneo recursivo |
 
 ### Estructura de carpetas del proyecto
 
 ```
 stackwatch/
 ├── electron/
-│   ├── main.ts          # Proceso principal, IPC handlers
-│   ├── preload.ts       # Bridge seguro al renderer
-│   └── analyzers/       # Módulos de análisis (uno por tipo de fichero)
-│       ├── packageJson.ts
-│       ├── envFile.ts
-│       ├── dockerCompose.ts
-│       ├── githubWorkflows.ts
-│       ├── pythonDeps.ts
-│       ├── rustDeps.ts
-│       ├── goDeps.ts
-│       └── terraform.ts
+│   ├── main.ts              # Proceso principal, IPC handlers
+│   ├── preload.ts           # Bridge seguro al renderer
+│   ├── types.ts             # Tipos compartidos (Service, Evidence, AIProvider, etc.)
+│   ├── analyzers/
+│   │   ├── extractor.ts     # Extrae evidencias en bruto del repo (recursivo, respeta .gitignore)
+│   │   ├── heuristic.ts     # Clasifica evidencias por semántica (sin listas fijas)
+│   │   ├── deduplicator.ts  # Agrupa y deduplica servicios detectados
+│   │   ├── flowInference.ts # Infiere grafo de flujo de la arquitectura
+│   │   └── index.ts         # Orquesta el flujo completo: extract → classify → dedup → AI → flow
+│   └── ai/
+│       └── provider.ts      # Cliente OpenAI-compatible + presets de proveedores
 ├── src/
 │   ├── components/
 │   │   ├── Dashboard/
-│   │   ├── ServicesPanel/
+│   │   ├── ServicesPanel/    # ServiceCard con badges de confianza, sección "Needs Review"
 │   │   ├── DepsPanel/
-│   │   └── FlowGraph/
-│   ├── store/           # Estado global (Zustand)
+│   │   ├── FlowGraph/       # Nodos con indicadores de confianza (borde discontinuo)
+│   │   └── Settings/        # Configuración de proveedor de IA
+│   ├── store/               # Estado global (Zustand) + AI settings
 │   └── main.tsx
 ├── stackwatch.config.json   # Config manual del usuario (versionable)
-└── CONTEXT.md                  # Contexto vivo para agentes (ver sección 6)
+└── CONTEXT.md               # Contexto vivo para agentes
 ```
 
 ---
 
-## 3. Funcionalidades
+## 3. Arquitectura de detección (v0.2)
 
-### 3.1 Análisis automático del repositorio
-
-El motor de análisis corre en el proceso principal de Electron y parsea los siguientes ficheros:
-
-| Fichero | Qué extrae |
-|---|---|
-| `package.json` | Dependencias npm (prod + dev), scripts |
-| `.env` / `.env.example` | Variables de entorno → detecta servicios por nombre de variable |
-| `docker-compose.yml` | Servicios, puertos, imágenes |
-| `.github/workflows/*.yml` | CI/CD, servicios de terceros usados |
-| `vercel.json` / `netlify.toml` | Plataforma de despliegue |
-| `next.config.js` / `vite.config.ts` | Framework, plugins, redirects |
-| `requirements.txt` / `pyproject.toml` / `setup.py` | Dependencias Python (pip) |
-| `Cargo.toml` | Dependencias Rust (cargo) |
-| `go.mod` | Dependencias Go |
-| `pubspec.yaml` | Dependencias Flutter/Dart |
-| `pom.xml` / `build.gradle` | Dependencias Java/Kotlin (Maven/Gradle) |
-| `Gemfile` | Dependencias Ruby |
-| `*.tf` (Terraform) | Infraestructura cloud (AWS, GCP, Azure) |
-| `*.yaml` en `k8s/` o `kubernetes/` | Servicios Kubernetes |
-| `.gitlab-ci.yml` / `bitrise.yml` / `.circleci/config.yml` | CI/CD alternativo |
-| `firebase.json` / `firestore.rules` | Firebase |
-
-**Detección de servicios por patrón de variable de entorno:**
+### Flujo de análisis en dos capas
 
 ```
-# Web / Original
-STRIPE_*          → Stripe (pagos)
-SENDGRID_*        → SendGrid (email)
-TWILIO_*          → Twilio (SMS)
-DATABASE_URL      → Base de datos (detecta tipo por prefijo: postgres://, mysql://, mongodb://)
-NEXT_PUBLIC_GA_*  → Google Analytics
-SENTRY_*          → Sentry (monitoring)
-AWS_*             → Amazon Web Services
-VERCEL_*          → Vercel
-GITHUB_TOKEN      → GitHub API
-
-# Mobile
-FIREBASE_*        → Firebase
-APPCENTER_*       → App Center (Microsoft)
-ONESIGNAL_*       → OneSignal (push notifications)
-
-# AI / ML
-OPENAI_*          → OpenAI API
-ANTHROPIC_*       → Anthropic API
-HUGGINGFACE_*     → HuggingFace
-COHERE_*          → Cohere
-WANDB_*           → Weights & Biases
-
-# Data
-SNOWFLAKE_*       → Snowflake
-DATABRICKS_*      → Databricks
-PINECONE_*        → Pinecone (vector DB)
-ELASTICSEARCH_*   → Elasticsearch
-
-# Infraestructura / Messaging
-REDIS_*           → Redis
-RABBITMQ_*        → RabbitMQ
-KAFKA_*           → Apache Kafka
-DATADOG_*         → Datadog
-NEWRELIC_*        → New Relic
-
-# Gaming
-STEAM_*           → Steam (Steamworks)
-DISCORD_*         → Discord API
-PLAYFAB_*         → PlayFab (Microsoft)
-
-# General
-CLOUDFLARE_*      → Cloudflare
-ALGOLIA_*         → Algolia
-PUSHER_*          → Pusher
-INTERCOM_*        → Intercom
-ZENDESK_*         → Zendesk
+repo (local o GitHub)
+    ↓
+Extractor de evidencias  →  Evidence[]  (determinista, rápido)
+    ↓
+Clasificador heurístico  →  HeuristicResult[]  (semántica, sin listas fijas)
+    ↓
+Deduplicador             →  DetectedService[]  (agrupado, sin duplicados)
+    ↓ (si IA configurada)
+Mejora con IA            →  DetectedService[]  (solo casos ambiguos)
+    ↓
+Merge con stackwatch.config.json  →  servicios manuales del usuario
+    ↓
+Dashboard: panel servicios + grafo de flujo con niveles de confianza
 ```
 
-### 3.2 Configuración manual (`stackwatch.config.json`)
+### 3.1 Extractor de evidencias (`extractor.ts`)
 
-Fichero JSON versionable en la raíz del repo donde el usuario declara servicios que no se pueden inferir:
+Recorre el repo recursivamente y extrae señales en bruto:
 
-```json
-{
-  "version": "1",
-  "project": {
-    "name": "Mi proyecto web",
-    "description": "Descripción breve"
-  },
-  "services": [
-    {
-      "id": "namecheap-domain",
-      "name": "Namecheap",
-      "category": "domain",
-      "plan": "paid",
-      "cost": { "amount": 12, "currency": "USD", "period": "yearly" },
-      "renewalDate": "2026-09-01",
-      "accountEmail": "admin@example.com",
-      "notes": "Dominio principal miproyecto.com",
-      "url": "https://namecheap.com"
-    }
-  ],
-  "accounts": [
-    {
-      "id": "outlook-transactional",
-      "provider": "Microsoft Outlook",
-      "purpose": "Email transaccional",
-      "accountEmail": "noreply@miproyecto.com"
-    }
-  ]
-}
-```
+| Tipo | Fuente | Cómo |
+|---|---|---|
+| `npm_package` | `package.json` (todos los niveles) | Lee dependencies + devDependencies |
+| `env_var` | Todos los `.env*` del repo | Parsea key=value |
+| `url` | Ficheros de código (.ts, .tsx, .js, .jsx, .py, .go, .rs) | Regex `https?://...` |
+| `import` | Mismos ficheros de código | Regex `from '...'` y `require('...')` |
+| `config_file` | Raíz del repo | Presencia de vercel.json, firebase.json, fly.toml, etc. |
+| `ci_secret` | `.github/workflows/*.yml`, `.gitlab-ci.yml` | Regex `secrets.NOMBRE` |
+| `domain` | Todo el código | Extraer dominio de URLs |
 
-### 3.3 Dashboard — tres paneles
+**Exclusiones:** node_modules, dist, .next, build, .git, coverage + respeta .gitignore
 
-**Panel: Servicios**
-- Tarjetas por servicio: nombre, categoría, plan (free/paid), coste, fecha de renovación
-- Filtros: por categoría (infra, dev, marketing, pagos, analytics), por tipo (free/paid)
-- Alertas visuales: servicios con renovación en menos de 30 días
-- Origen del dato: badge "inferido" vs "manual"
+### 3.2 Clasificador heurístico (`heuristic.ts`)
 
-**Panel: Dependencias**
-- Lista de dependencias npm/pip/cargo con versión
-- Indicador de tipo: producción / desarrollo / peer
-- Enlace directo a npm/PyPI
-- Búsqueda por nombre
+Clasifica las evidencias usando semántica, sin ninguna lista hardcodeada:
 
-**Panel: Grafo de flujo**
-- Nodos: usuario, CDN, frontend, API, base de datos, servicios externos
-- Aristas: flujo de datos, flujo de autenticación, flujo de pagos (distinguidos por color)
-- Nodos arrastrables, layout auto con dagre
-- Exportable como PNG / SVG
+- **Variables de entorno:** Extrae nombre del servicio eliminando prefijos genéricos (NEXT_PUBLIC_, VITE_, etc.) y sufijos (_KEY, _SECRET, _URL, etc.). Confianza alta si es credencial o endpoint.
+- **URLs externas:** Extrae dominio, quita subdominios comunes (api., app., cdn.). Confianza alta si contiene `/api/`.
+- **Paquetes npm:** Ignora utilidades, frameworks y herramientas de dev. Extrae nombre del servicio del nombre del paquete.
+- **Config files:** Mapeo directo de fichero a servicio (vercel.json → Vercel, etc.)
+- **Inferencia de categoría:** Regex semántica contra el nombre normalizado para 19 categorías.
 
-### 3.4 Fuentes de datos
+### 3.3 IA opcional (`ai/provider.ts`)
 
-El usuario puede elegir al abrir la app:
+Solo se ejecuta si el usuario la configura. Actúa sobre evidencias con confianza baja.
 
-1. **Repo local** — selecciona carpeta, análisis instantáneo vía `fs`
-2. **Repo GitHub** — introduce `owner/repo` + token personal, la app clona en memoria vía Octokit
+**Proveedores preconfigurados:**
+- Ollama (local, gratuito) — `localhost:11434`
+- LM Studio (local, gratuito) — `localhost:1234`
+- Groq (rápido, tier gratuito)
+- OpenAI — `gpt-4o-mini`
+- Mistral — `mistral-small-latest`
+- Custom (cualquier endpoint OpenAI-compatible)
+
+Si la IA falla, fallback silencioso al resultado heurístico.
+
+### 3.4 Configuración manual (`stackwatch.config.json`)
+
+El usuario puede añadir servicios manualmente desde la UI con formulario expandido: nombre, categoría, plan, coste, fecha de renovación, email de cuenta, notas, URL. Se persisten con `source: "manual"`.
 
 ---
 
 ## 4. Modelo de datos
 
-### Servicio inferido o manual
+### Service
 
 ```typescript
 interface Service {
   id: string
   name: string
-  category: 'domain' | 'hosting' | 'cicd' | 'database' | 'auth' | 'payments'
-           | 'email' | 'analytics' | 'monitoring' | 'cdn' | 'storage' | 'infra'
-           | 'ai' | 'mobile' | 'gaming' | 'data' | 'messaging' | 'support' | 'other'
+  category: ServiceCategory  // 19 categorías
   plan: 'free' | 'paid' | 'trial' | 'unknown'
-  source: 'inferred' | 'manual'          // origen del dato
-  inferredFrom?: string                   // ej: ".env.example → STRIPE_KEY"
+  source: 'inferred' | 'manual'
+  confidence?: 'high' | 'medium' | 'low'
+  needsReview?: boolean
+  confidenceReasons?: string[]
+  inferredFrom?: string
   cost?: { amount: number; currency: string; period: 'monthly' | 'yearly' }
-  renewalDate?: string                    // ISO 8601
+  renewalDate?: string
   accountEmail?: string
   notes?: string
   url?: string
 }
 ```
 
-### Dependencia
+### Evidence (interno)
 
 ```typescript
-interface Dependency {
+interface Evidence {
+  type: 'npm_package' | 'env_var' | 'url' | 'import' | 'config_file' | 'ci_secret' | 'domain'
+  value: string
+  file: string
+  line?: number
+}
+```
+
+### AIProvider / AISettings
+
+```typescript
+interface AIProvider {
   name: string
-  version: string
-  type: 'production' | 'development' | 'peer'
-  ecosystem: 'npm' | 'pip' | 'cargo' | 'composer' | 'go' | 'dart' | 'maven' | 'gradle' | 'gem'
-  relatedService?: string                 // ej: "stripe" → Service.id "stripe"
+  baseUrl: string
+  model: string
+  apiKey?: string
+}
+
+interface AISettings {
+  enabled: boolean
+  provider: AIProvider
 }
 ```
 
-### Nodo del grafo
+### Dependency, FlowNode, FlowEdge
 
-```typescript
-interface FlowNode {
-  id: string
-  label: string
-  type: 'user' | 'cdn' | 'frontend' | 'api' | 'database' | 'external'
-  serviceId?: string                      // referencia a Service
-}
-
-interface FlowEdge {
-  source: string
-  target: string
-  label?: string
-  flowType: 'data' | 'auth' | 'payment' | 'webhook'
-}
-```
+Sin cambios respecto a v0.1.
 
 ---
 
-## 5. Comunicación IPC (main ↔ renderer)
+## 5. UI — Niveles de confianza
+
+### Panel de Servicios
+- `high` → tarjeta normal, sin badge extra
+- `medium` → badge amarillo "review"
+- `low` → badge naranja "incomplete" + icono warning + tooltip con la razón
+- Sección "Needs Review" al inicio del panel si hay servicios con `needsReview: true`
+
+### Grafo de flujo
+- Nodos `confidence: 'low'` → borde discontinuo + color naranja + "?" marker
+- Tooltip en hover con razón de detección
+
+### Settings
+- Toggle "Enhance analysis with AI" (desactivado por defecto)
+- Dropdown proveedor (presets + Custom)
+- Campo API Key (oculto para Ollama y LM Studio)
+- Campo Base URL y Model (editables para Custom/Local)
+- Botón "Test Connection"
+- Nota sobre privacidad de proveedores locales
+
+---
+
+## 6. Comunicación IPC (main ↔ renderer)
 
 ```typescript
-// Canales expuestos via contextBridge
-interface ProjectRadarAPI {
+interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>
-  saveConfig(config: UserConfig): Promise<void>
-  loadConfig(): Promise<UserConfig>
-  openFolder(): Promise<string | null>   // diálogo nativo de selección
+  openFolder(): Promise<string | null>
+  loadConfig(repoPath: string): Promise<UserConfig | null>
+  saveConfig(repoPath: string, config: UserConfig): Promise<void>
+  getAISettings(): Promise<AISettings>
+  setAISettings(settings: AISettings): Promise<void>
+  testAIConnection(provider: AIProvider): Promise<{ ok: boolean; error?: string }>
 }
 ```
 
 ---
 
-## 6. Fuera de alcance (v1)
+## 7. Fuera de alcance (v1)
 
 - Notificaciones push / alertas por email de renovaciones
 - Multi-proyecto (v1 gestiona un proyecto a la vez)
-- Integración con APIs de facturación de servicios (Stripe dashboard, AWS Cost Explorer)
-- Detección de vulnerabilidades en dependencias (posible v2 vía `npm audit`)
+- Integración con APIs de facturación de servicios
+- Detección de vulnerabilidades en dependencias
 - Soporte para monorepos
 
 ---
 
-## 7. Criterios de aceptación (v1)
+## 8. Criterios de aceptación (v0.2)
 
-- [ ] Dado un repo con `package.json` y `.env.example`, la app detecta al menos el 80% de servicios externos presentes
-- [ ] El usuario puede añadir/editar servicios manualmente en menos de 30 segundos
-- [ ] El grafo de flujo se genera automáticamente a partir del análisis sin configuración manual
-- [ ] Los cambios en `stackwatch.config.json` se reflejan en el dashboard sin reiniciar la app
-- [ ] La app funciona en macOS, Windows y Linux
+- [x] Sin ninguna configuración, StackWatch detecta servicios por semántica — cero listas hardcodeadas
+- [x] Variables como TWITTER_API_KEY o GA_MEASUREMENT_ID generan entradas con confianza high/medium aunque el servicio no esté en ninguna lista
+- [x] El usuario puede añadir servicios manualmente desde la UI — se persisten en stackwatch.config.json
+- [x] La configuración de IA acepta cualquier proveedor OpenAI-compatible incluyendo Ollama y LM Studio sin API key
+- [x] Si la IA falla, la app muestra el resultado heurístico sin errores
+- [x] El grafo de flujo muestra indicadores de confianza (bordes discontinuos para low confidence)
+- [x] 19 tests passing para heurística y deduplicación

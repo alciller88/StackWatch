@@ -15,6 +15,15 @@ const api: StackWatchAPI = {
 
   saveConfig: (repoPath: string, config) =>
     ipcRenderer.invoke('save-config', { repoPath, config }),
+
+  getAISettings: () =>
+    ipcRenderer.invoke('get-ai-settings'),
+
+  setAISettings: (settings) =>
+    ipcRenderer.invoke('set-ai-settings', settings),
+
+  testAIConnection: (provider) =>
+    ipcRenderer.invoke('test-ai-connection', provider),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

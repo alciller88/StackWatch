@@ -14,4 +14,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  test: {
+    exclude: ['node_modules', 'dist', 'dist-electron'],
+  },
 })

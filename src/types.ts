@@ -1,28 +1,33 @@
+export type ServiceCategory =
+  | 'domain'
+  | 'hosting'
+  | 'cicd'
+  | 'database'
+  | 'auth'
+  | 'payments'
+  | 'email'
+  | 'analytics'
+  | 'monitoring'
+  | 'cdn'
+  | 'storage'
+  | 'infra'
+  | 'ai'
+  | 'mobile'
+  | 'gaming'
+  | 'data'
+  | 'messaging'
+  | 'support'
+  | 'other';
+
 export interface Service {
   id: string;
   name: string;
-  category:
-    | 'domain'
-    | 'hosting'
-    | 'cicd'
-    | 'database'
-    | 'auth'
-    | 'payments'
-    | 'email'
-    | 'analytics'
-    | 'monitoring'
-    | 'cdn'
-    | 'storage'
-    | 'infra'
-    | 'ai'
-    | 'mobile'
-    | 'gaming'
-    | 'data'
-    | 'messaging'
-    | 'support'
-    | 'other';
+  category: ServiceCategory;
   plan: 'free' | 'paid' | 'trial' | 'unknown';
   source: 'inferred' | 'manual';
+  confidence?: 'high' | 'medium' | 'low';
+  needsReview?: boolean;
+  confidenceReasons?: string[];
   inferredFrom?: string;
   cost?: { amount: number; currency: string; period: 'monthly' | 'yearly' };
   renewalDate?: string;
@@ -35,7 +40,16 @@ export interface Dependency {
   name: string;
   version: string;
   type: 'production' | 'development' | 'peer';
-  ecosystem: 'npm' | 'pip' | 'cargo' | 'composer' | 'go' | 'dart' | 'maven' | 'gradle' | 'gem';
+  ecosystem:
+    | 'npm'
+    | 'pip'
+    | 'cargo'
+    | 'composer'
+    | 'go'
+    | 'dart'
+    | 'maven'
+    | 'gradle'
+    | 'gem';
   relatedService?: string;
 }
 
@@ -75,12 +89,48 @@ export interface UserConfig {
   }[];
 }
 
+export interface Evidence {
+  type:
+    | 'npm_package'
+    | 'env_var'
+    | 'url'
+    | 'import'
+    | 'config_file'
+    | 'ci_secret'
+    | 'domain';
+  value: string;
+  file: string;
+  line?: number;
+}
+
+export interface HeuristicResult {
+  serviceName: string;
+  category: ServiceCategory;
+  confidence: 'high' | 'medium' | 'low';
+  reason: string;
+}
+
+export interface AIProvider {
+  name: string;
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+}
+
+export interface AISettings {
+  enabled: boolean;
+  provider: AIProvider;
+}
+
 export interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>;
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>;
-  saveConfig(repoPath: string, config: UserConfig): Promise<void>;
-  loadConfig(repoPath: string): Promise<UserConfig | null>;
   openFolder(): Promise<string | null>;
+  loadConfig(repoPath: string): Promise<UserConfig | null>;
+  saveConfig(repoPath: string, config: UserConfig): Promise<void>;
+  getAISettings(): Promise<AISettings>;
+  setAISettings(settings: AISettings): Promise<void>;
+  testAIConnection(provider: AIProvider): Promise<{ ok: boolean; error?: string }>;
 }
 
 declare global {

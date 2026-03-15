@@ -1,21 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { ServiceCard } from './ServiceCard';
-import type { Service } from '../../types';
+import type { Service, ServiceCategory } from '../../types';
 
-const categories: Service['category'][] = [
-  'domain',
-  'hosting',
-  'cicd',
-  'database',
-  'auth',
-  'payments',
-  'email',
-  'analytics',
-  'monitoring',
-  'cdn',
-  'storage',
-  'other',
+const categories: ServiceCategory[] = [
+  'domain', 'hosting', 'cicd', 'database', 'auth', 'payments',
+  'email', 'analytics', 'monitoring', 'cdn', 'storage', 'infra',
+  'ai', 'mobile', 'gaming', 'data', 'messaging', 'support', 'other',
 ];
 
 const planTypes: Service['plan'][] = ['free', 'paid', 'trial', 'unknown'];
@@ -23,9 +14,13 @@ const planTypes: Service['plan'][] = ['free', 'paid', 'trial', 'unknown'];
 export const ServicesPanel: React.FC = () => {
   const { services } = useStore();
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<Service['category'] | 'all'>('all');
+  const [activeCategory, setActiveCategory] = useState<ServiceCategory | 'all'>('all');
   const [activePlan, setActivePlan] = useState<Service['plan'] | 'all'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
+
+  const needsReview = useMemo(() => {
+    return services.filter(s => s.needsReview || s.confidence === 'low');
+  }, [services]);
 
   const filtered = useMemo(() => {
     return services.filter((s) => {
@@ -140,11 +135,31 @@ export const ServicesPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Service Form (basic) */}
+      {/* Add Service Form */}
       {showAddForm && <AddServiceForm onClose={() => setShowAddForm(false)} />}
 
-      {/* Grid */}
-      <div className="flex-1 overflow-auto p-6">
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-6 space-y-6">
+        {/* Needs Review Section */}
+        {needsReview.length > 0 && !search && activeCategory === 'all' && activePlan === 'all' && (
+          <div className="bg-orange-900/10 border border-orange-800/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-orange-400 text-sm font-medium">
+                Needs Review ({needsReview.length})
+              </span>
+              <span className="text-xs text-orange-400/60">
+                Add details in the form or in stackwatch.config.json
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {needsReview.map((service) => (
+                <ServiceCard key={service.id} service={service} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Grid */}
         {filtered.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500 text-sm">
             {services.length === 0
@@ -163,12 +178,19 @@ export const ServicesPanel: React.FC = () => {
   );
 };
 
-/** Basic add-service form */
+/** Expanded add-service form */
 const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { config, saveConfig } = useStore();
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<Service['category']>('other');
+  const [category, setCategory] = useState<ServiceCategory>('other');
   const [plan, setPlan] = useState<Service['plan']>('unknown');
+  const [url, setUrl] = useState('');
+  const [costAmount, setCostAmount] = useState('');
+  const [costCurrency, setCostCurrency] = useState('USD');
+  const [costPeriod, setCostPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [renewalDate, setRenewalDate] = useState('');
+  const [accountEmail, setAccountEmail] = useState('');
+  const [notes, setNotes] = useState('');
 
   const handleAdd = async () => {
     if (!name.trim()) return;
@@ -179,6 +201,13 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       category,
       plan,
       source: 'manual',
+      ...(url && { url }),
+      ...(costAmount && {
+        cost: { amount: parseFloat(costAmount), currency: costCurrency, period: costPeriod },
+      }),
+      ...(renewalDate && { renewalDate }),
+      ...(accountEmail && { accountEmail }),
+      ...(notes && { notes }),
     };
 
     const currentConfig = config ?? {
@@ -196,7 +225,8 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   return (
-    <div className="px-6 py-4 border-b border-gray-800 bg-gray-900/50">
+    <div className="px-6 py-4 border-b border-gray-800 bg-gray-900/50 space-y-3">
+      {/* Row 1: Name, Category, Plan */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
           <label className="block text-xs text-gray-400 mb-1">Name</label>
@@ -212,13 +242,11 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <label className="block text-xs text-gray-400 mb-1">Category</label>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value as Service['category'])}
+            onChange={(e) => setCategory(e.target.value as ServiceCategory)}
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           >
             {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
@@ -230,11 +258,76 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           >
             {planTypes.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Row 2: URL, Cost, Renewal */}
+      <div className="flex items-end gap-3">
+        <div className="flex-1">
+          <label className="block text-xs text-gray-400 mb-1">URL</label>
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://..."
+            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        <div className="w-24">
+          <label className="block text-xs text-gray-400 mb-1">Cost</label>
+          <input
+            type="number"
+            value={costAmount}
+            onChange={(e) => setCostAmount(e.target.value)}
+            placeholder="0"
+            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <select
+            value={costPeriod}
+            onChange={(e) => setCostPeriod(e.target.value as 'monthly' | 'yearly')}
+            className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          >
+            <option value="monthly">/mo</option>
+            <option value="yearly">/yr</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Renewal</label>
+          <input
+            type="date"
+            value={renewalDate}
+            onChange={(e) => setRenewalDate(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Email, Notes */}
+      <div className="flex items-end gap-3">
+        <div className="flex-1">
+          <label className="block text-xs text-gray-400 mb-1">Account Email</label>
+          <input
+            type="email"
+            value={accountEmail}
+            onChange={(e) => setAccountEmail(e.target.value)}
+            placeholder="admin@example.com"
+            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs text-gray-400 mb-1">Notes</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Additional details..."
+            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          />
         </div>
         <button
           onClick={handleAdd}

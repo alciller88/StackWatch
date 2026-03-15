@@ -30,6 +30,12 @@ const planColors: Record<Service['plan'], string> = {
   unknown: 'bg-gray-800 text-gray-400 border-gray-700',
 };
 
+const confidenceBadge: Record<string, { bg: string; text: string; label: string }> = {
+  high: { bg: '', text: '', label: '' },
+  medium: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', label: 'review' },
+  low: { bg: 'bg-orange-900/40', text: 'text-orange-400', label: 'incomplete' },
+};
+
 function daysUntil(dateStr: string): number {
   const target = new Date(dateStr);
   const now = new Date();
@@ -42,6 +48,8 @@ interface ServiceCardProps {
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
   const days = service.renewalDate ? daysUntil(service.renewalDate) : null;
+  const confidence = service.confidence ?? 'high';
+  const badge = confidenceBadge[confidence];
 
   let renewalColor = 'text-gray-400';
   if (days !== null) {
@@ -50,7 +58,15 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
+    <div
+      className={`bg-gray-900 border rounded-xl p-4 hover:border-gray-700 transition-colors ${
+        confidence === 'low'
+          ? 'border-orange-800/50 border-dashed'
+          : confidence === 'medium'
+          ? 'border-yellow-800/30'
+          : 'border-gray-800'
+      }`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5">
@@ -65,16 +81,31 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
           </div>
         </div>
 
-        {/* Source badge */}
-        <span
-          className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-            service.source === 'inferred'
-              ? 'bg-purple-900/40 text-purple-400 border border-purple-800'
-              : 'bg-gray-800 text-gray-400 border border-gray-700'
-          }`}
-        >
-          {service.source}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {/* Confidence badge */}
+          {badge.label && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${badge.bg} ${badge.text} border ${
+                confidence === 'low' ? 'border-orange-800' : 'border-yellow-800'
+              }`}
+              title={service.confidenceReasons?.join('\n') ?? ''}
+            >
+              {confidence === 'low' && '\u26A0 '}
+              {badge.label}
+            </span>
+          )}
+
+          {/* Source badge */}
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+              service.source === 'inferred'
+                ? 'bg-purple-900/40 text-purple-400 border border-purple-800'
+                : 'bg-gray-800 text-gray-400 border border-gray-700'
+            }`}
+          >
+            {service.source}
+          </span>
+        </div>
       </div>
 
       {/* Plan badge */}

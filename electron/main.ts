@@ -1,9 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
-import { analyzeLocalRepo } from './analyzers/index'
-import type { UserConfig } from './types'
+import Store from 'electron-store'
+import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
+import { testConnection } from './ai/provider'
+import type { UserConfig, AISettings, AIProvider } from './types'
 
+const store = new (Store as any)()
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
@@ -41,10 +44,11 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
-// IPC Handlers
+// --- IPC Handlers ---
 
 ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
-  return analyzeLocalRepo(folderPath)
+  const aiSettings = getAISettings()
+  return analyzeLocalRepo(folderPath, aiSettings)
 })
 
 ipcMain.handle(
@@ -88,113 +92,8 @@ ipcMain.handle(
       }
     }
 
-    const { analyzePackageJson } = await import('./analyzers/packageJson')
-    const { analyzeEnvFile } = await import('./analyzers/envFile')
-    const { analyzeDockerCompose } = await import('./analyzers/dockerCompose')
-    const { analyzeGithubWorkflows } = await import('./analyzers/githubWorkflows')
-    const { analyzeConfigFile } = await import('./analyzers/configFiles')
-    const { analyzePythonDeps } = await import('./analyzers/pythonDeps')
-    const { analyzeRustDeps } = await import('./analyzers/rustDeps')
-    const { analyzeGoDeps } = await import('./analyzers/goDeps')
-    const { analyzeTerraform } = await import('./analyzers/terraform')
-    const { inferFlowGraph } = await import('./analyzers/flowInference')
-
-    const allServices: import('./types').Service[] = []
-    const allDeps: import('./types').Dependency[] = []
-
-    const pkgContent = await fetchFile('package.json')
-    if (pkgContent) {
-      const result = analyzePackageJson(pkgContent)
-      allServices.push(...result.services)
-      allDeps.push(...result.dependencies)
-    }
-
-    for (const envFile of ['.env', '.env.example', '.env.local']) {
-      const content = await fetchFile(envFile)
-      if (content) {
-        const result = analyzeEnvFile(content, envFile)
-        allServices.push(...result.services)
-      }
-    }
-
-    for (const dcFile of ['docker-compose.yml', 'docker-compose.yaml']) {
-      const content = await fetchFile(dcFile)
-      if (content) {
-        const result = analyzeDockerCompose(content)
-        allServices.push(...result.services)
-      }
-    }
-
-    const workflowFiles = await listDir('.github/workflows')
-    for (const wf of workflowFiles) {
-      if (wf.endsWith('.yml') || wf.endsWith('.yaml')) {
-        const content = await fetchFile(`.github/workflows/${wf}`)
-        if (content) {
-          const result = analyzeGithubWorkflows(content, wf)
-          allServices.push(...result.services)
-        }
-      }
-    }
-
-    for (const cf of ['vercel.json', 'netlify.toml', 'firebase.json']) {
-      const content = await fetchFile(cf)
-      if (content) {
-        const result = analyzeConfigFile(content, cf)
-        allServices.push(...result.services)
-      }
-    }
-
-    // Python deps
-    for (const pyFile of ['requirements.txt', 'pyproject.toml', 'setup.py']) {
-      const content = await fetchFile(pyFile)
-      if (content) {
-        const result = analyzePythonDeps(content, pyFile)
-        allServices.push(...result.services)
-        allDeps.push(...result.dependencies)
-      }
-    }
-
-    // Rust deps
-    const cargoContent = await fetchFile('Cargo.toml')
-    if (cargoContent) {
-      const result = analyzeRustDeps(cargoContent)
-      allDeps.push(...result.dependencies)
-    }
-
-    // Go deps
-    const goModContent = await fetchFile('go.mod')
-    if (goModContent) {
-      const result = analyzeGoDeps(goModContent)
-      allDeps.push(...result.dependencies)
-    }
-
-    // Terraform files
-    const rootFiles = await listDir('.')
-    for (const file of rootFiles) {
-      if (file.endsWith('.tf')) {
-        const content = await fetchFile(file)
-        if (content) {
-          const result = analyzeTerraform(content, file)
-          allServices.push(...result.services)
-        }
-      }
-    }
-
-    const seenIds = new Set<string>()
-    const uniqueServices = allServices.filter((s) => {
-      if (seenIds.has(s.id)) return false
-      seenIds.add(s.id)
-      return true
-    })
-
-    const flow = inferFlowGraph(uniqueServices, allDeps)
-
-    return {
-      services: uniqueServices,
-      dependencies: allDeps,
-      flowNodes: flow.nodes,
-      flowEdges: flow.edges,
-    }
+    const aiSettings = getAISettings()
+    return analyzeGitHubRepo(fetchFile, listDir, aiSettings)
   }
 )
 
@@ -227,3 +126,25 @@ ipcMain.handle(
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
   }
 )
+
+// --- AI Settings ---
+
+function getAISettings(): AISettings {
+  const settings = store.get('aiSettings') as AISettings | undefined
+  return settings ?? {
+    enabled: false,
+    provider: { name: 'Ollama (local, free)', baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
+  }
+}
+
+ipcMain.handle('get-ai-settings', async () => {
+  return getAISettings()
+})
+
+ipcMain.handle('set-ai-settings', async (_event, settings: AISettings) => {
+  store.set('aiSettings', settings)
+})
+
+ipcMain.handle('test-ai-connection', async (_event, provider: AIProvider) => {
+  return testConnection(provider)
+})
