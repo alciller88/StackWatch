@@ -27,6 +27,15 @@ const api: StackWatchAPI = {
 
   getAIPresets: () =>
     ipcRenderer.invoke('get-ai-presets'),
+
+  importConfig: () =>
+    ipcRenderer.invoke('import-config'),
+
+  exportConfig: (content: string) =>
+    ipcRenderer.invoke('export-config', content),
+
+  exportServicesMd: (content: string) =>
+    ipcRenderer.invoke('export-services-md', content),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

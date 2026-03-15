@@ -117,4 +117,7 @@ export interface StackWatchAPI {
   setAISettings(settings: AISettings): Promise<void>
   testAIConnection(provider: AIProvider): Promise<{ ok: boolean; error?: string }>
   getAIPresets(): Promise<AIProvider[]>
+  importConfig(): Promise<string | null>
+  exportConfig(content: string): Promise<boolean>
+  exportServicesMd(content: string): Promise<boolean>
 }

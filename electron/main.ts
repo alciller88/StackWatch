@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import Store from 'electron-store'
@@ -10,18 +10,23 @@ const store = new (Store as any)()
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
+  Menu.setApplicationMenu(null)
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 960,
     minHeight: 600,
     title: 'StackWatch',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   })
+
+  mainWindow.removeMenu()
 
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     mainWindow.loadURL('http://localhost:5173')
@@ -151,4 +156,42 @@ ipcMain.handle('test-ai-connection', async (_event, provider: AIProvider) => {
 
 ipcMain.handle('get-ai-presets', async () => {
   return PRESET_PROVIDERS
+})
+
+// --- Import / Export ---
+
+ipcMain.handle('import-config', async () => {
+  if (!mainWindow) return null
+  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import StackWatch config',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    properties: ['openFile'],
+  })
+  if (!filePaths[0]) return null
+  const content = await fs.readFile(filePaths[0], 'utf-8')
+  return content
+})
+
+ipcMain.handle('export-config', async (_event, content: string) => {
+  if (!mainWindow) return false
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export StackWatch config',
+    defaultPath: 'stackwatch.config.json',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (!filePath) return false
+  await fs.writeFile(filePath, content, 'utf-8')
+  return true
+})
+
+ipcMain.handle('export-services-md', async (_event, content: string) => {
+  if (!mainWindow) return false
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export services as Markdown',
+    defaultPath: 'SERVICES.md',
+    filters: [{ name: 'Markdown', extensions: ['md'] }],
+  })
+  if (!filePath) return false
+  await fs.writeFile(filePath, content, 'utf-8')
+  return true
 })
