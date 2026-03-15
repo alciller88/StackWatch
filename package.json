@@ -4,7 +4,8 @@
   "description": "Know your stack, own your stack. Visualize every service, dependency, and account your project depends on.",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && node scripts/launch-electron.js\"",
+    "postinstall": "node scripts/setup.js",
     "build": "tsc -p tsconfig.node.json && vite build && electron-builder",
     "test": "vitest",
     "preview": "vite preview"

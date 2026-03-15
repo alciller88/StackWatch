@@ -106,6 +106,21 @@ Full detection rules: [`SPEC.md § 3.1`](./SPEC.md)
 - Node.js 20+
 - npm 10+
 
+### Platform notes
+
+| Environment | Behaviour |
+|---|---|
+| **Windows native** (cmd / PowerShell) | Works out of the box |
+| **WSL2** (Ubuntu on Windows) | `npm install` auto-installs system libs; `npm run dev` launches the Windows Electron binary |
+| **macOS** | Works out of the box |
+
+On WSL2, the postinstall hook (`scripts/setup.js`) may ask for `sudo` to install system dependencies (libnss3, libatk, etc.). If you prefer to skip this, install them manually:
+
+```bash
+sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+  libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
+```
+
 ### Stack
 
 - [Electron](https://electronjs.org) — desktop shell
@@ -131,6 +146,9 @@ StackWatch/
 │   ├── main.ts              # Main process, IPC handlers
 │   ├── preload.ts           # Secure renderer bridge
 │   └── analyzers/           # One module per file type
+├── scripts/
+│   ├── launch-electron.js   # WSL-aware Electron launcher
+│   └── setup.js             # Postinstall: system deps on WSL
 ├── src/
 │   ├── components/
 │   │   ├── ServicesPanel/
@@ -153,6 +171,7 @@ StackWatch/
 - [x] Dependencies panel (table with sort, filter, group by type)
 - [x] Flow graph (auto-generated with React Flow + dagre layout)
 - [x] GitHub remote repo support (Octokit integration)
+- [x] WSL2 support — auto-detect and launch Windows Electron binary
 - [ ] Unit tests for analyzers
 - [ ] Runtime validation and polish
 - [ ] macOS / Windows / Linux builds
