@@ -109,8 +109,10 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   loadConfig: async () => {
+    const repoPath = get().repoPath;
+    if (!repoPath) return;
     try {
-      const config = await window.stackwatch.loadConfig();
+      const config = await window.stackwatch.loadConfig(repoPath);
       set({ config });
     } catch {
       // Config may not exist yet — not an error
@@ -118,8 +120,10 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   saveConfig: async (config: UserConfig) => {
+    const repoPath = get().repoPath;
+    if (!repoPath) return;
     try {
-      await window.stackwatch.saveConfig(config);
+      await window.stackwatch.saveConfig(repoPath, config);
       set({ config });
     } catch (err) {
       set({

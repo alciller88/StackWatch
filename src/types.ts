@@ -71,8 +71,8 @@ export interface UserConfig {
 export interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>;
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>;
-  saveConfig(config: UserConfig): Promise<void>;
-  loadConfig(): Promise<UserConfig>;
+  saveConfig(repoPath: string, config: UserConfig): Promise<void>;
+  loadConfig(repoPath: string): Promise<UserConfig | null>;
   openFolder(): Promise<string | null>;
 }
 

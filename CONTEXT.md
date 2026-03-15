@@ -35,7 +35,11 @@ Spec completa: `SPEC.md`
 - **Fix: Electron dev launch** (2026-03-15):
   - `npm run dev` now compiles Electron TS files (`tsc -p tsconfig.node.json`) before launching Electron — previously `dist-electron/` was missing, causing silent launch failure
   - Added `window.stackwatch` guards in store (`analyzeLocal`, `analyzeGitHub`, `openFolder`) to show a clear error message instead of crashing when running outside Electron (e.g., opening Vite URL directly in browser)
-- **Próximo paso**: ejecutar `npm run dev` para validar en runtime, añadir tests unitarios para analizadores
+- **Fix: WSL2 auto-download + CommonJS** (2026-03-15):
+  - `scripts/launch-electron.js` now auto-downloads the Windows Electron binary on first run in WSL2 (re-runs `node_modules/electron/install.js` with `npm_config_platform=win32`) — no manual steps needed
+  - `tsconfig.node.json` changed from `ESNext`/`bundler` to `CommonJS`/`node` — fixes `ERR_MODULE_NOT_FOUND` caused by missing `.js` extensions in ESM imports; Electron main process runs in Node.js and works natively with CommonJS
+  - `npm run dev` now launches successfully on WSL2 end-to-end
+- **Próximo paso**: añadir tests unitarios para analizadores, validar build de producción (`npm run build`)
 
 ---
 
