@@ -33,14 +33,51 @@ Three panels:
 
 ## Getting started
 
-> ⚠️ Pre-release — not yet available for download. See [Development](#development) to run locally.
+### Prerequisites
 
-```bash
-git clone https://github.com/YOUR_USERNAME/StackWatch.git
+- [Node.js](https://nodejs.org/) 20+
+- [Git](https://git-scm.com/)
+
+### Windows (PowerShell or cmd)
+
+```powershell
+git clone https://github.com/alciller88/StackWatch.git
 cd StackWatch
 npm install
 npm run dev
 ```
+
+The Electron window will open automatically.
+
+### WSL2 (Ubuntu on Windows)
+
+```bash
+git clone https://github.com/alciller88/StackWatch.git
+cd StackWatch
+npm install
+npm run dev
+```
+
+StackWatch detects WSL automatically and launches the Windows Electron binary — no manual setup required.
+
+> **Note:** Clone into your WSL filesystem (`~/` or `/home/youruser/`), not into `/mnt/c/`. Running from `/mnt/c/` can cause performance issues and permission errors.
+
+### macOS / Linux
+
+```bash
+git clone https://github.com/alciller88/StackWatch.git
+cd StackWatch
+npm install
+npm run dev
+```
+
+### Available commands (all platforms)
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start in development mode with hot reload |
+| `npm run build` | Build production binaries |
+| `npm test` | Run unit tests |
 
 ---
 
@@ -101,26 +138,6 @@ Full detection rules: [`SPEC.md § 3.1`](./SPEC.md)
 
 ## Development
 
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-
-### Platform notes
-
-| Environment | Behaviour |
-|---|---|
-| **Windows native** (cmd / PowerShell) | Works out of the box |
-| **WSL2** (Ubuntu on Windows) | `npm install` auto-installs system libs; `npm run dev` launches the Windows Electron binary |
-| **macOS** | Works out of the box |
-
-On WSL2, the postinstall hook (`scripts/setup.js`) may ask for `sudo` to install system dependencies (libnss3, libatk, etc.). If you prefer to skip this, install them manually:
-
-```bash
-sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
-  libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2
-```
-
 ### Stack
 
 - [Electron](https://electronjs.org) — desktop shell
@@ -129,14 +146,6 @@ sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 
 - [Tailwind CSS](https://tailwindcss.com) — styling
 - [Octokit](https://github.com/octokit/rest.js) — GitHub API
 - [electron-store](https://github.com/sindresorhus/electron-store) — local persistence
-
-### Run in development
-
-```bash
-npm run dev          # starts Electron + Vite with HMR
-npm run test         # unit tests (Vitest)
-npm run build        # production build
-```
 
 ### Project structure
 
