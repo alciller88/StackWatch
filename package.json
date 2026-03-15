@@ -5,7 +5,6 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"tsc -p tsconfig.node.json && wait-on http://localhost:5173 && node scripts/launch-electron.js\"",
-    "postinstall": "node scripts/setup.js",
     "build": "tsc -p tsconfig.node.json && vite build && electron-builder",
     "test": "vitest",
     "preview": "vite preview"

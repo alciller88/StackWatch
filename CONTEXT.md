@@ -29,9 +29,9 @@ Spec completa: `SPEC.md`
   - Store Zustand: estado global con análisis local/GitHub, merge de servicios manuales
   - TypeScript compila sin errores (`tsc --noEmit` limpio)
 - **WSL support** (2026-03-15):
-  - `scripts/launch-electron.js` — detects WSL, launches `electron.exe` (Windows binary) instead of Linux binary
-  - `scripts/setup.js` — postinstall hook installs missing system libs on WSL (libnss3, libatk, etc.)
-  - `npm run dev` now works on Windows native, WSL2, and macOS without manual intervention
+  - `scripts/launch-electron.js` — detects WSL2 and uses `electron.exe` (Windows binary) directly, bypassing Linux binary entirely — no system libs needed
+  - Converts WSL paths (`/mnt/c/...`) to Windows paths (`C:\...`) so `electron.exe` can resolve the app root
+  - `npm run dev` now works on Windows native, WSL2, and macOS without manual intervention or library installation
 - **Fix: Electron dev launch** (2026-03-15):
   - `npm run dev` now compiles Electron TS files (`tsc -p tsconfig.node.json`) before launching Electron — previously `dist-electron/` was missing, causing silent launch failure
   - Added `window.stackwatch` guards in store (`analyzeLocal`, `analyzeGitHub`, `openFolder`) to show a clear error message instead of crashing when running outside Electron (e.g., opening Vite URL directly in browser)
@@ -73,7 +73,6 @@ electron/preload.ts              ← bridge IPC
 electron/analyzers/              ← módulos de análisis, uno por tipo de fichero
 src/store/                       ← estado global Zustand
 scripts/launch-electron.js       ← launcher con detección WSL
-scripts/setup.js                 ← postinstall: instala deps de sistema en WSL
 src/components/FlowGraph/        ← panel más complejo, usa React Flow
 ```
 
