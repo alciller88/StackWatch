@@ -12,6 +12,13 @@ export function inferFlowGraph(
   const edges: FlowEdge[] = []
   const depNames = new Set(dependencies.map((d) => d.name))
 
+  // Filter out services whose name matches the project (defense in depth)
+  const normalizedProjectName = projectName.toLowerCase().replace(/[^a-z0-9]/g, '')
+  services = services.filter((s) => {
+    const normalizedServiceName = s.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+    return normalizedServiceName !== normalizedProjectName
+  })
+
   // User node — always present
   nodes.push({ id: 'user', label: 'User', type: 'user' })
 

@@ -28,8 +28,8 @@ const api: StackWatchAPI = {
   getAIPresets: () =>
     ipcRenderer.invoke('get-ai-presets'),
 
-  importConfig: () =>
-    ipcRenderer.invoke('import-config'),
+  importConfig: (repoPath: string) =>
+    ipcRenderer.invoke('import-config', repoPath),
 
   exportConfig: (content: string) =>
     ipcRenderer.invoke('export-config', content),

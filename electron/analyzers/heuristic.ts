@@ -1,7 +1,10 @@
 import type { Evidence, HeuristicResult, ServiceCategory } from '../types'
 
-export function classifyEvidences(evidences: Evidence[]): HeuristicResult[] {
+export function classifyEvidences(evidences: Evidence[], projectName?: string): HeuristicResult[] {
   const results: HeuristicResult[] = []
+  const normalizedProject = projectName
+    ? projectName.toLowerCase().replace(/[^a-z0-9]/g, '')
+    : null
 
   for (const ev of evidences) {
     let result: HeuristicResult | null = null
@@ -31,6 +34,11 @@ export function classifyEvidences(evidences: Evidence[]): HeuristicResult[] {
     }
 
     if (result) {
+      // Filter out the project's own name from detected services
+      if (normalizedProject) {
+        const normalizedService = result.serviceName.toLowerCase().replace(/[^a-z0-9]/g, '')
+        if (normalizedService === normalizedProject) continue
+      }
       results.push(result)
     }
   }

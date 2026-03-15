@@ -28,8 +28,8 @@ async function runPipeline(
   aiSettings: AISettings | undefined,
   projectName: string,
 ): Promise<AnalysisResult> {
-  // Step 1: Classify with heuristics
-  const heuristicResults = classifyEvidences(evidences)
+  // Step 1: Classify with heuristics (pass projectName to filter own project)
+  const heuristicResults = classifyEvidences(evidences, projectName)
 
   // Step 2: Deduplicate
   let services = deduplicateServices(heuristicResults)

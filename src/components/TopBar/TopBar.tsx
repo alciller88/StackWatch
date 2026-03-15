@@ -88,22 +88,11 @@ export const TopBar: React.FC = () => {
   const handleImport = async () => {
     if (!window.stackwatch || !repoPath || repoPath.startsWith('github:')) return;
     try {
-      const content = await window.stackwatch.importConfig();
+      const content = await window.stackwatch.importConfig(repoPath);
       if (!content) return;
-      const parsed = JSON.parse(content) as UserConfig;
-
-      const existing = await window.stackwatch.loadConfig(repoPath);
-      if (existing) {
-        const confirmed = window.confirm(
-          'A stackwatch.config.json already exists in this project. Overwrite it?'
-        );
-        if (!confirmed) return;
-      }
-
-      await saveConfig(parsed);
-      analyzeLocal(repoPath);
+      await analyzeLocal(repoPath);
     } catch {
-      // invalid JSON or cancelled
+      // invalid JSON, cancelled, or file read error
     }
   };
 

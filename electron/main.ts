@@ -160,8 +160,25 @@ ipcMain.handle('get-ai-presets', async () => {
 
 // --- Import / Export ---
 
-ipcMain.handle('import-config', async () => {
+ipcMain.handle('import-config', async (_event, repoPath: string) => {
   if (!mainWindow) return null
+
+  // Check for existing config and confirm overwrite via native dialog
+  const configPath = path.join(repoPath, 'stackwatch.config.json')
+  try {
+    await fs.access(configPath)
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      buttons: ['Cancel', 'Overwrite'],
+      defaultId: 1,
+      title: 'Import config',
+      message: 'A stackwatch.config.json already exists in this project. Overwrite it?',
+    })
+    if (response === 0) return null
+  } catch {
+    // No existing config — proceed without confirmation
+  }
+
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: 'Import StackWatch config',
     filters: [{ name: 'JSON', extensions: ['json'] }],
@@ -169,6 +186,12 @@ ipcMain.handle('import-config', async () => {
   })
   if (!filePaths[0]) return null
   const content = await fs.readFile(filePaths[0], 'utf-8')
+
+  // Validate JSON before returning
+  JSON.parse(content)
+
+  // Write the imported config to the project
+  await fs.writeFile(configPath, content, 'utf-8')
   return content
 })
 

@@ -20,23 +20,28 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.2.3 — extractor filtra solo llamadas de red reales
-- **Último hito**: fix extractor URL filtering (2026-03-15)
-  - **FIX:** `electron/analyzers/extractor.ts` — el extractor ya no captura TODAS las URLs. Ahora solo extrae URLs dentro de llamadas de red reales (fetch, axios, baseURL, url:, endpoint:, new URL(), .get/.post, XMLHttpRequest). URLs en href=, src=, comentarios y strings planos se ignoran.
-  - **NUEVO:** lista ampliada de IGNORED_DOMAINS (~50 dominios: redes sociales, CDNs de imágenes, servicios de avatares, documentación, etc.)
-  - **NUEVO:** excepción para subdominios `api.*` (api.github.com, api.twitter.com sí se capturan)
-  - **NUEVO:** detección de `process.env.*_URL/*_HOST/*_ENDPOINT/*_DSN` en código fuente
-  - **NUEVO:** 24 tests en extractor.test.ts (12 nuevos tests para filtrado de URLs)
+- **Fase**: v0.2.4 — filtrado del proyecto propio + fix import
+- **Último hito**: fix own project name filtering + import config (2026-03-16)
+  - **FIX:** el nombre del propio proyecto ya NO aparece como servicio en el grafo — filtro aplicado en tres capas (defensa en profundidad):
+    - `heuristic.ts`: `classifyEvidences()` recibe `projectName` y descarta resultados cuyo `serviceName` normalizado coincida con el nombre del proyecto
+    - `flowInference.ts`: `inferFlowGraph()` filtra servicios cuyo nombre normalizado coincida con el proyecto antes de construir los nodos
+    - `index.ts`: pasa `projectName` al clasificador heurístico
+  - **FIX:** import de config no funcionaba — tres problemas corregidos:
+    - `analyzeLocal` en el store no recargaba el config de disco si ya existía en memoria → ahora siempre recarga
+    - `window.confirm` reemplazado por `dialog.showMessageBox` nativo de Electron (más fiable en WSL2/Linux)
+    - `import-config` IPC handler ahora valida JSON, escribe el archivo y confirma sobreescritura en el main process
+  - **REFACTOR:** `importConfig()` ahora recibe `repoPath` y gestiona todo el flujo (confirmación + lectura + escritura) en el main process
   - 56 tests passing (heuristic: 13, deduplicator: 6, extractor: 24, pipeline: 4, flowInference: 9)
 - **Hitos anteriores**:
-  - v0.2.2: purga de bugs, eliminación de duplicación, tests del extractor (regex Docker Compose, Cargo.toml, CI_ENV_VAR_REGEX, externalCategories, serviceId en grafo, errores duplicados, config auto-load, runPipeline refactor, IPC get-ai-presets)
+  - v0.2.3: extractor filtra solo llamadas de red reales, IGNORED_DOMAINS ampliado, excepción api.*, process.env URL detection
+  - v0.2.2: purga de bugs, eliminación de duplicación, tests del extractor
   - v0.2.1: proveedores IA recomendados + formulario de servicios manuales
   - v0.2: reingeniería completa del sistema de detección — heurística semántica + IA opcional
   - v0.1: scaffolding completo, 11 analizadores hardcodeados, UI React completa, WSL support
   - Multi-ecosistema: Python, Rust, Go, Terraform
   - WSL2 auto-download de Electron binary
   - CommonJS fix para Electron main process
-- **Próximo paso**: validar build de producción (`npm run build`), tests de componentes UI, exportación de datos
+- **Próximo paso**: validar build de producción (`npm run build`), tests de componentes UI
 
 ---
 
@@ -73,7 +78,7 @@ SPEC.md                              ← especificación completa (v0.2)
 CONTEXT.md                           ← este fichero
 electron/types.ts                    ← todos los tipos: Service, Evidence, AIProvider, etc.
 electron/main.ts                     ← entry point + IPC handlers (análisis + AI settings)
-electron/preload.ts                  ← bridge IPC (8 canales)
+electron/preload.ts                  ← bridge IPC (11 canales)
 electron/analyzers/extractor.ts      ← extracción de evidencias del repo
 electron/analyzers/heuristic.ts      ← clasificación semántica
 electron/analyzers/deduplicator.ts   ← agrupación y deduplicación
