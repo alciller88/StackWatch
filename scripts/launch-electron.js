@@ -8,12 +8,18 @@ const isWSL = fs.existsSync('/proc/version') &&
 let electronBin
 
 if (isWSL) {
-  // In WSL, use the Windows .exe binary from Electron's dist
-  electronBin = path.join(__dirname, '../node_modules/electron/dist/electron.exe')
-  if (!fs.existsSync(electronBin)) {
+  // In WSL2, try the Windows .exe first (if installed), then fall back to the Linux binary
+  const winBin = path.join(__dirname, '../node_modules/electron/dist/electron.exe')
+  const linuxBin = path.join(__dirname, '../node_modules/electron/dist/electron')
+
+  if (fs.existsSync(winBin)) {
+    electronBin = winBin
+  } else if (fs.existsSync(linuxBin)) {
+    electronBin = linuxBin
+  } else {
     console.error(
-      'electron.exe not found at', electronBin,
-      '\nRun: npx electron install'
+      'Electron binary not found in node_modules/electron/dist/',
+      '\nRun: npm install electron'
     )
     process.exit(1)
   }
