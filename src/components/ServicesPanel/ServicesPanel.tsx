@@ -17,6 +17,7 @@ export const ServicesPanel: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | 'all'>('all');
   const [activePlan, setActivePlan] = useState<Service['plan'] | 'all'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
 
   const needsReview = useMemo(() => {
     return services.filter(s => s.needsReview || s.confidence === 'low');
@@ -37,6 +38,16 @@ export const ServicesPanel: React.FC = () => {
     });
   }, [services, search, activeCategory, activePlan]);
 
+  const handleEdit = (service: Service) => {
+    setEditingService(service);
+    setShowAddForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowAddForm(false);
+    setEditingService(null);
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
@@ -49,7 +60,7 @@ export const ServicesPanel: React.FC = () => {
             </span>
           </h2>
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => { setEditingService(null); setShowAddForm(!showAddForm); }}
             className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
             + Add Service
@@ -135,26 +146,50 @@ export const ServicesPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Service Form */}
-      {showAddForm && <AddServiceForm onClose={() => setShowAddForm(false)} />}
+      {/* Add/Edit Service Form */}
+      {showAddForm && (
+        <ServiceForm
+          editingService={editingService}
+          onClose={handleCloseForm}
+        />
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-6 space-y-6">
         {/* Needs Review Section */}
         {needsReview.length > 0 && !search && activeCategory === 'all' && activePlan === 'all' && (
           <div className="bg-orange-900/10 border border-orange-800/30 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-orange-400 text-sm font-medium">
-                Needs Review ({needsReview.length})
-              </span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-orange-400">&#9888;</span>
+                <span className="text-orange-400 text-sm font-medium">
+                  {needsReview.length} service{needsReview.length !== 1 ? 's' : ''} need{needsReview.length === 1 ? 's' : ''} review
+                </span>
+              </div>
               <span className="text-xs text-orange-400/60">
-                Add details in the form or in stackwatch.config.json
+                These were detected with low confidence. Add details to confirm them.
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {needsReview.map((service) => (
-                <ServiceCard key={service.id} service={service} />
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  onEdit={service.source === 'manual' ? handleEdit : undefined}
+                />
               ))}
+            </div>
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-orange-800/20">
+              <button
+                onClick={() => { setEditingService(null); setShowAddForm(true); }}
+                className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
+              >
+                Complete in form &rarr;
+              </button>
+              <span className="text-xs text-gray-600">or</span>
+              <span className="text-xs text-gray-500">
+                Edit stackwatch.config.json directly
+              </span>
             </div>
           </div>
         )}
@@ -169,7 +204,11 @@ export const ServicesPanel: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onEdit={service.source === 'manual' ? handleEdit : undefined}
+              />
             ))}
           </div>
         )}
@@ -178,25 +217,30 @@ export const ServicesPanel: React.FC = () => {
   );
 };
 
-/** Expanded add-service form */
-const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { config, saveConfig } = useStore();
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState<ServiceCategory>('other');
-  const [plan, setPlan] = useState<Service['plan']>('unknown');
-  const [url, setUrl] = useState('');
-  const [costAmount, setCostAmount] = useState('');
-  const [costCurrency, setCostCurrency] = useState('USD');
-  const [costPeriod, setCostPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [renewalDate, setRenewalDate] = useState('');
-  const [accountEmail, setAccountEmail] = useState('');
-  const [notes, setNotes] = useState('');
+/** Service form — add or edit */
+const ServiceForm: React.FC<{
+  editingService: Service | null;
+  onClose: () => void;
+}> = ({ editingService, onClose }) => {
+  const { addManualService, updateManualService, deleteManualService } = useStore();
+  const isEditing = editingService !== null;
 
-  const handleAdd = async () => {
+  const [name, setName] = useState(editingService?.name ?? '');
+  const [category, setCategory] = useState<ServiceCategory>(editingService?.category ?? 'other');
+  const [plan, setPlan] = useState<Service['plan']>(editingService?.plan ?? 'unknown');
+  const [url, setUrl] = useState(editingService?.url ?? '');
+  const [costAmount, setCostAmount] = useState(editingService?.cost?.amount?.toString() ?? '');
+  const [costCurrency, setCostCurrency] = useState(editingService?.cost?.currency ?? 'USD');
+  const [costPeriod, setCostPeriod] = useState<'monthly' | 'yearly'>(editingService?.cost?.period ?? 'monthly');
+  const [renewalDate, setRenewalDate] = useState(editingService?.renewalDate ?? '');
+  const [accountEmail, setAccountEmail] = useState(editingService?.accountEmail ?? '');
+  const [notes, setNotes] = useState(editingService?.notes ?? '');
+
+  const handleSubmit = async () => {
     if (!name.trim()) return;
 
-    const newService: Service = {
-      id: name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
+    const service: Service = {
+      id: editingService?.id ?? name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
       name: name.trim(),
       category,
       plan,
@@ -210,26 +254,40 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       ...(notes && { notes }),
     };
 
-    const currentConfig = config ?? {
-      version: '1',
-      project: { name: '', description: '' },
-      services: [],
-      accounts: [],
-    };
+    if (isEditing) {
+      await updateManualService(service);
+    } else {
+      await addManualService(service);
+    }
+    onClose();
+  };
 
-    await saveConfig({
-      ...currentConfig,
-      services: [...currentConfig.services, newService],
-    });
+  const handleDelete = async () => {
+    if (!editingService) return;
+    await deleteManualService(editingService.id);
     onClose();
   };
 
   return (
     <div className="px-6 py-4 border-b border-gray-800 bg-gray-900/50 space-y-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-medium text-gray-400">
+          {isEditing ? 'Edit Service' : 'Add Service'}
+        </span>
+        {isEditing && (
+          <button
+            onClick={handleDelete}
+            className="text-xs text-red-400 hover:text-red-300 transition-colors"
+          >
+            Delete
+          </button>
+        )}
+      </div>
+
       {/* Row 1: Name, Category, Plan */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <label className="block text-xs text-gray-400 mb-1">Name</label>
+          <label className="block text-xs text-gray-400 mb-1">Name *</label>
           <input
             type="text"
             value={name}
@@ -239,7 +297,7 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Category</label>
+          <label className="block text-xs text-gray-400 mb-1">Category *</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as ServiceCategory)}
@@ -251,7 +309,7 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Plan</label>
+          <label className="block text-xs text-gray-400 mb-1">Plan *</label>
           <select
             value={plan}
             onChange={(e) => setPlan(e.target.value as Service['plan'])}
@@ -276,7 +334,7 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           />
         </div>
-        <div className="w-24">
+        <div className="w-20">
           <label className="block text-xs text-gray-400 mb-1">Cost</label>
           <input
             type="number"
@@ -286,11 +344,21 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           />
         </div>
-        <div>
+        <div className="w-16">
+          <select
+            value={costCurrency}
+            onChange={(e) => setCostCurrency(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          >
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div className="w-16">
           <select
             value={costPeriod}
             onChange={(e) => setCostPeriod(e.target.value as 'monthly' | 'yearly')}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           >
             <option value="monthly">/mo</option>
             <option value="yearly">/yr</option>
@@ -307,7 +375,7 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Row 3: Email, Notes */}
+      {/* Row 3: Email, Notes, Actions */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
           <label className="block text-xs text-gray-400 mb-1">Account Email</label>
@@ -330,10 +398,11 @@ const AddServiceForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           />
         </div>
         <button
-          onClick={handleAdd}
-          className="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+          className="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded transition-colors"
         >
-          Add
+          {isEditing ? 'Update' : 'Add'}
         </button>
         <button
           onClick={onClose}

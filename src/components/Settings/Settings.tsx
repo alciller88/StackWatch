@@ -3,22 +3,80 @@ import { useStore } from '../../store/useStore';
 import type { AIProvider, AISettings } from '../../types';
 
 const PRESET_PROVIDERS: AIProvider[] = [
-  { name: 'Ollama (local, free)', baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
-  { name: 'LM Studio (local, free)', baseUrl: 'http://localhost:1234/v1', model: 'local-model' },
-  { name: 'Groq (fast, free tier)', baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.1-8b-instant' },
-  { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-  { name: 'Mistral', baseUrl: 'https://api.mistral.ai/v1', model: 'mistral-small-latest' },
-  { name: 'Custom', baseUrl: '', model: '' },
+  {
+    name: 'Groq',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'llama-3.1-8b-instant',
+    recommended: true,
+    localOnly: false,
+    setupUrl: 'https://console.groq.com/keys',
+    description: 'Free, no credit card required. Create your API key at groq.com.',
+  },
+  {
+    name: 'Ollama',
+    baseUrl: 'http://localhost:11434/v1',
+    model: 'llama3.2',
+    recommended: true,
+    localOnly: true,
+    setupUrl: 'https://ollama.com',
+    description: 'Free and local. Install Ollama and run: ollama pull llama3.2',
+  },
+  {
+    name: 'LM Studio',
+    baseUrl: 'http://localhost:1234/v1',
+    model: 'local-model',
+    recommended: false,
+    localOnly: true,
+    setupUrl: 'https://lmstudio.ai',
+    description: 'Local. Download LM Studio and load any GGUF model.',
+  },
+  {
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+    recommended: false,
+    localOnly: false,
+    setupUrl: 'https://platform.openai.com/api-keys',
+    description: 'Pay per use.',
+  },
+  {
+    name: 'Mistral',
+    baseUrl: 'https://api.mistral.ai/v1',
+    model: 'mistral-small-latest',
+    recommended: false,
+    localOnly: false,
+    setupUrl: 'https://console.mistral.ai',
+    description: 'Pay per use.',
+  },
+  {
+    name: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    model: 'claude-haiku-4-5-20251001',
+    recommended: false,
+    localOnly: false,
+    setupUrl: 'https://console.anthropic.com',
+    description: 'Pay per use.',
+  },
+  {
+    name: 'Custom',
+    baseUrl: '',
+    model: '',
+    recommended: false,
+    localOnly: false,
+    description: 'Any endpoint compatible with the OpenAI API.',
+  },
 ];
 
-const LOCAL_PROVIDERS = new Set(['Ollama (local, free)', 'LM Studio (local, free)']);
+function getPreset(name: string): AIProvider | undefined {
+  return PRESET_PROVIDERS.find(p => p.name === name);
+}
 
 export const Settings: React.FC = () => {
   const { aiSettings, loadAISettings, saveAISettings, testAIConnection } = useStore();
   const [enabled, setEnabled] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('Ollama (local, free)');
-  const [baseUrl, setBaseUrl] = useState('http://localhost:11434/v1');
-  const [model, setModel] = useState('llama3.2');
+  const [selectedPreset, setSelectedPreset] = useState('Groq');
+  const [baseUrl, setBaseUrl] = useState('https://api.groq.com/openai/v1');
+  const [model, setModel] = useState('llama-3.1-8b-instant');
   const [apiKey, setApiKey] = useState('');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
   const [testError, setTestError] = useState('');
@@ -40,11 +98,11 @@ export const Settings: React.FC = () => {
 
   const handlePresetChange = (name: string) => {
     setSelectedPreset(name);
-    const preset = PRESET_PROVIDERS.find(p => p.name === name);
+    const preset = getPreset(name);
     if (preset) {
       setBaseUrl(preset.baseUrl);
       setModel(preset.model);
-      if (LOCAL_PROVIDERS.has(name)) {
+      if (preset.localOnly) {
         setApiKey('');
       }
     }
@@ -78,7 +136,8 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const isLocal = LOCAL_PROVIDERS.has(selectedPreset);
+  const currentPreset = getPreset(selectedPreset);
+  const isLocal = currentPreset?.localOnly ?? false;
   const isCustom = selectedPreset === 'Custom';
 
   return (
@@ -114,73 +173,154 @@ export const Settings: React.FC = () => {
 
           {enabled && (
             <>
-              {/* Provider Selection */}
+              {/* Provider Selection — card list */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1.5">Provider</label>
-                <select
-                  value={selectedPreset}
-                  onChange={(e) => handlePresetChange(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
-                >
+                <label className="block text-xs text-gray-400 mb-2">Provider</label>
+                <div className="space-y-2">
                   {PRESET_PROVIDERS.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                    </option>
+                    <button
+                      key={p.name}
+                      onClick={() => handlePresetChange(p.name)}
+                      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                        selectedPreset === p.name
+                          ? 'bg-gray-800 border-blue-600'
+                          : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-200">{p.name}</span>
+                        {p.recommended && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/40 text-green-400 border border-green-800 font-medium">
+                            Recommended
+                          </span>
+                        )}
+                        {p.localOnly && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-400 border border-blue-800 font-medium">
+                            Local
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{p.description}</p>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
-              {/* API Key (hidden for local providers) */}
-              {!isLocal && (
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">API Key</label>
-                  <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+              {/* Provider-specific fields */}
+              <div className="space-y-4 pt-1">
+                {/* API Key — hidden for local providers */}
+                {!isLocal && !isCustom && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs text-gray-400">API Key</label>
+                      {currentPreset?.setupUrl && (
+                        <a
+                          href={currentPreset.setupUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          {selectedPreset === 'Groq' ? 'Get free API key' : 'Get API key'} &rarr;
+                        </a>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
-              {/* Base URL (editable for Custom, visible for fine-tuning) */}
-              {(isCustom || isLocal) && (
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Base URL</label>
-                  <input
-                    type="text"
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="http://localhost:11434/v1"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+                {/* Custom: API key + Base URL + Model all editable */}
+                {isCustom && (
+                  <>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">API Key (optional)</label>
+                      <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="sk-..."
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Base URL</label>
+                      <input
+                        type="text"
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
+                        placeholder="http://localhost:11434/v1"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Model</label>
+                      <input
+                        type="text"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        placeholder="llama3.2"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
 
-              {/* Model */}
-              {(isCustom || isLocal) && (
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5">Model</label>
-                  <input
-                    type="text"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder="llama3.2"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+                {/* Local providers: Base URL + Model editable for fine-tuning */}
+                {isLocal && (
+                  <>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Base URL</label>
+                      <input
+                        type="text"
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
+                        placeholder="http://localhost:11434/v1"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Model</label>
+                      <input
+                        type="text"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        placeholder="llama3.2"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    {/* Inline setup instructions */}
+                    {selectedPreset === 'Ollama' && (
+                      <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg px-4 py-3 text-xs text-blue-300 space-y-1">
+                        <p className="font-medium">Setup:</p>
+                        <p>1. Install Ollama from <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-200">ollama.com</a></p>
+                        <p>2. Run: <code className="bg-blue-900/40 px-1 rounded">ollama pull llama3.2</code></p>
+                        <p>3. Ollama runs automatically on port 11434</p>
+                      </div>
+                    )}
+                    {selectedPreset === 'LM Studio' && (
+                      <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg px-4 py-3 text-xs text-blue-300 space-y-1">
+                        <p className="font-medium">Setup:</p>
+                        <p>1. Download from <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-200">lmstudio.ai</a></p>
+                        <p>2. Load any GGUF model</p>
+                        <p>3. Start the local server (port 1234)</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
 
-              {/* Local provider note */}
-              {isLocal && (
-                <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg px-4 py-3 text-xs text-blue-300">
-                  {selectedPreset.split(' (')[0]} is free and processes your code locally without sending data to third parties.
-                </div>
-              )}
+              {/* Privacy note */}
+              <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg px-4 py-2.5 text-[11px] text-gray-500">
+                Groq is free and requires no credit card. Ollama and LM Studio process your code locally without sending data to third parties.
+              </div>
 
               {/* Test Connection + Save */}
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-center gap-3 pt-1">
                 <button
                   onClick={handleTest}
                   disabled={testStatus === 'testing' || !baseUrl || !model}

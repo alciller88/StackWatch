@@ -33,6 +33,9 @@ interface StoreState {
   loadAISettings: () => Promise<void>;
   saveAISettings: (settings: AISettings) => Promise<void>;
   testAIConnection: (provider: AIProvider) => Promise<{ ok: boolean; error?: string }>;
+  addManualService: (service: Service) => Promise<void>;
+  updateManualService: (service: Service) => Promise<void>;
+  deleteManualService: (serviceId: string) => Promise<void>;
 }
 
 function mergeServices(
@@ -47,6 +50,15 @@ function mergeServices(
     merged.set(s.id, s);
   }
   return Array.from(merged.values());
+}
+
+function ensureConfig(config: UserConfig | null): UserConfig {
+  return config ?? {
+    version: '1',
+    project: { name: '', description: '' },
+    services: [],
+    accounts: [],
+  };
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -187,5 +199,42 @@ export const useStore = create<StoreState>((set, get) => ({
       return { ok: false, error: 'Not running in Electron' };
     }
     return window.stackwatch.testAIConnection(provider);
+  },
+
+  addManualService: async (service: Service) => {
+    const currentConfig = ensureConfig(get().config);
+    const updatedConfig = {
+      ...currentConfig,
+      services: [...currentConfig.services, service],
+    };
+    await get().saveConfig(updatedConfig);
+    // Update services list instantly
+    set((state) => ({
+      services: [...state.services, service],
+    }));
+  },
+
+  updateManualService: async (service: Service) => {
+    const currentConfig = ensureConfig(get().config);
+    const updatedConfig = {
+      ...currentConfig,
+      services: currentConfig.services.map(s => s.id === service.id ? service : s),
+    };
+    await get().saveConfig(updatedConfig);
+    set((state) => ({
+      services: state.services.map(s => s.id === service.id ? service : s),
+    }));
+  },
+
+  deleteManualService: async (serviceId: string) => {
+    const currentConfig = ensureConfig(get().config);
+    const updatedConfig = {
+      ...currentConfig,
+      services: currentConfig.services.filter(s => s.id !== serviceId),
+    };
+    await get().saveConfig(updatedConfig);
+    set((state) => ({
+      services: state.services.filter(s => s.id !== serviceId),
+    }));
   },
 }));

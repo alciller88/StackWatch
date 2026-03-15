@@ -20,25 +20,17 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.2 — detección heurística inteligente + IA opcional
-- **Último hito**: reingeniería completa del sistema de detección (2026-03-15)
-  - **ELIMINADOS:** Todos los analizadores con mapas hardcodeados (packageJson.ts, envFile.ts, dockerCompose.ts, githubWorkflows.ts, configFiles.ts, pythonDeps.ts, rustDeps.ts, goDeps.ts, terraform.ts + sus tests)
-  - **NUEVO:** Arquitectura de detección en dos capas:
-    - `electron/analyzers/extractor.ts` — extrae evidencias en bruto del repo (recursivo, respeta .gitignore con librería `ignore`)
-    - `electron/analyzers/heuristic.ts` — clasifica evidencias por semántica sin listas fijas. 19 categorías de servicio.
-    - `electron/analyzers/deduplicator.ts` — agrupa y deduplica servicios, merge de grupos relacionados por prefijo
-    - `electron/analyzers/index.ts` — orquesta: extract → classify → dedup → (optional AI) → flow inference
-  - **NUEVO:** `electron/ai/provider.ts` — cliente OpenAI-compatible con 5 presets (Ollama, LM Studio, Groq, OpenAI, Mistral) + Custom. Test de conexión. Fallback silencioso si falla.
-  - **NUEVO:** `src/components/Settings/Settings.tsx` — panel de configuración de IA con toggle, selector de proveedor, API key, base URL, modelo, botón "Test Connection"
-  - **ACTUALIZADO:** Service type con `confidence`, `needsReview`, `confidenceReasons`
-  - **ACTUALIZADO:** ServicesPanel con sección "Needs Review" al inicio, formulario Add Service expandido (url, cost, renewal, email, notes)
-  - **ACTUALIZADO:** ServiceCard con badges de confianza (amarillo "review", naranja "incomplete")
-  - **ACTUALIZADO:** FlowGraph con bordes discontinuos y color naranja para nodos de baja confianza
-  - **ACTUALIZADO:** Sidebar con navegación a Settings, Zustand store con AI settings
-  - **ACTUALIZADO:** electron/main.ts con IPC handlers para AI settings via electron-store
-  - **ACTUALIZADO:** electron/preload.ts con 3 nuevos canales IPC (getAISettings, setAISettings, testAIConnection)
+- **Fase**: v0.2.1 — proveedores IA recomendados + formulario de servicios manuales
+- **Último hito**: mejora de proveedores IA y formulario de servicios manuales (2026-03-15)
+  - **ACTUALIZADO:** `electron/ai/provider.ts` — 7 presets reordenados: Groq y Ollama primero como recomendados. Nuevo Anthropic preset. Cada preset tiene `recommended`, `localOnly`, `setupUrl`, `description`.
+  - **ACTUALIZADO:** `electron/types.ts` + `src/types.ts` — AIProvider tiene campos opcionales: `recommended`, `localOnly`, `setupUrl`, `description`
+  - **ACTUALIZADO:** `src/components/Settings/Settings.tsx` — selector de proveedor rediseñado como lista de cards con badges "Recommended" (verde) y "Local" (azul). Enlace "Get free API key →" para Groq. Instrucciones inline para Ollama y LM Studio. Nota de privacidad fija.
+  - **ACTUALIZADO:** `src/components/ServicesPanel/ServicesPanel.tsx` — formulario unificado Add/Edit con todos los campos (nombre, categoría, plan, URL, coste con moneda USD/EUR, período, fecha renovación, email, notas). Sección "Needs Review" mejorada con icono ⚠, conteo, CTAs "Complete in form" / "Edit stackwatch.config.json". Soporte para edición de servicios manuales via `onEdit`.
+  - **ACTUALIZADO:** `src/components/ServicesPanel/ServiceCard.tsx` — badges diferenciados: inferidos = gris "auto", manuales = azul "manual". Click-to-edit para servicios manuales con hint visual.
+  - **ACTUALIZADO:** `src/store/useStore.ts` — 3 nuevas acciones: `addManualService`, `updateManualService`, `deleteManualService` con actualización instantánea sin re-análisis.
   - 19 tests passing (heuristic: 13, deduplicator: 6)
 - **Hitos anteriores**:
+  - v0.2: reingeniería completa del sistema de detección — heurística semántica + IA opcional
   - v0.1: scaffolding completo, 11 analizadores hardcodeados, UI React completa, WSL support
   - Multi-ecosistema: Python, Rust, Go, Terraform
   - WSL2 auto-download de Electron binary

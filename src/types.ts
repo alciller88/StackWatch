@@ -115,6 +115,10 @@ export interface AIProvider {
   baseUrl: string;
   model: string;
   apiKey?: string;
+  recommended?: boolean;
+  localOnly?: boolean;
+  setupUrl?: string;
+  description?: string;
 }
 
 export interface AISettings {

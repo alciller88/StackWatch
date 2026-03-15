@@ -44,9 +44,10 @@ function daysUntil(dateStr: string): number {
 
 interface ServiceCardProps {
   service: Service;
+  onEdit?: (service: Service) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onEdit }) => {
   const days = service.renewalDate ? daysUntil(service.renewalDate) : null;
   const confidence = service.confidence ?? 'high';
   const badge = confidenceBadge[confidence];
@@ -57,15 +58,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
     else if (days < 30) renewalColor = 'text-amber-400';
   }
 
+  const isClickable = !!onEdit;
+
   return (
     <div
-      className={`bg-gray-900 border rounded-xl p-4 hover:border-gray-700 transition-colors ${
+      className={`bg-gray-900 border rounded-xl p-4 transition-colors ${
         confidence === 'low'
           ? 'border-orange-800/50 border-dashed'
           : confidence === 'medium'
           ? 'border-yellow-800/30'
           : 'border-gray-800'
-      }`}
+      } ${isClickable ? 'cursor-pointer hover:border-blue-700/50' : 'hover:border-gray-700'}`}
+      onClick={onEdit ? () => onEdit(service) : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
@@ -99,11 +103,11 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
           <span
             className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
               service.source === 'inferred'
-                ? 'bg-purple-900/40 text-purple-400 border border-purple-800'
-                : 'bg-gray-800 text-gray-400 border border-gray-700'
+                ? 'bg-gray-800 text-gray-400 border border-gray-700'
+                : 'bg-blue-900/40 text-blue-400 border border-blue-800'
             }`}
           >
-            {service.source}
+            {service.source === 'inferred' ? 'auto' : 'manual'}
           </span>
         </div>
       </div>
@@ -150,6 +154,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
       {service.notes && (
         <div className="text-xs text-gray-500 mt-2 line-clamp-2">
           {service.notes}
+        </div>
+      )}
+
+      {/* Edit hint for manual services */}
+      {isClickable && (
+        <div className="text-[10px] text-blue-400/50 mt-2">
+          Click to edit
         </div>
       )}
     </div>
