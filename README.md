@@ -147,12 +147,14 @@ StackWatch/
 ## Roadmap
 
 - [x] Architecture and specification (v0.1)
-- [ ] Project scaffold — Electron + React + Vite
-- [ ] Repo analyzer — `package.json`, `.env`, `docker-compose`
-- [ ] Services panel with manual config support
-- [ ] Dependencies panel
-- [ ] Flow graph (auto-generated)
-- [ ] GitHub remote repo support
+- [x] Project scaffold — Electron + React + Vite + Tailwind CSS v4
+- [x] Repo analyzer — `package.json`, `.env`, `docker-compose`, GitHub workflows, config files
+- [x] Services panel with manual config support (add/filter/search)
+- [x] Dependencies panel (table with sort, filter, group by type)
+- [x] Flow graph (auto-generated with React Flow + dagre layout)
+- [x] GitHub remote repo support (Octokit integration)
+- [ ] Unit tests for analyzers
+- [ ] Runtime validation and polish
 - [ ] macOS / Windows / Linux builds
 
 ---

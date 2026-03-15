@@ -20,9 +20,15 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: scaffolding inicial — aún no hay código
-- **Último hito**: definición de arquitectura y spec
-- **Próximo paso**: crear proyecto Electron + React con Vite, estructura de carpetas según SPEC §2
+- **Fase**: v0.1 funcional — scaffolding completo con todos los módulos implementados
+- **Último hito**: implementación completa del proyecto (2026-03-15)
+  - Scaffolding: package.json, tsconfig, vite.config, tailwind, electron-builder
+  - Proceso Electron: main.ts, preload.ts, types.ts con IPC completo
+  - 7 analizadores: packageJson, envFile, dockerCompose, githubWorkflows, configFiles, flowInference, index
+  - UI React: Dashboard, ServicesPanel (con ServiceCard y formulario Add), DepsPanel (tabla con filtros/sort/agrupación), FlowGraph (React Flow + dagre layout), Sidebar (colapsable), TopBar (con soporte GitHub)
+  - Store Zustand: estado global con análisis local/GitHub, merge de servicios manuales
+  - TypeScript compila sin errores (`tsc --noEmit` limpio)
+- **Próximo paso**: ejecutar `npm run dev` para validar en runtime, añadir tests unitarios para analizadores
 
 ---
 
