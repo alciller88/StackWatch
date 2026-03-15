@@ -55,6 +55,10 @@ export const useStore = create<StoreState>((set, get) => ({
   error: null,
 
   analyzeLocal: async (path: string) => {
+    if (!window.stackwatch) {
+      set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
+      return;
+    }
     set({ isAnalyzing: true, error: null, repoPath: path });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
@@ -76,6 +80,10 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   analyzeGitHub: async (repo: string, token: string) => {
+    if (!window.stackwatch) {
+      set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
+      return;
+    }
     set({ isAnalyzing: true, error: null, repoPath: `github:${repo}` });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
@@ -122,6 +130,10 @@ export const useStore = create<StoreState>((set, get) => ({
 
   openFolder: async () => {
     try {
+      if (!window.stackwatch) {
+        set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
+        return;
+      }
       const folderPath = await window.stackwatch.openFolder();
       if (folderPath) {
         await get().analyzeLocal(folderPath);
