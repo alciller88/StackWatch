@@ -9,8 +9,8 @@ export async function analyzeLocalRepo(
   folderPath: string,
   aiSettings?: AISettings,
 ): Promise<AnalysisResult> {
-  const { evidences, dependencies } = await extractEvidences(folderPath)
-  return runPipeline(evidences, dependencies, aiSettings)
+  const { evidences, dependencies, projectName } = await extractEvidences(folderPath)
+  return runPipeline(evidences, dependencies, aiSettings, projectName)
 }
 
 export async function analyzeGitHubRepo(
@@ -18,14 +18,15 @@ export async function analyzeGitHubRepo(
   listDir: (path: string) => Promise<string[]>,
   aiSettings?: AISettings,
 ): Promise<AnalysisResult> {
-  const { evidences, dependencies } = await extractEvidencesFromGitHub(fetchFile, listDir)
-  return runPipeline(evidences, dependencies, aiSettings)
+  const { evidences, dependencies, projectName } = await extractEvidencesFromGitHub(fetchFile, listDir)
+  return runPipeline(evidences, dependencies, aiSettings, projectName)
 }
 
 async function runPipeline(
   evidences: Evidence[],
   dependencies: Dependency[],
-  aiSettings?: AISettings,
+  aiSettings: AISettings | undefined,
+  projectName: string,
 ): Promise<AnalysisResult> {
   // Step 1: Classify with heuristics
   const heuristicResults = classifyEvidences(evidences)
@@ -45,7 +46,7 @@ async function runPipeline(
   }
 
   // Step 4: Infer flow graph
-  const flow = inferFlowGraph(services, dependencies)
+  const flow = inferFlowGraph(services, dependencies, projectName)
 
   return {
     services,

@@ -96,11 +96,14 @@ const CI_ENV_VAR_REGEX = /\$([A-Z][A-Z_]*_[A-Z_]{2,})/g
 interface ExtractionResult {
   evidences: Evidence[]
   dependencies: Dependency[]
+  projectName: string
 }
 
 export async function extractEvidences(repoPath: string): Promise<ExtractionResult> {
   const evidences: Evidence[] = []
   const dependencies: Dependency[] = []
+  const projectDomain = await detectProjectDomain(repoPath)
+  const projectName = await getProjectName(repoPath)
 
   const ig = ignore()
   try {
@@ -129,7 +132,7 @@ export async function extractEvidences(repoPath: string): Promise<ExtractionResu
       // .env files
       if (basename.startsWith('.env')) {
         const content = await fs.readFile(filePath, 'utf-8')
-        extractFromEnvFile(content, relPath, evidences)
+        extractFromEnvFile(content, relPath, evidences, projectDomain)
         continue
       }
 
@@ -199,14 +202,14 @@ export async function extractEvidences(repoPath: string): Promise<ExtractionResu
       // Source code files — extract URLs, imports, domains
       if (CODE_EXTENSIONS.has(ext)) {
         const content = await fs.readFile(filePath, 'utf-8')
-        extractFromSourceCode(content, relPath, evidences)
+        extractFromSourceCode(content, relPath, evidences, projectDomain)
       }
     } catch {
       // skip files that can't be read
     }
   }
 
-  return { evidences, dependencies }
+  return { evidences, dependencies, projectName }
 }
 
 async function walkRepo(
@@ -267,7 +270,7 @@ function extractFromPackageJson(
   }
 }
 
-function extractFromEnvFile(content: string, file: string, evidences: Evidence[]): void {
+function extractFromEnvFile(content: string, file: string, evidences: Evidence[], projectDomain: string | null): void {
   const lines = content.split('\n')
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
@@ -281,7 +284,7 @@ function extractFromEnvFile(content: string, file: string, evidences: Evidence[]
     // Also extract URLs from env values
     if (value.startsWith('http://') || value.startsWith('https://')) {
       const domain = extractDomainFromUrl(value)
-      if (domain && !IGNORED_DOMAINS.has(domain)) {
+      if (domain && !IGNORED_DOMAINS.has(domain) && !isOwnDomain(domain, projectDomain)) {
         evidences.push({ type: 'url', value, file, line: i + 1 })
       }
     }
@@ -355,7 +358,7 @@ function isConfigFile(basename: string): boolean {
   return configFiles.has(basename)
 }
 
-function extractFromSourceCode(content: string, file: string, evidences: Evidence[]): void {
+function extractFromSourceCode(content: string, file: string, evidences: Evidence[], projectDomain: string | null): void {
   const lines = content.split('\n')
 
   for (let i = 0; i < lines.length; i++) {
@@ -369,7 +372,7 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
         if (match?.[1]) {
           const url = match[1].replace(/[),;'"}\]]+$/, '')
           const domain = extractDomainFromUrl(url)
-          if (domain && !shouldIgnoreDomain(domain)) {
+          if (domain && !shouldIgnoreDomain(domain) && !isOwnDomain(domain, projectDomain)) {
             evidences.push({ type: 'url', value: url, file, line: i + 1 })
             evidences.push({ type: 'domain', value: domain, file, line: i + 1 })
           }
@@ -560,10 +563,14 @@ export async function extractEvidencesFromGitHub(
     extractFromPackageJson(pkgContent, 'package.json', evidences, dependencies)
   }
 
+  // Detect own domain and project name from fetched content
+  const projectDomain = detectProjectDomainFromContent(pkgContent)
+  const projectName = getProjectNameFromContent(pkgContent)
+
   // .env files
   for (const envFile of ['.env', '.env.example', '.env.local']) {
     const content = await fetchFile(envFile)
-    if (content) extractFromEnvFile(content, envFile, evidences)
+    if (content) extractFromEnvFile(content, envFile, evidences, projectDomain)
   }
 
   // docker-compose
@@ -626,10 +633,129 @@ export async function extractEvidencesFromGitHub(
       const ext = path.extname(f)
       if (CODE_EXTENSIONS.has(ext)) {
         const content = await fetchFile(`${dir}/${f}`)
-        if (content) extractFromSourceCode(content, `${dir}/${f}`, evidences)
+        if (content) extractFromSourceCode(content, `${dir}/${f}`, evidences, projectDomain)
       }
     }
   }
 
-  return { evidences, dependencies }
+  return { evidences, dependencies, projectName }
+}
+
+// --- Project domain detection (filters own domain from services) ---
+
+async function detectProjectDomain(repoPath: string): Promise<string | null> {
+  // 1. From .env files — domain variables
+  const envFiles = ['.env', '.env.local', '.env.production', '.env.example']
+  const domainVars = [
+    'NEXT_PUBLIC_URL', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_APP_URL',
+    'PUBLIC_URL', 'APP_URL', 'SITE_URL', 'VERCEL_URL',
+  ]
+
+  for (const envFile of envFiles) {
+    try {
+      const content = await fs.readFile(path.join(repoPath, envFile), 'utf-8')
+      const vars = parseEnvVars(content)
+      for (const v of domainVars) {
+        if (vars[v]) {
+          const apex = extractApexDomain(vars[v])
+          if (apex) return apex
+        }
+      }
+    } catch { /* no file */ }
+  }
+
+  // 2. From vercel.json alias
+  try {
+    const vercelContent = await fs.readFile(path.join(repoPath, 'vercel.json'), 'utf-8')
+    const vercelConfig = JSON.parse(vercelContent)
+    if (vercelConfig?.alias?.[0]) {
+      const apex = extractApexDomain(vercelConfig.alias[0])
+      if (apex) return apex
+    }
+  } catch { /* no file */ }
+
+  // 3. Fallback: package.json name
+  try {
+    const pkgContent = await fs.readFile(path.join(repoPath, 'package.json'), 'utf-8')
+    const pkg = JSON.parse(pkgContent)
+    if (pkg?.name) return pkg.name.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  } catch { /* no file */ }
+
+  return null
+}
+
+function detectProjectDomainFromContent(pkgContent: string | null): string | null {
+  if (!pkgContent) return null
+  try {
+    const pkg = JSON.parse(pkgContent)
+    if (pkg?.name) return pkg.name.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  } catch { /* invalid JSON */ }
+  return null
+}
+
+function extractApexDomain(urlOrDomain: string): string | null {
+  try {
+    const url = urlOrDomain.includes('://') ? urlOrDomain : `https://${urlOrDomain}`
+    const { hostname } = new URL(url)
+    return hostname.replace(/^www\./, '').split('.')[0].toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+function isOwnDomain(domain: string, projectDomain: string | null): boolean {
+  if (!projectDomain) return false
+  const apex = domain.replace(/^www\./, '').split('.')[0].toLowerCase()
+  return apex === projectDomain.toLowerCase()
+}
+
+function parseEnvVars(content: string): Record<string, string> {
+  const vars: Record<string, string> = {}
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eqIndex = trimmed.indexOf('=')
+    if (eqIndex <= 0) continue
+    vars[trimmed.substring(0, eqIndex).trim()] = trimmed.substring(eqIndex + 1).trim().replace(/^["']|["']$/g, '')
+  }
+  return vars
+}
+
+// --- Project name detection (for graph node label) ---
+
+async function getProjectName(repoPath: string): Promise<string> {
+  // 1. stackwatch.config.json
+  try {
+    const content = await fs.readFile(path.join(repoPath, 'stackwatch.config.json'), 'utf-8')
+    const config = JSON.parse(content)
+    if (config?.project?.name) return config.project.name
+  } catch { /* no file */ }
+
+  // 2. package.json name
+  try {
+    const content = await fs.readFile(path.join(repoPath, 'package.json'), 'utf-8')
+    const pkg = JSON.parse(content)
+    if (pkg?.name) return formatProjectName(pkg.name)
+  } catch { /* no file */ }
+
+  // 3. Folder name fallback
+  return formatProjectName(path.basename(repoPath))
+}
+
+function getProjectNameFromContent(pkgContent: string | null): string {
+  if (pkgContent) {
+    try {
+      const pkg = JSON.parse(pkgContent)
+      if (pkg?.name) return formatProjectName(pkg.name)
+    } catch { /* invalid JSON */ }
+  }
+  return 'App'
+}
+
+function formatProjectName(raw: string): string {
+  return raw
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .replace(/\s*(temp|dev|test|local)\s*/gi, '')
+    .trim() || 'App'
 }

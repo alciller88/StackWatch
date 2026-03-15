@@ -5,7 +5,8 @@ const BACKEND_DEPS = ['express', 'fastify', 'koa', '@nestjs/core', 'hapi', 'rest
 
 export function inferFlowGraph(
   services: Service[],
-  dependencies: Dependency[]
+  dependencies: Dependency[],
+  projectName: string = 'App',
 ): { nodes: FlowNode[]; edges: FlowEdge[] } {
   const nodes: FlowNode[] = []
   const edges: FlowEdge[] = []
@@ -17,18 +18,17 @@ export function inferFlowGraph(
   // Frontend
   const hasFrontend = FRONTEND_DEPS.some((d) => depNames.has(d))
   if (hasFrontend) {
-    const framework =
-      FRONTEND_DEPS.find((d) => depNames.has(d)) ?? 'Frontend'
-    nodes.push({ id: 'frontend', label: framework, type: 'frontend' })
+    nodes.push({ id: 'frontend', label: projectName, type: 'frontend' })
     edges.push({ source: 'user', target: 'frontend', flowType: 'data' })
   }
 
   // Backend / API
   const hasBackend = BACKEND_DEPS.some((d) => depNames.has(d))
   if (hasBackend) {
-    const framework =
-      BACKEND_DEPS.find((d) => depNames.has(d)) ?? 'API'
-    nodes.push({ id: 'api', label: framework, type: 'api' })
+    const label = hasFrontend
+      ? (BACKEND_DEPS.find((d) => depNames.has(d)) ?? 'API')
+      : projectName
+    nodes.push({ id: 'api', label, type: 'api' })
     if (hasFrontend) {
       edges.push({ source: 'frontend', target: 'api', flowType: 'data' })
     } else {

@@ -23,19 +23,19 @@ describe('inferFlowGraph', () => {
   })
 
   it('creates frontend node when React dependency present', () => {
-    const { nodes } = inferFlowGraph([], [makeDep('react')])
+    const { nodes } = inferFlowGraph([], [makeDep('react')], 'MyProject')
     const frontend = nodes.find(n => n.id === 'frontend')
     expect(frontend).toBeDefined()
     expect(frontend!.type).toBe('frontend')
-    expect(frontend!.label).toBe('react')
+    expect(frontend!.label).toBe('MyProject')
   })
 
   it('creates API node when Express dependency present', () => {
-    const { nodes } = inferFlowGraph([], [makeDep('express')])
+    const { nodes } = inferFlowGraph([], [makeDep('express')], 'MyProject')
     const api = nodes.find(n => n.id === 'api')
     expect(api).toBeDefined()
     expect(api!.type).toBe('api')
-    expect(api!.label).toBe('express')
+    expect(api!.label).toBe('MyProject')
   })
 
   it('creates database nodes for services with category database', () => {
