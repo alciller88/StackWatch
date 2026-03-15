@@ -16,14 +16,76 @@ const CODE_EXTENSIONS = new Set([
 
 const IGNORED_DOMAINS = new Set([
   'localhost', '127.0.0.1', '0.0.0.0',
-  'mozilla.org', 'w3.org', 'w3schools.com', 'unpkg.com', 'cdnjs.com',
-  'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com',
-  'schema.org', 'example.com', 'example.org', 'placeholder.com',
-  'wikipedia.org', 'stackoverflow.com', 'github.com', 'gitlab.com',
-  'npmjs.com', 'npmjs.org', 'pypi.org', 'crates.io', 'pkg.go.dev',
+  // Documentation and standards
+  'mozilla.org', 'developer.mozilla.org', 'w3.org', 'w3schools.com',
+  'schema.org', 'json-schema.org', 'example.com', 'example.org',
+  'tc39.es', 'ogp.me',
   'typescriptlang.org', 'reactjs.org', 'vuejs.org', 'nodejs.org',
-  'developer.mozilla.org', 'tc39.es', 'json-schema.org',
+  'wikipedia.org', 'stackoverflow.com',
+  // Package registries and repos (not APIs you consume)
+  'github.com', 'gitlab.com', 'npmjs.com', 'npmjs.org',
+  'pypi.org', 'crates.io', 'pkg.go.dev',
+  // CDNs for static assets
+  'cdnjs.cloudflare.com', 'unpkg.com', 'cdnjs.com',
+  'cdn.jsdelivr.net', 'esm.sh',
+  'fonts.googleapis.com', 'fonts.gstatic.com',
+  // Social media and content links
+  'policies.google.com', 'support.google.com', 'accounts.google.com',
+  'wa.me', 'whatsapp.com', 't.me',
+  'reddit.com', 'www.reddit.com',
+  'linkedin.com', 'www.linkedin.com',
+  'facebook.com', 'www.facebook.com',
+  'instagram.com', 'www.instagram.com',
+  'youtube.com', 'www.youtube.com',
+  'twitter.com', 'x.com',
+  'raw.githubusercontent.com',
+  // Social media CDNs (images, not APIs)
+  'pbs.twimg.com', 'abs.twimg.com',
+  'scontent.cdninstagram.com', 'fbcdn.net',
+  // Avatar and placeholder services
+  'unavatar.io', 'gravatar.com', 'ui-avatars.com',
+  'picsum.photos', 'placeholder.com', 'via.placeholder.com', 'placehold.co',
 ])
+
+/** Patterns that indicate a line contains a real network call, not just a content URL */
+const API_CALL_PATTERNS = [
+  // fetch() and variants
+  /fetch\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /fetch\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*(https?:\/\/[^`'"]+)`/,
+  // axios
+  /axios\s*\.\s*(?:get|post|put|patch|delete|request|head|options)\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /axios\s*\(\s*\{[^}]*url\s*:\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // new URL() — endpoint construction
+  /new\s+URL\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // baseURL / baseUrl in config objects
+  /baseURL\s*:\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /baseUrl\s*:\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // url: in SDK/client config
+  /\burl\s*:\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // endpoint: in config
+  /\bendpoint\s*:\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // Generic http client patterns
+  /\.get\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /\.post\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /\.put\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /\.delete\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  /\.patch\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // XMLHttpRequest
+  /\.open\s*\(\s*['"][A-Z]+['"]\s*,\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+]
+
+/** Patterns for process.env references that look like service URLs */
+const ENV_URL_PATTERN = /process\.env\.[A-Z_]*(URL|HOST|ENDPOINT|DSN)[A-Z_]*/g
+
+/** Lines matching these patterns contain content URLs, not API calls */
+const CONTENT_LINE_PATTERNS = [
+  /href\s*=\s*[`'"]/,       // <a href="..."> — navigation links
+  /src\s*=\s*[`'"]/,        // <img src="..."> — images
+  /action\s*=\s*[`'"]/,     // <form action="...">
+  /^\s*\/\//,                // single-line comments
+  /^\s*\*/,                  // block comment lines
+  /^\s*\{?\s*\/\*/,          // start of block comments
+]
 
 const URL_REGEX = /https?:\/\/[^\s'"`,)}\]>]+/g
 const IMPORT_FROM_REGEX = /from\s+['"]([^./][^'"]+)['"]/g
@@ -299,19 +361,31 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
-    // Extract URLs
-    let urlMatch
-    const urlRegex = new RegExp(URL_REGEX.source, 'g')
-    while ((urlMatch = urlRegex.exec(line)) !== null) {
-      const url = urlMatch[0].replace(/[),;'"}\]]+$/, '') // clean trailing chars
-      const domain = extractDomainFromUrl(url)
-      if (domain && !IGNORED_DOMAINS.has(domain)) {
-        evidences.push({ type: 'url', value: url, file, line: i + 1 })
-        evidences.push({ type: 'domain', value: domain, file, line: i + 1 })
+    // Skip content lines (comments, href=, src=, action=)
+    if (!isContentLine(line)) {
+      // Extract URLs only from real API call patterns (stop at first match to avoid duplicates)
+      for (const pattern of API_CALL_PATTERNS) {
+        const match = line.match(pattern)
+        if (match?.[1]) {
+          const url = match[1].replace(/[),;'"}\]]+$/, '')
+          const domain = extractDomainFromUrl(url)
+          if (domain && !shouldIgnoreDomain(domain)) {
+            evidences.push({ type: 'url', value: url, file, line: i + 1 })
+            evidences.push({ type: 'domain', value: domain, file, line: i + 1 })
+          }
+          break
+        }
+      }
+
+      // Extract process.env references that look like service URLs
+      let envMatch
+      const envRegex = new RegExp(ENV_URL_PATTERN.source, 'g')
+      while ((envMatch = envRegex.exec(line)) !== null) {
+        evidences.push({ type: 'env_var', value: envMatch[0].replace('process.env.', ''), file, line: i + 1 })
       }
     }
 
-    // Extract imports (from '...')
+    // Extract imports (from '...') — always, regardless of content context
     let importMatch
     const importRegex = new RegExp(IMPORT_FROM_REGEX.source, 'g')
     while ((importMatch = importRegex.exec(line)) !== null) {
@@ -325,6 +399,22 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
       evidences.push({ type: 'import', value: reqMatch[1], file, line: i + 1 })
     }
   }
+}
+
+function isContentLine(line: string): boolean {
+  return CONTENT_LINE_PATTERNS.some(p => p.test(line))
+}
+
+function shouldIgnoreDomain(domain: string): boolean {
+  // api.* subdomains of social/content sites ARE real API calls (e.g. api.github.com, api.twitter.com)
+  if (domain.startsWith('api.')) return false
+
+  if (IGNORED_DOMAINS.has(domain)) return true
+  // Check if any ignored domain is a suffix (e.g., 'x.fbcdn.net' matches 'fbcdn.net')
+  for (const ignored of IGNORED_DOMAINS) {
+    if (domain.endsWith('.' + ignored)) return true
+  }
+  return false
 }
 
 function extractDomainFromUrl(url: string): string | null {

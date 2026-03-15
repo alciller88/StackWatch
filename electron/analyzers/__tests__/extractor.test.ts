@@ -194,12 +194,12 @@ jobs:
   })
 
   describe('source code extraction', () => {
-    it('extracts URLs and imports from source files', async () => {
+    it('extracts imports from source files', async () => {
       const { evidences } = await extractEvidencesFromGitHub(
         mockFetchFile({
           'src/api.ts': `
 import Stripe from 'stripe'
-const url = 'https://api.sendgrid.com/v3/mail/send'
+import { Redis } from '@upstash/redis'
 `,
         }),
         mockListDir({ 'src': ['api.ts'] }),
@@ -207,10 +207,202 @@ const url = 'https://api.sendgrid.com/v3/mail/send'
 
       const imports = evidences.filter(e => e.type === 'import')
       expect(imports.map(e => e.value)).toContain('stripe')
+      expect(imports.map(e => e.value)).toContain('@upstash/redis')
+    })
+
+    it('captures URLs in fetch() calls', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/api.ts': `
+const res = await fetch('https://api.twitter.com/2/tweets')
+const data = await fetch("https://api.sendgrid.com/v3/mail/send")
+`,
+        }),
+        mockListDir({ 'src': ['api.ts'] }),
+      )
 
       const urls = evidences.filter(e => e.type === 'url')
-      expect(urls.length).toBeGreaterThanOrEqual(1)
-      expect(urls[0].value).toContain('sendgrid.com')
+      expect(urls).toHaveLength(2)
+      expect(urls.map(e => e.value)).toContain('https://api.twitter.com/2/tweets')
+      expect(urls.map(e => e.value)).toContain('https://api.sendgrid.com/v3/mail/send')
+    })
+
+    it('captures URLs in axios calls', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/client.ts': `
+axios.get('https://api.upstash.com/v2/redis')
+axios.post('https://api.stripe.com/v1/charges')
+`,
+        }),
+        mockListDir({ 'src': ['client.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(2)
+      expect(urls.map(e => e.value)).toContain('https://api.upstash.com/v2/redis')
+      expect(urls.map(e => e.value)).toContain('https://api.stripe.com/v1/charges')
+    })
+
+    it('captures URLs in baseURL and url config properties', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/config.ts': `
+const client = axios.create({
+  baseURL: 'https://api.plausible.io/v1',
+})
+const redis = new Redis({ url: 'https://us1-merry-cat.upstash.io' })
+`,
+        }),
+        mockListDir({ 'src': ['config.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls.map(e => e.value)).toContain('https://api.plausible.io/v1')
+      expect(urls.map(e => e.value)).toContain('https://us1-merry-cat.upstash.io')
+    })
+
+    it('captures process.env references that look like service URLs', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/db.ts': `
+const url = process.env.UPSTASH_REDIS_REST_URL
+const dsn = process.env.SENTRY_DSN
+const host = process.env.DATABASE_HOST
+`,
+        }),
+        mockListDir({ 'src': ['db.ts'] }),
+      )
+
+      const envVars = evidences.filter(e => e.type === 'env_var')
+      expect(envVars.map(e => e.value)).toContain('UPSTASH_REDIS_REST_URL')
+      expect(envVars.map(e => e.value)).toContain('SENTRY_DSN')
+      expect(envVars.map(e => e.value)).toContain('DATABASE_HOST')
+    })
+
+    it('does NOT capture URLs in href attributes', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/Footer.tsx': `
+<a href="https://wa.me/1234567890">WhatsApp</a>
+<a href="https://reddit.com/r/myproject">Reddit</a>
+<a href="https://policies.google.com/privacy">Privacy</a>
+`,
+        }),
+        mockListDir({ 'src': ['Footer.tsx'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(0)
+    })
+
+    it('does NOT capture URLs in src attributes', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/Avatar.tsx': `
+<img src="https://unavatar.io/user@example.com" alt="avatar" />
+<img src="https://pbs.twimg.com/profile_images/123/photo.jpg" />
+`,
+        }),
+        mockListDir({ 'src': ['Avatar.tsx'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(0)
+    })
+
+    it('does NOT capture URLs in comments', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/utils.ts': `
+// See https://api.twitter.com/2/docs for details
+/* API docs: https://api.stripe.com/v1 */
+* Reference: https://api.sendgrid.com/v3
+`,
+        }),
+        mockListDir({ 'src': ['utils.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(0)
+    })
+
+    it('does NOT capture URLs from ignored domains', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/api.ts': `
+fetch('https://www.youtube.com/watch?v=123')
+fetch('https://github.com/my/repo')
+fetch('https://www.facebook.com/share')
+`,
+        }),
+        mockListDir({ 'src': ['api.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(0)
+    })
+
+    it('does NOT capture plain string URLs without API call context', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/constants.ts': `
+const HOMEPAGE = 'https://xgridnews.com'
+const PRIVACY = 'https://policies.google.com/privacy'
+const SUPPORT = 'https://support.google.com/accounts'
+const AVATAR_URL = 'https://unavatar.io/user'
+`,
+        }),
+        mockListDir({ 'src': ['constants.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(0)
+    })
+
+    it('captures URLs in new URL() constructor', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/api.ts': `
+const endpoint = new URL('https://api.openai.com/v1/chat/completions')
+`,
+        }),
+        mockListDir({ 'src': ['api.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(1)
+      expect(urls[0].value).toContain('api.openai.com')
+    })
+
+    it('captures URLs in endpoint config', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/config.ts': `
+const config = { endpoint: 'https://my-service.amazonaws.com/prod' }
+`,
+        }),
+        mockListDir({ 'src': ['config.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(1)
+      expect(urls[0].value).toContain('amazonaws.com')
+    })
+
+    it('captures URLs in generic .get/.post calls', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'src/api.ts': `
+const res = await client.get('https://api.example-service.com/data')
+await http.post('https://hooks.slack.com/services/T00/B00/xxx')
+`,
+        }),
+        mockListDir({ 'src': ['api.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls).toHaveLength(2)
     })
   })
 

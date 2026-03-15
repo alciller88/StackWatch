@@ -20,21 +20,16 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.2.2 — purga de bugs, eliminación de duplicación, tests del extractor
-- **Último hito**: refactor y bug fixes por equipo de 8 devs (2026-03-15)
-  - **FIX:** `electron/analyzers/extractor.ts` — regex Docker Compose usaba `\Z` (Perl) en JS; cambiado a patrón correcto. Regex Cargo.toml con el mismo bug corregido. CI_ENV_VAR_REGEX ahora requiere underscore para no capturar vars de sistema.
-  - **FIX:** `electron/analyzers/flowInference.ts` — externalCategories ahora incluye las 19 categorías (faltaban 10: hosting, cicd, infra, ai, messaging, domain, mobile, gaming, data, support).
-  - **FIX:** `src/components/FlowGraph/useLayoutNodes.ts` — serviceId ahora se pasa al data del nodo, habilitando los indicadores de confianza en el grafo.
-  - **FIX:** `src/App.tsx` — eliminada visualización duplicada de errores (ahora solo en TopBar).
-  - **FIX:** `src/store/useStore.ts` — analyzeLocal ahora carga config automáticamente tras el primer análisis para mergear servicios manuales.
-  - **FIX:** `src/components/ServicesPanel/ServicesPanel.tsx` — input de coste con min=0 y step=0.01.
-  - **REFACTOR:** `electron/analyzers/index.ts` — lógica duplicada entre analyzeLocalRepo y analyzeGitHubRepo extraída a runPipeline(). Helper findAmbiguousEvidences() extraído. Import dinámico redundante eliminado.
-  - **REFACTOR:** `src/components/Settings/Settings.tsx` — PRESET_PROVIDERS eliminado del renderer, ahora se carga via IPC desde el main process (fuente única de verdad en electron/ai/provider.ts).
-  - **NUEVO:** IPC channel `get-ai-presets` en preload.ts, main.ts, types.ts.
-  - **NUEVO:** `electron/analyzers/__tests__/extractor.test.ts` — 12 tests para extracción GitHub (package.json, .env, docker-compose, CI workflows, config files, Python, Terraform, source code).
-  - **FIX:** `package.json` version sincronizada a 0.2.1. Sidebar actualizado.
-  - 31+ tests passing (heuristic: 13, deduplicator: 6, extractor: 12)
+- **Fase**: v0.2.3 — extractor filtra solo llamadas de red reales
+- **Último hito**: fix extractor URL filtering (2026-03-15)
+  - **FIX:** `electron/analyzers/extractor.ts` — el extractor ya no captura TODAS las URLs. Ahora solo extrae URLs dentro de llamadas de red reales (fetch, axios, baseURL, url:, endpoint:, new URL(), .get/.post, XMLHttpRequest). URLs en href=, src=, comentarios y strings planos se ignoran.
+  - **NUEVO:** lista ampliada de IGNORED_DOMAINS (~50 dominios: redes sociales, CDNs de imágenes, servicios de avatares, documentación, etc.)
+  - **NUEVO:** excepción para subdominios `api.*` (api.github.com, api.twitter.com sí se capturan)
+  - **NUEVO:** detección de `process.env.*_URL/*_HOST/*_ENDPOINT/*_DSN` en código fuente
+  - **NUEVO:** 24 tests en extractor.test.ts (12 nuevos tests para filtrado de URLs)
+  - 56 tests passing (heuristic: 13, deduplicator: 6, extractor: 24, pipeline: 4, flowInference: 9)
 - **Hitos anteriores**:
+  - v0.2.2: purga de bugs, eliminación de duplicación, tests del extractor (regex Docker Compose, Cargo.toml, CI_ENV_VAR_REGEX, externalCategories, serviceId en grafo, errores duplicados, config auto-load, runPipeline refactor, IPC get-ai-presets)
   - v0.2.1: proveedores IA recomendados + formulario de servicios manuales
   - v0.2: reingeniería completa del sistema de detección — heurística semántica + IA opcional
   - v0.1: scaffolding completo, 11 analizadores hardcodeados, UI React completa, WSL support
