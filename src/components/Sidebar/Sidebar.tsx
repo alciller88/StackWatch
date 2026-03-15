@@ -137,7 +137,7 @@ export const Sidebar: React.FC = () => {
       {/* Footer */}
       <div className="px-3 py-3 border-t border-gray-800">
         {!collapsed && (
-          <span className="text-xs text-gray-600">v0.1.0</span>
+          <span className="text-xs text-gray-600">v0.2.1</span>
         )}
       </div>
     </div>

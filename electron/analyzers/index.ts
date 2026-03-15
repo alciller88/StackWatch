@@ -1,4 +1,4 @@
-import type { Service, AnalysisResult, Evidence, AISettings } from '../types'
+import type { Service, AnalysisResult, Evidence, Dependency, AISettings } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices } from './deduplicator'
@@ -9,21 +9,33 @@ export async function analyzeLocalRepo(
   folderPath: string,
   aiSettings?: AISettings,
 ): Promise<AnalysisResult> {
-  // Step 1: Extract evidences
   const { evidences, dependencies } = await extractEvidences(folderPath)
+  return runPipeline(evidences, dependencies, aiSettings)
+}
 
-  // Step 2: Classify with heuristics
+export async function analyzeGitHubRepo(
+  fetchFile: (path: string) => Promise<string | null>,
+  listDir: (path: string) => Promise<string[]>,
+  aiSettings?: AISettings,
+): Promise<AnalysisResult> {
+  const { evidences, dependencies } = await extractEvidencesFromGitHub(fetchFile, listDir)
+  return runPipeline(evidences, dependencies, aiSettings)
+}
+
+async function runPipeline(
+  evidences: Evidence[],
+  dependencies: Dependency[],
+  aiSettings?: AISettings,
+): Promise<AnalysisResult> {
+  // Step 1: Classify with heuristics
   const heuristicResults = classifyEvidences(evidences)
 
-  // Step 3: Deduplicate
+  // Step 2: Deduplicate
   let services = deduplicateServices(heuristicResults)
 
-  // Step 4: Optional AI enhancement for ambiguous cases
+  // Step 3: Optional AI enhancement for ambiguous cases
   if (aiSettings?.enabled && aiSettings.provider) {
-    const ambiguous = evidences.filter(ev => {
-      const classified = classifyEvidences([ev])
-      return classified.length === 0 || classified.some(c => c.confidence === 'low')
-    })
+    const ambiguous = findAmbiguousEvidences(evidences)
     if (ambiguous.length > 0) {
       const aiResults = await enhanceWithAI(ambiguous, aiSettings.provider)
       if (aiResults.length > 0) {
@@ -32,7 +44,7 @@ export async function analyzeLocalRepo(
     }
   }
 
-  // Step 5: Infer flow graph
+  // Step 4: Infer flow graph
   const flow = inferFlowGraph(services, dependencies)
 
   return {
@@ -43,45 +55,11 @@ export async function analyzeLocalRepo(
   }
 }
 
-export async function analyzeGitHubRepo(
-  fetchFile: (path: string) => Promise<string | null>,
-  listDir: (path: string) => Promise<string[]>,
-  aiSettings?: AISettings,
-): Promise<AnalysisResult> {
-  const { inferFlowGraph } = await import('./flowInference')
-
-  // Step 1: Extract evidences
-  const { evidences, dependencies } = await extractEvidencesFromGitHub(fetchFile, listDir)
-
-  // Step 2: Classify with heuristics
-  const heuristicResults = classifyEvidences(evidences)
-
-  // Step 3: Deduplicate
-  let services = deduplicateServices(heuristicResults)
-
-  // Step 4: Optional AI enhancement
-  if (aiSettings?.enabled && aiSettings.provider) {
-    const ambiguous = evidences.filter(ev => {
-      const classified = classifyEvidences([ev])
-      return classified.length === 0 || classified.some(c => c.confidence === 'low')
-    })
-    if (ambiguous.length > 0) {
-      const aiResults = await enhanceWithAI(ambiguous, aiSettings.provider)
-      if (aiResults.length > 0) {
-        services = mergeAIResults(services, aiResults)
-      }
-    }
-  }
-
-  // Step 5: Infer flow graph
-  const flow = inferFlowGraph(services, dependencies)
-
-  return {
-    services,
-    dependencies,
-    flowNodes: flow.nodes,
-    flowEdges: flow.edges,
-  }
+function findAmbiguousEvidences(evidences: Evidence[]): Evidence[] {
+  return evidences.filter(ev => {
+    const results = classifyEvidences([ev])
+    return results.length === 0 || results.some(r => r.confidence === 'low')
+  })
 }
 
 function mergeAIResults(services: Service[], aiResults: Partial<Service>[]): Service[] {

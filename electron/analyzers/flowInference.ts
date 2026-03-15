@@ -70,6 +70,16 @@ export function inferFlowGraph(
     'monitoring',
     'auth',
     'storage',
+    'hosting',
+    'cicd',
+    'infra',
+    'ai',
+    'messaging',
+    'domain',
+    'mobile',
+    'gaming',
+    'data',
+    'support',
     'other',
   ]
   const externalServices = services.filter((s) =>

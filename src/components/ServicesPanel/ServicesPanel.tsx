@@ -341,6 +341,8 @@ const ServiceForm: React.FC<{
             value={costAmount}
             onChange={(e) => setCostAmount(e.target.value)}
             placeholder="0"
+            min="0"
+            step="0.01"
             className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           />
         </div>

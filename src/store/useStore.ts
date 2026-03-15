@@ -81,7 +81,16 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ isAnalyzing: true, error: null, repoPath: path });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
-      const config = get().config;
+      // Load config to get manual services (may not exist yet)
+      let config = get().config;
+      if (!config) {
+        try {
+          config = await window.stackwatch.loadConfig(path);
+          if (config) set({ config });
+        } catch {
+          // Config may not exist yet
+        }
+      }
       const manualServices = config?.services ?? [];
       set({
         services: mergeServices(result.services, manualServices),

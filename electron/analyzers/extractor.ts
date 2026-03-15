@@ -29,7 +29,7 @@ const URL_REGEX = /https?:\/\/[^\s'"`,)}\]>]+/g
 const IMPORT_FROM_REGEX = /from\s+['"]([^./][^'"]+)['"]/g
 const REQUIRE_REGEX = /require\(\s*['"]([^./][^'"]+)['"]\s*\)/g
 const CI_SECRET_REGEX = /\$\{\{\s*secrets\.(\w+)\s*\}\}/g
-const CI_ENV_VAR_REGEX = /\$([A-Z_]{4,})/g
+const CI_ENV_VAR_REGEX = /\$([A-Z][A-Z_]*_[A-Z_]{2,})/g
 
 interface ExtractionResult {
   evidences: Evidence[]
@@ -247,7 +247,7 @@ function extractFromDockerCompose(content: string, file: string, evidences: Evid
   }
 
   // Extract service names
-  const servicesBlock = content.match(/^services:\s*\n([\s\S]*?)(?=^\S|\Z)/m)
+  const servicesBlock = content.match(/^services:\s*\n((?:[ \t].*\n?)*)/m)
   if (servicesBlock) {
     const svcRegex = /^\s{2}(\w[\w-]*):/gm
     while ((match = svcRegex.exec(servicesBlock[1])) !== null) {
@@ -381,9 +381,9 @@ function extractFromSetupPy(content: string, file: string, deps: Dependency[]): 
 
 function extractFromCargoToml(content: string, file: string, deps: Dependency[]): void {
   const sections = [
-    { regex: /\[dependencies\]([\s\S]*?)(?=\n\[|\Z)/g, type: 'production' as const },
-    { regex: /\[dev-dependencies\]([\s\S]*?)(?=\n\[|\Z)/g, type: 'development' as const },
-    { regex: /\[build-dependencies\]([\s\S]*?)(?=\n\[|\Z)/g, type: 'development' as const },
+    { regex: /\[dependencies\]([\s\S]*?)(?=\n\[|$)/g, type: 'production' as const },
+    { regex: /\[dev-dependencies\]([\s\S]*?)(?=\n\[|$)/g, type: 'development' as const },
+    { regex: /\[build-dependencies\]([\s\S]*?)(?=\n\[|$)/g, type: 'development' as const },
   ]
   for (const section of sections) {
     let sectionMatch

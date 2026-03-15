@@ -42,7 +42,7 @@ export function useLayoutNodes(
           x: (pos?.x ?? 0) - NODE_WIDTH / 2,
           y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
         },
-        data: { label: node.label, nodeType: node.type },
+        data: { label: node.label, nodeType: node.type, serviceId: node.serviceId },
         style: {
           width: NODE_WIDTH,
           height: NODE_HEIGHT,

@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import Store from 'electron-store'
 import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
-import { testConnection } from './ai/provider'
+import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import type { UserConfig, AISettings, AIProvider } from './types'
 
 const store = new (Store as any)()
@@ -147,4 +147,8 @@ ipcMain.handle('set-ai-settings', async (_event, settings: AISettings) => {
 
 ipcMain.handle('test-ai-connection', async (_event, provider: AIProvider) => {
   return testConnection(provider)
+})
+
+ipcMain.handle('get-ai-presets', async () => {
+  return PRESET_PROVIDERS
 })

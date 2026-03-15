@@ -24,6 +24,9 @@ const api: StackWatchAPI = {
 
   testAIConnection: (provider) =>
     ipcRenderer.invoke('test-ai-connection', provider),
+
+  getAIPresets: () =>
+    ipcRenderer.invoke('get-ai-presets'),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

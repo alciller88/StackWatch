@@ -20,22 +20,28 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.2.1 — proveedores IA recomendados + formulario de servicios manuales
-- **Último hito**: mejora de proveedores IA y formulario de servicios manuales (2026-03-15)
-  - **ACTUALIZADO:** `electron/ai/provider.ts` — 7 presets reordenados: Groq y Ollama primero como recomendados. Nuevo Anthropic preset. Cada preset tiene `recommended`, `localOnly`, `setupUrl`, `description`.
-  - **ACTUALIZADO:** `electron/types.ts` + `src/types.ts` — AIProvider tiene campos opcionales: `recommended`, `localOnly`, `setupUrl`, `description`
-  - **ACTUALIZADO:** `src/components/Settings/Settings.tsx` — selector de proveedor rediseñado como lista de cards con badges "Recommended" (verde) y "Local" (azul). Enlace "Get free API key →" para Groq. Instrucciones inline para Ollama y LM Studio. Nota de privacidad fija.
-  - **ACTUALIZADO:** `src/components/ServicesPanel/ServicesPanel.tsx` — formulario unificado Add/Edit con todos los campos (nombre, categoría, plan, URL, coste con moneda USD/EUR, período, fecha renovación, email, notas). Sección "Needs Review" mejorada con icono ⚠, conteo, CTAs "Complete in form" / "Edit stackwatch.config.json". Soporte para edición de servicios manuales via `onEdit`.
-  - **ACTUALIZADO:** `src/components/ServicesPanel/ServiceCard.tsx` — badges diferenciados: inferidos = gris "auto", manuales = azul "manual". Click-to-edit para servicios manuales con hint visual.
-  - **ACTUALIZADO:** `src/store/useStore.ts` — 3 nuevas acciones: `addManualService`, `updateManualService`, `deleteManualService` con actualización instantánea sin re-análisis.
-  - 19 tests passing (heuristic: 13, deduplicator: 6)
+- **Fase**: v0.2.2 — purga de bugs, eliminación de duplicación, tests del extractor
+- **Último hito**: refactor y bug fixes por equipo de 8 devs (2026-03-15)
+  - **FIX:** `electron/analyzers/extractor.ts` — regex Docker Compose usaba `\Z` (Perl) en JS; cambiado a patrón correcto. Regex Cargo.toml con el mismo bug corregido. CI_ENV_VAR_REGEX ahora requiere underscore para no capturar vars de sistema.
+  - **FIX:** `electron/analyzers/flowInference.ts` — externalCategories ahora incluye las 19 categorías (faltaban 10: hosting, cicd, infra, ai, messaging, domain, mobile, gaming, data, support).
+  - **FIX:** `src/components/FlowGraph/useLayoutNodes.ts` — serviceId ahora se pasa al data del nodo, habilitando los indicadores de confianza en el grafo.
+  - **FIX:** `src/App.tsx` — eliminada visualización duplicada de errores (ahora solo en TopBar).
+  - **FIX:** `src/store/useStore.ts` — analyzeLocal ahora carga config automáticamente tras el primer análisis para mergear servicios manuales.
+  - **FIX:** `src/components/ServicesPanel/ServicesPanel.tsx` — input de coste con min=0 y step=0.01.
+  - **REFACTOR:** `electron/analyzers/index.ts` — lógica duplicada entre analyzeLocalRepo y analyzeGitHubRepo extraída a runPipeline(). Helper findAmbiguousEvidences() extraído. Import dinámico redundante eliminado.
+  - **REFACTOR:** `src/components/Settings/Settings.tsx` — PRESET_PROVIDERS eliminado del renderer, ahora se carga via IPC desde el main process (fuente única de verdad en electron/ai/provider.ts).
+  - **NUEVO:** IPC channel `get-ai-presets` en preload.ts, main.ts, types.ts.
+  - **NUEVO:** `electron/analyzers/__tests__/extractor.test.ts` — 12 tests para extracción GitHub (package.json, .env, docker-compose, CI workflows, config files, Python, Terraform, source code).
+  - **FIX:** `package.json` version sincronizada a 0.2.1. Sidebar actualizado.
+  - 31+ tests passing (heuristic: 13, deduplicator: 6, extractor: 12)
 - **Hitos anteriores**:
+  - v0.2.1: proveedores IA recomendados + formulario de servicios manuales
   - v0.2: reingeniería completa del sistema de detección — heurística semántica + IA opcional
   - v0.1: scaffolding completo, 11 analizadores hardcodeados, UI React completa, WSL support
   - Multi-ecosistema: Python, Rust, Go, Terraform
   - WSL2 auto-download de Electron binary
   - CommonJS fix para Electron main process
-- **Próximo paso**: validar build de producción (`npm run build`), añadir más tests para el extractor
+- **Próximo paso**: validar build de producción (`npm run build`), tests de componentes UI, exportación de datos
 
 ---
 

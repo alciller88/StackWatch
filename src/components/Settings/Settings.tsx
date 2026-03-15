@@ -2,79 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import type { AIProvider, AISettings } from '../../types';
 
-const PRESET_PROVIDERS: AIProvider[] = [
-  {
-    name: 'Groq',
-    baseUrl: 'https://api.groq.com/openai/v1',
-    model: 'llama-3.1-8b-instant',
-    recommended: true,
-    localOnly: false,
-    setupUrl: 'https://console.groq.com/keys',
-    description: 'Free, no credit card required. Create your API key at groq.com.',
-  },
-  {
-    name: 'Ollama',
-    baseUrl: 'http://localhost:11434/v1',
-    model: 'llama3.2',
-    recommended: true,
-    localOnly: true,
-    setupUrl: 'https://ollama.com',
-    description: 'Free and local. Install Ollama and run: ollama pull llama3.2',
-  },
-  {
-    name: 'LM Studio',
-    baseUrl: 'http://localhost:1234/v1',
-    model: 'local-model',
-    recommended: false,
-    localOnly: true,
-    setupUrl: 'https://lmstudio.ai',
-    description: 'Local. Download LM Studio and load any GGUF model.',
-  },
-  {
-    name: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
-    recommended: false,
-    localOnly: false,
-    setupUrl: 'https://platform.openai.com/api-keys',
-    description: 'Pay per use.',
-  },
-  {
-    name: 'Mistral',
-    baseUrl: 'https://api.mistral.ai/v1',
-    model: 'mistral-small-latest',
-    recommended: false,
-    localOnly: false,
-    setupUrl: 'https://console.mistral.ai',
-    description: 'Pay per use.',
-  },
-  {
-    name: 'Anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    model: 'claude-haiku-4-5-20251001',
-    recommended: false,
-    localOnly: false,
-    setupUrl: 'https://console.anthropic.com',
-    description: 'Pay per use.',
-  },
-  {
-    name: 'Custom',
-    baseUrl: '',
-    model: '',
-    recommended: false,
-    localOnly: false,
-    description: 'Any endpoint compatible with the OpenAI API.',
-  },
-];
-
-function getPreset(name: string): AIProvider | undefined {
-  return PRESET_PROVIDERS.find(p => p.name === name);
-}
-
 export const Settings: React.FC = () => {
   const { aiSettings, loadAISettings, saveAISettings, testAIConnection } = useStore();
+  const [presets, setPresets] = useState<AIProvider[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState('Groq');
+
+  const getPreset = (name: string): AIProvider | undefined => {
+    return presets.find(p => p.name === name);
+  };
   const [baseUrl, setBaseUrl] = useState('https://api.groq.com/openai/v1');
   const [model, setModel] = useState('llama-3.1-8b-instant');
   const [apiKey, setApiKey] = useState('');
@@ -84,6 +20,9 @@ export const Settings: React.FC = () => {
 
   useEffect(() => {
     loadAISettings();
+    if (window.stackwatch?.getAIPresets) {
+      window.stackwatch.getAIPresets().then(setPresets);
+    }
   }, [loadAISettings]);
 
   useEffect(() => {
@@ -177,7 +116,7 @@ export const Settings: React.FC = () => {
               <div>
                 <label className="block text-xs text-gray-400 mb-2">Provider</label>
                 <div className="space-y-2">
-                  {PRESET_PROVIDERS.map((p) => (
+                  {presets.map((p) => (
                     <button
                       key={p.name}
                       onClick={() => handlePresetChange(p.name)}
