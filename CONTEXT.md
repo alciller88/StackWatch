@@ -8,7 +8,7 @@
 
 ## Qué es este proyecto
 
-App de escritorio Electron + React que analiza un repositorio (local o GitHub) e infiere todos los servicios externos, dependencias y cuentas que usa el proyecto. El resultado se muestra en un dashboard con tres paneles: servicios, dependencias y grafo de flujo.
+App de escritorio Electron + React que analiza cualquier proyecto de software (local o GitHub) e infiere todos los servicios externos, dependencias y cuentas que usa el proyecto. Soporta ecosistemas web, Python, Rust, Go, Terraform y más. El resultado se muestra en un dashboard con tres paneles: servicios, dependencias y grafo de flujo.
 
 El fichero de configuración manual del usuario es `stackwatch.config.json` en la raíz del repo analizado (no del repo de la app).
 
@@ -24,7 +24,7 @@ Spec completa: `SPEC.md`
 - **Último hito**: implementación completa del proyecto (2026-03-15)
   - Scaffolding: package.json, tsconfig, vite.config, tailwind, electron-builder
   - Proceso Electron: main.ts, preload.ts, types.ts con IPC completo
-  - 7 analizadores: packageJson, envFile, dockerCompose, githubWorkflows, configFiles, flowInference, index
+  - 11 analizadores: packageJson, envFile, dockerCompose, githubWorkflows, configFiles, pythonDeps, rustDeps, goDeps, terraform, flowInference, index
   - UI React: Dashboard, ServicesPanel (con ServiceCard y formulario Add), DepsPanel (tabla con filtros/sort/agrupación), FlowGraph (React Flow + dagre layout), Sidebar (colapsable), TopBar (con soporte GitHub)
   - Store Zustand: estado global con análisis local/GitHub, merge de servicios manuales
   - TypeScript compila sin errores (`tsc --noEmit` limpio)
@@ -39,7 +39,15 @@ Spec completa: `SPEC.md`
   - `scripts/launch-electron.js` now auto-downloads the Windows Electron binary on first run in WSL2 (re-runs `node_modules/electron/install.js` with `npm_config_platform=win32`) — no manual steps needed
   - `tsconfig.node.json` changed from `ESNext`/`bundler` to `CommonJS`/`node` — fixes `ERR_MODULE_NOT_FOUND` caused by missing `.js` extensions in ESM imports; Electron main process runs in Node.js and works natively with CommonJS
   - `npm run dev` now launches successfully on WSL2 end-to-end
-- **Próximo paso**: añadir tests unitarios para analizadores, validar build de producción (`npm run build`)
+- **Feature: multi-ecosystem support** (2026-03-15):
+  - Expanded scope from web-only to any software project type
+  - 4 new analyzers: pythonDeps (requirements.txt, pyproject.toml, setup.py), rustDeps (Cargo.toml), goDeps (go.mod), terraform (*.tf)
+  - Expanded envFile.ts with 25+ new service patterns: AI (OpenAI, Anthropic, HuggingFace...), Mobile (Firebase, App Center...), Data (Snowflake, Pinecone...), Gaming (Steam, Discord...), Messaging (Kafka, RabbitMQ...), Support (Intercom, Zendesk...)
+  - 7 new service categories: ai, mobile, gaming, data, messaging, support, infra
+  - 5 new dependency ecosystems: go, dart, maven, gradle, gem
+  - 32 unit tests passing across 5 test files
+  - Both local and GitHub analysis paths updated with new analyzers
+- **Próximo paso**: validar build de producción (`npm run build`), añadir analizadores pendientes (pubspec.yaml, Gemfile, pom.xml, build.gradle, k8s, gitlab-ci)
 
 ---
 
@@ -74,7 +82,8 @@ CONTEXT.md                       ← este fichero
 stackwatch.config.json        ← config manual del usuario (en el repo analizado)
 electron/main.ts                 ← entry point del proceso principal
 electron/preload.ts              ← bridge IPC
-electron/analyzers/              ← módulos de análisis, uno por tipo de fichero
+electron/analyzers/              ← módulos de análisis, uno por tipo de fichero/ecosistema
+electron/analyzers/__tests__/    ← tests unitarios para analizadores
 src/store/                       ← estado global Zustand
 scripts/launch-electron.js       ← launcher con detección WSL
 src/components/FlowGraph/        ← panel más complejo, usa React Flow
@@ -87,9 +96,10 @@ src/components/FlowGraph/        ← panel más complejo, usa React Flow
 ### Añadir un nuevo analizador
 
 1. Crear `electron/analyzers/miAnalizador.ts`
-2. Exportar función `analyze(content: string): Partial<AnalysisResult>`
-3. Importar y llamar en `electron/analyzers/index.ts`
+2. Exportar función `analyze(content: string): Partial<AnalysisResult>` — función pura, sin I/O
+3. Importar y llamar en `electron/analyzers/index.ts` (análisis local) y en `electron/main.ts` (análisis GitHub)
 4. Añadir tests unitarios en `electron/analyzers/__tests__/miAnalizador.test.ts`
+5. Para ecosistemas no-npm: añadir el ecosistema al tipo `Dependency['ecosystem']` en ambos `types.ts` y en `ecosystemUrls` de `DepsPanel.tsx`
 
 ### Añadir un nuevo servicio a la detección automática
 
@@ -121,7 +131,7 @@ const SERVICE_PATTERNS: Record<string, ServiceMeta> = {
 
 ## Contexto de producto (para decisiones de UX)
 
-- **Usuario objetivo**: desarrollador individual o equipo pequeño que gestiona un SaaS / proyecto web propio
+- **Usuario objetivo**: cualquier desarrollador o equipo pequeño que gestiona un proyecto de software (web, mobile, data/ML, backend, infra, gaming...)
 - **Dolor principal**: no saber qué servicios están activos, cuáles son de pago, cuándo renuevan
 - **Caso de uso más frecuente**: abrir la app al empezar el día para ver el estado del proyecto
 - **Caso de uso secundario**: incorporar a un nuevo desarrollador al equipo — exportar el mapa de servicios

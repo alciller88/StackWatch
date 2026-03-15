@@ -7,7 +7,7 @@
 
 ## 1. Visión del producto
 
-**StackWatch** es una aplicación de escritorio (Electron) que permite a desarrolladores visualizar, documentar y monitorizar todos los servicios, dependencias y cuentas externas que componen un proyecto web, infiriéndolos automáticamente desde el repositorio y permitiendo enriquecer esa información manualmente.
+**StackWatch** es una aplicación de escritorio (Electron) que permite a desarrolladores visualizar, documentar y monitorizar todos los servicios, dependencias y cuentas externas que componen cualquier proyecto de software, infiriéndolos automáticamente desde el repositorio y permitiendo enriquecer esa información manualmente.
 
 ### Problema que resuelve
 Los proyectos modernos dependen de decenas de servicios externos (hosting, dominio, CI/CD, analytics, pagos, APIs...) distribuidos en múltiples cuentas y proveedores. No existe una vista unificada de todo ese ecosistema.
@@ -44,7 +44,11 @@ stackwatch/
 │       ├── packageJson.ts
 │       ├── envFile.ts
 │       ├── dockerCompose.ts
-│       └── githubWorkflows.ts
+│       ├── githubWorkflows.ts
+│       ├── pythonDeps.ts
+│       ├── rustDeps.ts
+│       ├── goDeps.ts
+│       └── terraform.ts
 ├── src/
 │   ├── components/
 │   │   ├── Dashboard/
@@ -73,10 +77,21 @@ El motor de análisis corre en el proceso principal de Electron y parsea los sig
 | `.github/workflows/*.yml` | CI/CD, servicios de terceros usados |
 | `vercel.json` / `netlify.toml` | Plataforma de despliegue |
 | `next.config.js` / `vite.config.ts` | Framework, plugins, redirects |
+| `requirements.txt` / `pyproject.toml` / `setup.py` | Dependencias Python (pip) |
+| `Cargo.toml` | Dependencias Rust (cargo) |
+| `go.mod` | Dependencias Go |
+| `pubspec.yaml` | Dependencias Flutter/Dart |
+| `pom.xml` / `build.gradle` | Dependencias Java/Kotlin (Maven/Gradle) |
+| `Gemfile` | Dependencias Ruby |
+| `*.tf` (Terraform) | Infraestructura cloud (AWS, GCP, Azure) |
+| `*.yaml` en `k8s/` o `kubernetes/` | Servicios Kubernetes |
+| `.gitlab-ci.yml` / `bitrise.yml` / `.circleci/config.yml` | CI/CD alternativo |
+| `firebase.json` / `firestore.rules` | Firebase |
 
 **Detección de servicios por patrón de variable de entorno:**
 
 ```
+# Web / Original
 STRIPE_*          → Stripe (pagos)
 SENDGRID_*        → SendGrid (email)
 TWILIO_*          → Twilio (SMS)
@@ -86,6 +101,43 @@ SENTRY_*          → Sentry (monitoring)
 AWS_*             → Amazon Web Services
 VERCEL_*          → Vercel
 GITHUB_TOKEN      → GitHub API
+
+# Mobile
+FIREBASE_*        → Firebase
+APPCENTER_*       → App Center (Microsoft)
+ONESIGNAL_*       → OneSignal (push notifications)
+
+# AI / ML
+OPENAI_*          → OpenAI API
+ANTHROPIC_*       → Anthropic API
+HUGGINGFACE_*     → HuggingFace
+COHERE_*          → Cohere
+WANDB_*           → Weights & Biases
+
+# Data
+SNOWFLAKE_*       → Snowflake
+DATABRICKS_*      → Databricks
+PINECONE_*        → Pinecone (vector DB)
+ELASTICSEARCH_*   → Elasticsearch
+
+# Infraestructura / Messaging
+REDIS_*           → Redis
+RABBITMQ_*        → RabbitMQ
+KAFKA_*           → Apache Kafka
+DATADOG_*         → Datadog
+NEWRELIC_*        → New Relic
+
+# Gaming
+STEAM_*           → Steam (Steamworks)
+DISCORD_*         → Discord API
+PLAYFAB_*         → PlayFab (Microsoft)
+
+# General
+CLOUDFLARE_*      → Cloudflare
+ALGOLIA_*         → Algolia
+PUSHER_*          → Pusher
+INTERCOM_*        → Intercom
+ZENDESK_*         → Zendesk
 ```
 
 ### 3.2 Configuración manual (`stackwatch.config.json`)
@@ -161,7 +213,8 @@ interface Service {
   id: string
   name: string
   category: 'domain' | 'hosting' | 'cicd' | 'database' | 'auth' | 'payments'
-           | 'email' | 'analytics' | 'monitoring' | 'cdn' | 'storage' | 'other'
+           | 'email' | 'analytics' | 'monitoring' | 'cdn' | 'storage' | 'infra'
+           | 'ai' | 'mobile' | 'gaming' | 'data' | 'messaging' | 'support' | 'other'
   plan: 'free' | 'paid' | 'trial' | 'unknown'
   source: 'inferred' | 'manual'          // origen del dato
   inferredFrom?: string                   // ej: ".env.example → STRIPE_KEY"
@@ -180,7 +233,7 @@ interface Dependency {
   name: string
   version: string
   type: 'production' | 'development' | 'peer'
-  ecosystem: 'npm' | 'pip' | 'cargo' | 'composer'
+  ecosystem: 'npm' | 'pip' | 'cargo' | 'composer' | 'go' | 'dart' | 'maven' | 'gradle' | 'gem'
   relatedService?: string                 // ej: "stripe" → Service.id "stripe"
 }
 ```

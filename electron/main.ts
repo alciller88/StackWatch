@@ -93,6 +93,10 @@ ipcMain.handle(
     const { analyzeDockerCompose } = await import('./analyzers/dockerCompose')
     const { analyzeGithubWorkflows } = await import('./analyzers/githubWorkflows')
     const { analyzeConfigFile } = await import('./analyzers/configFiles')
+    const { analyzePythonDeps } = await import('./analyzers/pythonDeps')
+    const { analyzeRustDeps } = await import('./analyzers/rustDeps')
+    const { analyzeGoDeps } = await import('./analyzers/goDeps')
+    const { analyzeTerraform } = await import('./analyzers/terraform')
     const { inferFlowGraph } = await import('./analyzers/flowInference')
 
     const allServices: import('./types').Service[] = []
@@ -137,6 +141,42 @@ ipcMain.handle(
       if (content) {
         const result = analyzeConfigFile(content, cf)
         allServices.push(...result.services)
+      }
+    }
+
+    // Python deps
+    for (const pyFile of ['requirements.txt', 'pyproject.toml', 'setup.py']) {
+      const content = await fetchFile(pyFile)
+      if (content) {
+        const result = analyzePythonDeps(content, pyFile)
+        allServices.push(...result.services)
+        allDeps.push(...result.dependencies)
+      }
+    }
+
+    // Rust deps
+    const cargoContent = await fetchFile('Cargo.toml')
+    if (cargoContent) {
+      const result = analyzeRustDeps(cargoContent)
+      allDeps.push(...result.dependencies)
+    }
+
+    // Go deps
+    const goModContent = await fetchFile('go.mod')
+    if (goModContent) {
+      const result = analyzeGoDeps(goModContent)
+      allDeps.push(...result.dependencies)
+    }
+
+    // Terraform files
+    const rootFiles = await listDir('.')
+    for (const file of rootFiles) {
+      if (file.endsWith('.tf')) {
+        const content = await fetchFile(file)
+        if (content) {
+          const result = analyzeTerraform(content, file)
+          allServices.push(...result.services)
+        }
       }
     }
 

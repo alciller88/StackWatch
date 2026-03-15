@@ -13,6 +13,13 @@ export interface Service {
     | 'monitoring'
     | 'cdn'
     | 'storage'
+    | 'infra'
+    | 'ai'
+    | 'mobile'
+    | 'gaming'
+    | 'data'
+    | 'messaging'
+    | 'support'
     | 'other';
   plan: 'free' | 'paid' | 'trial' | 'unknown';
   source: 'inferred' | 'manual';
@@ -28,7 +35,7 @@ export interface Dependency {
   name: string;
   version: string;
   type: 'production' | 'development' | 'peer';
-  ecosystem: 'npm' | 'pip' | 'cargo' | 'composer';
+  ecosystem: 'npm' | 'pip' | 'cargo' | 'composer' | 'go' | 'dart' | 'maven' | 'gradle' | 'gem';
   relatedService?: string;
 }
 

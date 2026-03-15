@@ -6,6 +6,10 @@ import { analyzeEnvFile } from './envFile'
 import { analyzeDockerCompose } from './dockerCompose'
 import { analyzeGithubWorkflows } from './githubWorkflows'
 import { analyzeConfigFile } from './configFiles'
+import { analyzePythonDeps } from './pythonDeps'
+import { analyzeRustDeps } from './rustDeps'
+import { analyzeGoDeps } from './goDeps'
+import { analyzeTerraform } from './terraform'
 import { inferFlowGraph } from './flowInference'
 
 async function readFileIfExists(filePath: string): Promise<string | null> {
@@ -84,6 +88,46 @@ export async function analyzeLocalRepo(
       const result = analyzeConfigFile(content, cf)
       allServices.push(...result.services)
     }
+  }
+
+  // Python deps
+  for (const pyFile of ['requirements.txt', 'pyproject.toml', 'setup.py']) {
+    const content = await readFileIfExists(path.join(folderPath, pyFile))
+    if (content) {
+      const result = analyzePythonDeps(content, pyFile)
+      allServices.push(...result.services)
+      allDeps.push(...result.dependencies)
+    }
+  }
+
+  // Rust deps
+  const cargoContent = await readFileIfExists(path.join(folderPath, 'Cargo.toml'))
+  if (cargoContent) {
+    const result = analyzeRustDeps(cargoContent)
+    allDeps.push(...result.dependencies)
+  }
+
+  // Go deps
+  const goModContent = await readFileIfExists(path.join(folderPath, 'go.mod'))
+  if (goModContent) {
+    const result = analyzeGoDeps(goModContent)
+    allDeps.push(...result.dependencies)
+  }
+
+  // Terraform files
+  try {
+    const allFiles = await fs.readdir(folderPath)
+    for (const file of allFiles) {
+      if (file.endsWith('.tf')) {
+        const content = await readFileIfExists(path.join(folderPath, file))
+        if (content) {
+          const result = analyzeTerraform(content, file)
+          allServices.push(...result.services)
+        }
+      }
+    }
+  } catch {
+    // folder read may fail
   }
 
   // Deduplicate services

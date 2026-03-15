@@ -16,6 +16,11 @@ const ecosystemUrls: Record<Dependency['ecosystem'], (name: string) => string> =
   pip: (name) => `https://pypi.org/project/${name}`,
   cargo: (name) => `https://crates.io/crates/${name}`,
   composer: (name) => `https://packagist.org/packages/${name}`,
+  go: (name) => `https://pkg.go.dev/${name}`,
+  dart: (name) => `https://pub.dev/packages/${name}`,
+  maven: (name) => `https://search.maven.org/search?q=${name}`,
+  gradle: (name) => `https://search.maven.org/search?q=${name}`,
+  gem: (name) => `https://rubygems.org/gems/${name}`,
 };
 
 export const DepsPanel: React.FC = () => {

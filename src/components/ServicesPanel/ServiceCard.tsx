@@ -13,6 +13,13 @@ const categoryIcons: Record<Service['category'], string> = {
   monitoring: '\uD83D\uDCE1',
   cdn: '\u26A1',
   storage: '\uD83D\uDCC1',
+  infra: '\uD83C\uDFD7\uFE0F',
+  ai: '\uD83E\uDD16',
+  mobile: '\uD83D\uDCF1',
+  gaming: '\uD83C\uDFAE',
+  data: '\uD83D\uDCC0',
+  messaging: '\uD83D\uDCE8',
+  support: '\uD83C\uDFE7',
   other: '\uD83D\uDD27',
 };
 

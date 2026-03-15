@@ -7,26 +7,59 @@ interface ServicePattern {
 }
 
 const SERVICE_PATTERNS: Record<string, ServicePattern> = {
+  // Payments
   STRIPE_: { name: 'Stripe', category: 'payments' },
+  // Email / SMS
   SENDGRID_: { name: 'SendGrid', category: 'email' },
   TWILIO_: { name: 'Twilio', category: 'email' },
+  MAILGUN_: { name: 'Mailgun', category: 'email' },
+  // Analytics
   NEXT_PUBLIC_GA_: { name: 'Google Analytics', category: 'analytics' },
   GA_: { name: 'Google Analytics', category: 'analytics' },
+  // Monitoring
   SENTRY_: { name: 'Sentry', category: 'monitoring' },
-  AWS_: { name: 'AWS', category: 'storage' },
-  VERCEL_: { name: 'Vercel', category: 'hosting' },
-  GITHUB_TOKEN: { name: 'GitHub API', category: 'other' },
-  REDIS_: { name: 'Redis', category: 'database' },
-  FIREBASE_: { name: 'Firebase', category: 'hosting' },
-  CLOUDFLARE_: { name: 'Cloudflare', category: 'cdn' },
-  AUTH0_: { name: 'Auth0', category: 'auth' },
-  SUPABASE_: { name: 'Supabase', category: 'database' },
-  MAILGUN_: { name: 'Mailgun', category: 'email' },
-  CLOUDINARY_: { name: 'Cloudinary', category: 'storage' },
   DATADOG_: { name: 'Datadog', category: 'monitoring' },
+  NEWRELIC_: { name: 'New Relic', category: 'monitoring' },
   NEW_RELIC_: { name: 'New Relic', category: 'monitoring' },
+  // Hosting / CDN
+  AWS_: { name: 'AWS', category: 'infra' },
+  VERCEL_: { name: 'Vercel', category: 'hosting' },
+  CLOUDFLARE_: { name: 'Cloudflare', category: 'cdn' },
+  // Auth
+  AUTH0_: { name: 'Auth0', category: 'auth' },
+  GITHUB_TOKEN: { name: 'GitHub API', category: 'other' },
+  // Database
+  REDIS_: { name: 'Redis', category: 'database' },
+  SUPABASE_: { name: 'Supabase', category: 'database' },
+  ELASTICSEARCH_: { name: 'Elasticsearch', category: 'data' },
+  // Storage
+  CLOUDINARY_: { name: 'Cloudinary', category: 'storage' },
+  FIREBASE_: { name: 'Firebase', category: 'mobile' },
+  // Mobile
+  APPCENTER_: { name: 'App Center', category: 'mobile' },
+  ONESIGNAL_: { name: 'OneSignal', category: 'mobile' },
+  // AI / ML
+  OPENAI_: { name: 'OpenAI', category: 'ai' },
+  ANTHROPIC_: { name: 'Anthropic', category: 'ai' },
+  HUGGINGFACE_: { name: 'HuggingFace', category: 'ai' },
+  COHERE_: { name: 'Cohere', category: 'ai' },
+  WANDB_: { name: 'Weights & Biases', category: 'ai' },
+  // Data
+  SNOWFLAKE_: { name: 'Snowflake', category: 'data' },
+  DATABRICKS_: { name: 'Databricks', category: 'data' },
+  PINECONE_: { name: 'Pinecone', category: 'data' },
+  // Messaging
+  RABBITMQ_: { name: 'RabbitMQ', category: 'messaging' },
+  KAFKA_: { name: 'Apache Kafka', category: 'messaging' },
+  PUSHER_: { name: 'Pusher', category: 'messaging' },
+  // Gaming
+  STEAM_: { name: 'Steam', category: 'gaming' },
+  DISCORD_: { name: 'Discord', category: 'gaming' },
+  PLAYFAB_: { name: 'PlayFab', category: 'gaming' },
+  // Search / Support / General
   ALGOLIA_: { name: 'Algolia', category: 'other' },
-  PUSHER_: { name: 'Pusher', category: 'other' },
+  INTERCOM_: { name: 'Intercom', category: 'support' },
+  ZENDESK_: { name: 'Zendesk', category: 'support' },
 }
 
 function detectDbFromUrl(value: string): ServicePattern | null {
