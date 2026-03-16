@@ -70,6 +70,19 @@ async function runPipeline(
     }
   }
 
+  // Final sanity filter: remove obviously wrong results that slipped through
+  services = services.filter(s => {
+    const name = s.name.toLowerCase()
+    // Filter single-character or too-short names
+    if (name.length < 3) return false
+    // Filter Node.js builtins that somehow made it through
+    const builtins = new Set(['child process', 'child_process', 'file system', 'event emitter', 'buffer', 'stream', 'crypto'])
+    if (builtins.has(name)) return false
+    // Filter names starting with $ (template vars)
+    if (s.name.startsWith('$')) return false
+    return true
+  })
+
   // Step 4: Infer flow graph
   const flow = inferFlowGraph(services, dependencies, projectName)
 

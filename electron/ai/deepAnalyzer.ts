@@ -318,6 +318,17 @@ export async function refineServicesWithAI(
 
   const prompt = `Review these auto-detected services from a codebase. Return ONLY changes needed as JSON.
 
+IMPORTANT: Be aggressive about removing false positives. These are NOT real external services:
+- Programming language built-ins (child_process, fs, path, crypto, http, Buffer, Stream)
+- Generic programming concepts (Event Emitter, Promise, Async, Handler, Middleware)
+- Framework internals (Router, Controller, Resolver, Pipe, Guard, Interceptor)
+- Build tools and dev dependencies (Webpack, ESLint, Prettier, TypeScript compiler)
+- Template/placeholder variables ($DOMAIN, $HOST, $PORT, $SECRET)
+- Library utilities that aren't external services (Lodash, Moment, Zod)
+- Self-referential names (the project's own modules or components)
+
+Only keep entries that represent REAL external services with their own accounts, APIs, or billing.
+
 Services (id|name|category|confidence|reason):
 ${serviceList}
 Actions:

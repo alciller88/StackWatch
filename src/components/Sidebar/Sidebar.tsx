@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useGraphStore } from '../../store/graphStore';
 import { APP_VERSION } from '../../constants';
 import { calculateHealthScore } from '../../utils/healthScore';
+import type { FlowNode, FlowEdge } from '../../types';
 
 type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
 
@@ -104,13 +106,25 @@ const sectionLabel = (text: string, collapsed: boolean) =>
   ) : null;
 
 export const Sidebar: React.FC = () => {
-  const { activePanel, setActivePanel, services, flowNodes, flowEdges } = useStore();
+  const { activePanel, setActivePanel, services } = useStore();
+  const graphNodes = useGraphStore(s => s.nodes);
+  const graphEdges = useGraphStore(s => s.edges);
   const [collapsed, setCollapsed] = useState(false);
 
-  const breakdown = useMemo(
-    () => calculateHealthScore(services, flowNodes, flowEdges),
-    [services, flowNodes, flowEdges],
-  );
+  const breakdown = useMemo(() => {
+    const fNodes: FlowNode[] = graphNodes.map(n => ({
+      id: n.id,
+      label: n.data.label,
+      type: n.data.nodeType ?? 'external',
+      serviceId: n.data.serviceId,
+    }));
+    const fEdges: FlowEdge[] = graphEdges.map(e => ({
+      source: e.source,
+      target: e.target,
+      flowType: e.data?.flowType ?? 'data',
+    }));
+    return calculateHealthScore(services, fNodes, fEdges);
+  }, [services, graphNodes, graphEdges]);
 
   const viewItems = navItems.filter(i => i.section === 'views');
   const systemItems = navItems.filter(i => i.section === 'system');

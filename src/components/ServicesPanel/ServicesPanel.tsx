@@ -528,8 +528,7 @@ const ServiceForm: React.FC<{
         </button>
         <button
           onClick={onClose}
-          className="px-3 py-1.5 text-xs text-[var(--color-text-secondary)] rounded-none transition-colors"
-          style={{ background: 'var(--color-bg-hover)' }}
+          className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
         >
           Cancel
         </button>

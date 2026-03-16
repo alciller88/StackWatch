@@ -334,10 +334,37 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   deleteNode: (id) => {
+    // Find the node before removing it so we can check for a linked service
+    const node = get().nodes.find((n) => n.id === id)
+
     set((state) => ({
       nodes: state.nodes.filter((n) => n.id !== id),
       edges: state.edges.filter((e) => e.source !== id && e.target !== id),
     }))
+
+    // If this node was linked to a service, remove the service from the main store
+    if (node?.data?.serviceId) {
+      import('./useStore').then(({ useStore }) => {
+        const store = useStore.getState()
+        const serviceId = node.data.serviceId as string
+        if (store.services.find((s) => s.id === serviceId)) {
+          useStore.setState({
+            services: store.services.filter((s) => s.id !== serviceId),
+            flowNodes: store.flowNodes.filter((n) => n.serviceId !== serviceId),
+            flowEdges: store.flowEdges.filter((e) => {
+              const nodeId = `svc-${serviceId}`
+              return e.source !== nodeId && e.target !== nodeId
+            }),
+          })
+          // Also remove from config if it's a manual service
+          const config = store.config
+          if (config && config.services.find((s) => s.id === serviceId)) {
+            store.deleteManualService(serviceId)
+          }
+        }
+      })
+    }
+
     get().persistToConfig()
   },
 

@@ -35,7 +35,11 @@ Full spec: `SPEC.md`
   - **TEST:** Added store tests (mergeServices, ensureFlowNodes, loadDemo, CRUD operations)
   - **TEST:** Added deepAnalyzer tests (runDeepAnalysis, hidden services, edge types, service context)
   - **CONFIG:** ESLint + Prettier configured (not yet applied to codebase)
-  - 79 tests passing (6 suites: extractor 26, deepAnalyzer 19, heuristic 13, flowInference 9, deduplicator 6, pipeline 6)
+  - **FIX:** Stack Score now recalculates on every service edit/add/delete (reads from graphStore, not static flowNodes)
+  - **FIX:** Deleting a service node from the graph now also removes it from the services panel and config
+  - **FIX:** Expanded GENERIC_NAMES filter, added Node.js builtins blocklist, template variable filtering ($vars), improved AI refinement prompt for aggressive false positive removal, added post-AI sanity filter
+  - **FIX:** Cancel button in ServiceForm now has visible border, matching typography, and hover effects
+  - 102 tests passing (8 suites: extractor 26, deepAnalyzer 19+13, heuristic 13, flowInference 9, deduplicator 6, pipeline 6, useStore 10)
 - **Previous milestones**:
   - v0.3.10: unified types into shared/types.ts, extracted duplicated helpers, removed dead code, centralized version constant, flow legend color fix, import error handling, WCAG AA contrast fix
   - v0.3.3: editable confidence field + re-analyze UX fix

@@ -56,6 +56,21 @@ const GENERIC_NAMES = new Set([
   'public', 'queue', 'root', 'server', 'service', 'session', 'site',
   'staging', 'static', 'storage', 'store', 'system', 'test', 'token',
   'url', 'user', 'web', 'webhook', 'worker',
+  // Node.js / programming concepts (false positive prevention)
+  'child', 'process', 'child process', 'spawn', 'exec', 'fork',
+  'path', 'file', 'fs', 'buffer', 'stream', 'event', 'emitter',
+  'promise', 'async', 'await', 'callback', 'handler', 'middleware',
+  'component', 'module', 'package', 'library', 'framework',
+  'build', 'dist', 'output', 'input', 'source', 'target',
+  'secret', 'key', 'value', 'string', 'number', 'boolean',
+  'request', 'response', 'header', 'body', 'query', 'param',
+  'error', 'debug', 'info', 'warn', 'log', 'trace',
+  'type', 'interface', 'class', 'function', 'method', 'property',
+  'schema', 'model', 'entity', 'record', 'field', 'column',
+  'table', 'index', 'cursor', 'iterator', 'generator',
+  'connection', 'socket', 'channel', 'pipe', 'stdio',
+  'timeout', 'interval', 'timer', 'delay', 'retry',
+  'options', 'settings', 'preferences', 'constants',
 ])
 
 function isGenericName(name: string): boolean {
@@ -63,6 +78,9 @@ function isGenericName(name: string): boolean {
 }
 
 function classifyEnvVar(name: string): HeuristicResult | null {
+  // Filter out template/placeholder variables ($SOMETHING, ${SOMETHING})
+  if (name.startsWith('$') || name.startsWith('{') || name.includes('${')) return null
+
   const upper = name.toUpperCase()
 
   // Ignore system and framework variables
@@ -113,6 +131,9 @@ function classifyUrl(url: string): HeuristicResult | null {
 }
 
 function classifyNpmPackage(pkg: string): HeuristicResult | null {
+  // Ignore Node.js built-in modules
+  if (NODE_BUILTINS.has(pkg)) return null
+
   // Ignore packages that are clearly not external services
   const ignorePatterns = [
     /^@types\//,
@@ -157,7 +178,24 @@ function classifyNpmPackage(pkg: string): HeuristicResult | null {
   }
 }
 
+// Node.js built-in modules — these are NOT external services
+const NODE_BUILTINS = new Set([
+  'child_process', 'fs', 'path', 'crypto', 'http', 'https', 'net', 'os', 'url',
+  'util', 'stream', 'events', 'buffer', 'cluster', 'dgram', 'dns', 'readline',
+  'tls', 'vm', 'zlib', 'assert', 'console', 'process', 'querystring',
+  'string_decoder', 'timers', 'tty', 'v8', 'worker_threads', 'perf_hooks',
+  'node:child_process', 'node:fs', 'node:path', 'node:crypto', 'node:http',
+  'node:https', 'node:net', 'node:os', 'node:url', 'node:util', 'node:stream',
+  'node:events', 'node:buffer', 'node:cluster', 'node:dns', 'node:readline',
+  'node:tls', 'node:vm', 'node:zlib', 'node:assert', 'node:process',
+  'node:worker_threads', 'node:perf_hooks',
+  'fs/promises', 'node:fs/promises',
+])
+
 function classifyImport(importPath: string): HeuristicResult | null {
+  // Filter out Node.js built-in modules
+  if (NODE_BUILTINS.has(importPath)) return null
+
   // Extract the base package name
   const basePkg = importPath.startsWith('@')
     ? importPath.split('/').slice(0, 2).join('/')
