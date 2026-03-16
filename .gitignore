@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-electron/
+shared/*.js
+shared/*.d.ts
 out/
 .env
 .env.local
