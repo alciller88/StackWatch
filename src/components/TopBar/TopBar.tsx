@@ -151,7 +151,7 @@ export const TopBar: React.FC = () => {
           onClick={handleImport}
           disabled={isAnalyzing}
           className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
-          title="Import stackwatch.config.json"
+          title="Import config — restore all services, graph layout, and edits from a previously exported file"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 18h16" />
@@ -164,7 +164,7 @@ export const TopBar: React.FC = () => {
             onClick={() => setShowExportMenu(!showExportMenu)}
             disabled={services.length === 0 || isAnalyzing}
             className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
-            title="Export analysis"
+            title="Export — save config backup or generate report"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 20V8m0 0l4 4m-4-4l-4 4M4 6h16" />
@@ -178,13 +178,13 @@ export const TopBar: React.FC = () => {
                 onClick={handleExportConfig}
                 className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
               >
-                Export config (.json)
+                Backup config (.json)
               </button>
               <button
                 onClick={handleExportMd}
                 className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
               >
-                Export report (.md)
+                Report (.md)
               </button>
             </div>
           )}

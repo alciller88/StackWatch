@@ -185,13 +185,19 @@ The Flow panel provides a canvas-based architecture visualisation powered by Rea
 
 ---
 
-## Import & export
+## Scan vs Import — two distinct modes
+
+| Action | What happens |
+|---|---|
+| **Scan / Open repo** | Fresh analysis from code. Detects services, dependencies, and graph from scratch. No stale data — previous edits are not carried over. |
+| **Import config** | Full restore of a previously exported `stackwatch.config.json`. Restores all services (with edits, costs, owners, comments), graph layout, node positions, and edges exactly as saved. Works with or without a repo loaded. |
+
+### Export options
 
 | Action | Format |
 |---|---|
-| **Import config** | Load an existing `stackwatch.config.json` — works with or without a repo loaded (standalone = unlinked) |
-| **Export config** | Save full config as JSON (all services, accounts, graph layout) — reimportable |
-| **Export report** | Save services as a formatted Markdown table — read-only documentation |
+| **Export config (.json)** | Full config backup — reimportable to restore your entire stack |
+| **Export report (.md)** | Human-readable Markdown table — for documentation and sharing |
 
 ---
 
