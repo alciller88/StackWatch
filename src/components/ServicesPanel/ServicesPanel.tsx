@@ -270,6 +270,8 @@ const ServiceForm: React.FC<{
   const [accountEmail, setAccountEmail] = useState(editingService?.accountEmail ?? '');
   const [notes, setNotes] = useState(editingService?.notes ?? '');
   const [confidence, setConfidence] = useState<NonNullable<Service['confidence']>>(editingService?.confidence ?? 'high');
+  const [owner, setOwner] = useState(editingService?.owner ?? '');
+  const [comment, setComment] = useState(editingService?.comment ?? '');
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
@@ -288,6 +290,8 @@ const ServiceForm: React.FC<{
       ...(renewalDate && { renewalDate }),
       ...(accountEmail && { accountEmail }),
       ...(notes && { notes }),
+      ...(owner && { owner }),
+      ...(comment && { comment }),
     };
 
     if (isEditing) {
@@ -457,6 +461,28 @@ const ServiceForm: React.FC<{
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional details..."
+            className={`${inputClass} border`}
+            style={inputStyle}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Owner</label>
+          <input
+            type="text"
+            value={owner}
+            onChange={(e) => setOwner(e.target.value)}
+            placeholder="Team or person responsible"
+            className={`${inputClass} border`}
+            style={inputStyle}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Comment</label>
+          <input
+            type="text"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Quick note about this service"
             className={`${inputClass} border`}
             style={inputStyle}
           />

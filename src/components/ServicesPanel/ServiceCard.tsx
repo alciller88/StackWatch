@@ -167,6 +167,16 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
         </span>
       </div>
 
+      {/* Owner */}
+      {service.owner && (
+        <div className="font-mono text-[10px] text-[var(--color-text-secondary)] mb-2 flex items-center gap-1 truncate" title={service.owner}>
+          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="truncate">{service.owner}</span>
+        </div>
+      )}
+
       {/* Cost */}
       {service.cost && (
         <div className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-2">
@@ -225,6 +235,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       {service.notes && (
         <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-2 line-clamp-2">
           {service.notes}
+        </div>
+      )}
+
+      {/* Comment */}
+      {service.comment && (
+        <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-2 italic line-clamp-2">
+          {service.comment}
         </div>
       )}
 

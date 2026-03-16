@@ -34,6 +34,8 @@ export interface Service {
   accountEmail?: string
   notes?: string
   url?: string
+  owner?: string
+  comment?: string
 }
 
 export interface Dependency {

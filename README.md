@@ -351,13 +351,14 @@ StackWatch/
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
 - [x] 79 tests across 6 suites (added AI refiner + pipeline checkpoint tests)
+- [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
+- [x] Onboarding tutorial (5-step walkthrough after first scan)
+- [x] Service ownership + comments fields
+- [x] Badge generator + About section in Settings
 - [ ] Production build validation
 - [ ] UI component tests
 - [ ] macOS / Windows / Linux distributable builds
 - [ ] Monorepo support
-- [ ] Cost tracking panel + renewal alerts
-- [ ] Analysis progress indicator by phase
-- [ ] CSP headers + keychain API key storage
 
 ---
 

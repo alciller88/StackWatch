@@ -28,6 +28,8 @@ interface StoreState {
   deepAnalysis: DeepAnalysisResult | null;
   linkStatus: LinkStatus;
   analysisPhase: string | null;
+  hasSeenTutorial: boolean;
+  showTutorial: boolean;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
@@ -47,6 +49,7 @@ interface StoreState {
   deleteManualService: (serviceId: string) => Promise<void>;
   updateServiceConfidence: (serviceId: string, confidence: 'high' | 'medium' | 'low') => Promise<void>;
   importStandalone: () => Promise<void>;
+  dismissTutorial: () => void;
 }
 
 function mergeServices(
@@ -93,6 +96,8 @@ export const useStore = create<StoreState>((set, get) => ({
   deepAnalysis: null,
   linkStatus: 'unknown',
   analysisPhase: null,
+  hasSeenTutorial: localStorage.getItem('stackwatch-tutorial-seen') === 'true',
+  showTutorial: false,
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
@@ -123,6 +128,11 @@ export const useStore = create<StoreState>((set, get) => ({
         activePanel: 'flow',
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
+
+      // Show onboarding tutorial on first scan
+      if (!get().hasSeenTutorial) {
+        set({ showTutorial: true });
+      }
 
       // Write source reference to config
       const currentConfig = ensureConfig(config);
@@ -167,6 +177,11 @@ export const useStore = create<StoreState>((set, get) => ({
         activePanel: 'flow',
         linkStatus: 'linked',
       });
+
+      // Show onboarding tutorial on first scan
+      if (!get().hasSeenTutorial) {
+        set({ showTutorial: true });
+      }
 
       // Write source reference if repoPath is available for saving
       const repoPath = get().repoPath;
@@ -419,5 +434,10 @@ export const useStore = create<StoreState>((set, get) => ({
         s.id === serviceId ? { ...s, confidence } : s
       ),
     }));
+  },
+
+  dismissTutorial: () => {
+    localStorage.setItem('stackwatch-tutorial-seen', 'true');
+    set({ hasSeenTutorial: true, showTutorial: false });
   },
 }));

@@ -11,9 +11,10 @@ import { CostsPanel } from './components/CostsPanel/CostsPanel'
 import { TitleBar } from './components/TitleBar'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { OnboardingTutorial } from './components/OnboardingTutorial'
 
 export default function App() {
-  const { repoPath, activePanel } = useStore()
+  const { repoPath, activePanel, showTutorial } = useStore()
   const dialog = useDialogStore()
 
   const renderPanel = () => {
@@ -44,6 +45,7 @@ export default function App() {
             {renderPanel()}
           </main>
         </div>
+        {showTutorial && <OnboardingTutorial />}
         {dialog.current && (
           <ConfirmDialog
             title={dialog.current.title}

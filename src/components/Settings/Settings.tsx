@@ -19,6 +19,7 @@ export const Settings: React.FC = () => {
   const [testError, setTestError] = useState('');
   const [saved, setSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [badgeCopied, setBadgeCopied] = useState(false);
 
   useEffect(() => {
     loadAISettings();
@@ -409,6 +410,66 @@ export const Settings: React.FC = () => {
           <p>
             Any OpenAI-compatible provider works, including free local models via Ollama or LM Studio.
           </p>
+        </div>
+
+        {/* Share section */}
+        <div className="border rounded-sm p-5 space-y-4" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+          <h3 className="font-mono uppercase tracking-widest text-[10px] text-[var(--color-text-muted)]">Share</h3>
+          <div>
+            <span
+              className="inline-block font-mono text-[11px] px-3 py-1 rounded-full border border-[var(--color-accent)] text-[var(--color-accent)]"
+              style={{ background: 'var(--color-bg-primary)' }}
+            >
+              Analyzed with StackWatch
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <textarea
+              readOnly
+              rows={2}
+              value="[![Analyzed with StackWatch](https://img.shields.io/badge/Analyzed_with-StackWatch-e2b04a?style=flat)](https://github.com/alciller88/StackWatch)"
+              className="flex-1 border rounded-sm px-3 py-2 font-mono text-[10px] text-[var(--color-text-secondary)] resize-none focus:outline-none"
+              style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border)' }}
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  '[![Analyzed with StackWatch](https://img.shields.io/badge/Analyzed_with-StackWatch-e2b04a?style=flat)](https://github.com/alciller88/StackWatch)'
+                );
+                setBadgeCopied(true);
+                setTimeout(() => setBadgeCopied(false), 2000);
+              }}
+              className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] rounded-none transition-colors self-start"
+            >
+              {badgeCopied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        {/* About section */}
+        <div className="border rounded-sm p-5 space-y-3" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+          <h3 className="font-mono uppercase tracking-widest text-[10px] text-[var(--color-text-muted)]">About</h3>
+          <p className="font-mono text-[13px] text-[var(--color-accent)]">StackWatch v0.2.1</p>
+          <p className="font-mono text-[11px] text-[var(--color-text-muted)]">Know your stack, own your stack.</p>
+          <div className="space-y-1">
+            <a
+              href="https://github.com/alciller88/StackWatch"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block font-mono text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-opacity"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://github.com/alciller88/StackWatch/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block font-mono text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-opacity"
+            >
+              Report an issue
+            </a>
+            <span className="block font-mono text-[11px] text-[var(--color-text-muted)]">MIT License</span>
+          </div>
         </div>
       </div>
     </div>

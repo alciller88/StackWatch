@@ -6,13 +6,13 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div
-      className="flex-1 flex items-center justify-center p-8"
+      className="flex-1 flex items-center justify-center p-8 overflow-y-auto"
       style={{
         backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
         backgroundSize: '32px 32px',
       }}
     >
-      <div className="text-center max-w-md">
+      <div className="text-center max-w-2xl w-full py-8">
         {/* Icon with corner brackets */}
         <div className="relative mb-6 flex justify-center">
           <div style={{ width: 52, height: 52, border: '1px solid var(--color-border)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -47,70 +47,65 @@ export const Dashboard: React.FC = () => {
           Visualize and monitor all the services, dependencies, and external
           accounts your project relies on.
         </p>
-        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-8">
+        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-6">
           Open a local repository or connect to GitHub to automatically detect
           your project&apos;s tech stack, services, and infrastructure.
         </p>
 
-        {/* CTA */}
-        <button
-          onClick={openFolder}
-          disabled={isAnalyzing}
-          className="inline-flex items-center gap-2 px-7 py-2.5 bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-50 disabled:cursor-not-allowed font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
-        >
-          {isAnalyzing ? (
-            <>
-              <svg
-                className="w-4 h-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                />
-              </svg>
-              Open a Repository
-            </>
-          )}
-        </button>
-
-        <p className="font-mono text-[10px] tracking-wide text-[var(--color-text-muted)] mt-3">
-          Or use the GitHub button in the top bar to analyze a remote repository
-        </p>
-
-        {/* Demo CTA */}
-        <div className="mt-5 pt-5 border-t" style={{ borderColor: 'var(--color-border)' }}>
+        {/* CTA Buttons */}
+        <div className="flex items-center justify-center gap-4 mb-2">
           <button
             onClick={openFolder}
             disabled={isAnalyzing}
-            className="inline-flex items-center gap-2 px-5 py-2 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed font-mono text-[10px] uppercase tracking-widest rounded-none transition-all"
+            className="inline-flex items-center gap-2 px-7 py-2.5 bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-50 disabled:cursor-not-allowed font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
+          >
+            {isAnalyzing ? (
+              <>
+                <svg
+                  className="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  />
+                </svg>
+                Open a Repository
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={openFolder}
+            disabled={isAnalyzing}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
             aria-label="Try demo by scanning a local project"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,33 +114,164 @@ export const Dashboard: React.FC = () => {
             </svg>
             Try Demo
           </button>
-          <p className="font-mono text-[9px] tracking-wide text-[var(--color-text-muted)] mt-2" style={{ opacity: 0.7 }}>
-            Scan any local project to see StackWatch in action
-          </p>
         </div>
 
-        {/* Features */}
-        <div className="mt-10 grid grid-cols-3 gap-px text-left" style={{ background: 'var(--color-border)' }}>
-          <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">01 · SERVICES</div>
-            <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">Services</h3>
-            <p className="font-mono text-[10px] text-[var(--color-text-muted)]">
-              Detect hosting, payments, auth, and more from your codebase.
-            </p>
+        <p className="font-mono text-[10px] tracking-wide text-[var(--color-text-muted)] mb-10">
+          Or use the GitHub button in the top bar to analyze a remote repository
+        </p>
+
+        {/* Quick Start */}
+        <div className="mb-10">
+          <div
+            className="text-left px-6 py-5"
+            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+          >
+            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--color-accent)' }}>
+              Quick Start
+            </h2>
+            <div className="space-y-3">
+              {[
+                { num: '01', text: 'Open a local folder or connect a GitHub repo' },
+                { num: '02', text: 'Review detected services, dependencies, and costs' },
+                { num: '03', text: 'Visualize your architecture in the flow graph' },
+              ].map((step) => (
+                <div key={step.num} className="flex items-start gap-3">
+                  <span
+                    className="font-mono text-[10px] font-medium shrink-0 w-6 h-6 flex items-center justify-center"
+                    style={{ color: 'var(--color-accent)', border: '1px solid var(--color-border)' }}
+                  >
+                    {step.num}
+                  </span>
+                  <span className="font-mono text-[11px] text-[var(--color-text-secondary)] leading-relaxed pt-0.5">
+                    {step.text}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">02 · DEPS</div>
-            <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">Dependencies</h3>
-            <p className="font-mono text-[10px] text-[var(--color-text-muted)]">
-              Browse all packages with version, type, and ecosystem info.
-            </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="mb-10">
+          <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-left" style={{ color: 'var(--color-accent)' }}>
+            Features
+          </h2>
+          <div className="grid grid-cols-3 gap-px text-left" style={{ background: 'var(--color-border)' }}>
+            {[
+              {
+                num: '01',
+                label: 'SERVICES',
+                title: 'Services',
+                desc: 'Detect hosting, payments, auth, and more from your codebase.',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                  </svg>
+                ),
+              },
+              {
+                num: '02',
+                label: 'DEPS',
+                title: 'Dependencies',
+                desc: 'Browse all packages with version, type, and ecosystem info.',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h7" />
+                  </svg>
+                ),
+              },
+              {
+                num: '03',
+                label: 'GRAPH',
+                title: 'Flow Graph',
+                desc: 'Interactive architecture diagram of your app data flow.',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ),
+              },
+              {
+                num: '04',
+                label: 'COSTS',
+                title: 'Costs & Renewals',
+                desc: 'Track spending by category with renewal date alerts.',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+              },
+              {
+                num: '05',
+                label: 'AI',
+                title: 'AI Analysis',
+                desc: 'Validate findings and discover hidden services with AI.',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                ),
+              },
+              {
+                num: '06',
+                label: 'DATA',
+                title: 'Import / Export',
+                desc: 'Save and share your project configuration as JSON.',
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                ),
+              },
+            ].map((feat) => (
+              <div key={feat.num} className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span style={{ color: 'var(--color-text-muted)' }}>{feat.icon}</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">
+                    {feat.num} · {feat.label}
+                  </span>
+                </div>
+                <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">{feat.title}</h3>
+                <p className="font-mono text-[10px] text-[var(--color-text-muted)]">{feat.desc}</p>
+              </div>
+            ))}
           </div>
-          <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">03 · GRAPH</div>
-            <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">Flow Graph</h3>
-            <p className="font-mono text-[10px] text-[var(--color-text-muted)]">
-              Interactive architecture diagram of your app data flow.
-            </p>
+        </div>
+
+        {/* Keyboard Shortcuts */}
+        <div className="text-left">
+          <div
+            className="px-6 py-5"
+            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+          >
+            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--color-accent)' }}>
+              Keyboard Shortcuts
+            </h2>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              {[
+                { key: 'Esc', desc: 'Close dialogs and modals' },
+                { key: 'Right-click', desc: 'Context menu in flow graph' },
+                { key: 'Double-click', desc: 'Edit nodes in flow graph' },
+                { key: 'Drag', desc: 'Reposition nodes on canvas' },
+              ].map((shortcut) => (
+                <div key={shortcut.key} className="flex items-center gap-3">
+                  <kbd
+                    className="font-mono text-[9px] px-1.5 py-0.5 shrink-0"
+                    style={{
+                      color: 'var(--color-accent)',
+                      border: '1px solid var(--color-border)',
+                      background: 'var(--color-bg-primary)',
+                    }}
+                  >
+                    {shortcut.key}
+                  </kbd>
+                  <span className="font-mono text-[10px] text-[var(--color-text-muted)]">
+                    {shortcut.desc}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
