@@ -1,0 +1,77 @@
+# StackWatch CI/CD — build & test on push/PR
+#
+# Code signing secrets (add in GitHub repo Settings > Secrets):
+#   Windows:  CSC_LINK (base64 .pfx), CSC_KEY_PASSWORD
+#   macOS:    APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID, CSC_LINK, CSC_KEY_PASSWORD
+#   Linux:    (none required for unsigned AppImage)
+#
+# Auto-publish to GitHub Releases is NOT enabled yet — requires
+# GH_TOKEN secret and electron-builder publish config.
+
+name: Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: stackwatch-linux
+          - os: windows-latest
+            artifact: stackwatch-windows
+          - os: macos-latest
+            artifact: stackwatch-macos
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # TypeScript compile + Vite bundle + electron-builder package
+      # Signing is skipped unless CSC_LINK / APPLE_ID secrets are set
+      - run: npm run build
+        env:
+          # Prevent electron-builder from publishing
+          EP_PRE_RELEASE: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb
+          if-no-files-found: warn
+          retention-days: 14
