@@ -8,3 +8,5 @@ out/
 *.tsbuildinfo
 .claude/
 stackwatch.config.json
+# CI/CD workflow requires GitHub token with 'workflow' scope to push
+.github/workflows/
