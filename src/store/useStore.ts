@@ -116,6 +116,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: result.flowEdges,
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
+        activePanel: 'flow',
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
 
@@ -156,6 +157,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: result.flowEdges,
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
+        activePanel: 'flow',
         linkStatus: 'linked',
       });
 
@@ -385,6 +387,7 @@ export const useStore = create<StoreState>((set, get) => ({
         dependencies: [],
         repoPath: null,
         linkStatus: 'unlinked',
+        activePanel: 'flow',
         deepAnalysis: null,
         error: null,
       });

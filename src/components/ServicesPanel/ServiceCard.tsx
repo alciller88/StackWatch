@@ -97,7 +97,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
   return (
     <div
-      className={`border rounded-none p-4 transition-colors ${
+      className={`border rounded-none p-4 transition-colors overflow-hidden ${
         confidenceBorder[service.confidence ?? 'default']
       } ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'}`}
       style={{ background: 'var(--color-bg-secondary)' }}
@@ -110,7 +110,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
             {categoryIcons[service.category]}
           </span>
           <div>
-            <h3 className="font-mono text-[12px] font-medium text-[var(--color-text-primary)]">{service.name}</h3>
+            <h3 className="font-mono text-[12px] font-medium text-[var(--color-text-primary)] truncate max-w-[140px]" title={service.name}>{service.name}</h3>
             <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">
               {service.category}
             </span>
@@ -192,7 +192,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       {/* AI Context */}
       {context && (
         <div className="mt-2 space-y-1">
-          <div className="font-mono text-[10px] text-[var(--color-text-secondary)] leading-relaxed">
+          <div className="font-mono text-[10px] text-[var(--color-text-secondary)] leading-relaxed line-clamp-3">
             — {context.usage}
           </div>
           <div className="flex items-center gap-1.5">
