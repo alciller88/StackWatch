@@ -11,13 +11,18 @@ import type {
 } from '../types'
 
 const MAX_FILES_PER_SERVICE = 3
-const MAX_FILES_HIDDEN_DETECTION = 5
-const MAX_LINES_PER_FILE = 200
-const MAX_PROMPT_CHARS = 12000 // ~3k tokens, safe for most providers
+const MAX_FILES_HIDDEN_DETECTION = 4
+const MAX_LINES_PER_FILE = 100
+const MAX_PROMPT_CHARS = 6000 // hard cap per prompt, ~1.5k tokens
 
 // ── AI call helper ──
 
 async function callAI(provider: AIProvider, prompt: string, maxTokens: number): Promise<string> {
+  // Hard safety cap: truncate prompt if it exceeds limit
+  const safePrompt = prompt.length > MAX_PROMPT_CHARS
+    ? prompt.slice(0, MAX_PROMPT_CHARS) + '\n[... truncated for size]'
+    : prompt
+
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (provider.apiKey) {
     headers['Authorization'] = `Bearer ${provider.apiKey}`
@@ -30,7 +35,7 @@ async function callAI(provider: AIProvider, prompt: string, maxTokens: number): 
       model: provider.model,
       max_tokens: maxTokens,
       temperature: 0.1,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: safePrompt }],
     }),
     signal: AbortSignal.timeout(60000),
   })
@@ -290,9 +295,17 @@ async function aiClassifyBatch(
 ): Promise<Partial<Service>[]> {
   if (items.length === 0) return []
 
+  // Cap the items list to ~3k chars to stay within prompt budget
+  let itemList = ''
+  for (const item of items) {
+    if (itemList.length + item.length > 3000) break
+    if (itemList) itemList += ', '
+    itemList += item
+  }
+
   const prompt = `Identify external services from these ${evidenceType} found in a software project.
 
-${evidenceType}: ${items.join(', ')}
+${evidenceType}: ${itemList}
 
 Return ONLY a valid JSON array (empty [] if none are real services):
 ${AI_SVC_SCHEMA}
