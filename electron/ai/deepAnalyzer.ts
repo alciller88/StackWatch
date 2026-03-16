@@ -237,6 +237,86 @@ Return ONLY a valid JSON array:
     }))
 }
 
+// ── Step D: AI-based evidence classification (for ai-only mode) ──
+
+export async function classifyEvidencesWithAI(
+  evidences: Evidence[],
+  repoPath: string | null,
+  provider: AIProvider,
+): Promise<Service[]> {
+  // Summarize evidences for the prompt
+  const envVars = evidences.filter(e => e.type === 'env_var').map(e => e.value)
+  const urls = evidences.filter(e => e.type === 'url').map(e => e.value)
+  const packages = evidences.filter(e => e.type === 'npm_package' || e.type === 'import').map(e => e.value)
+  const configs = evidences.filter(e => e.type === 'config_file').map(e => e.value)
+  const domains = evidences.filter(e => e.type === 'domain').map(e => e.value)
+  const ciSecrets = evidences.filter(e => e.type === 'ci_secret').map(e => e.value)
+
+  // Read a selection of source files for additional context
+  const allFiles = [...new Set(evidences.map(e => e.file))]
+  const filesToRead = selectFilesForHiddenDetection(allFiles)
+  const fileContents: { path: string; content: string }[] = []
+  for (const f of filesToRead) {
+    if (repoPath) {
+      try {
+        const fullPath = path.join(repoPath, f)
+        fileContents.push({ path: f, content: await readFileContent(fullPath) })
+      } catch { /* skip */ }
+    }
+  }
+
+  const prompt = `You are analyzing a software project to identify ALL external services, APIs, and platforms it depends on.
+
+Evidence collected from the codebase:
+${envVars.length > 0 ? `\nEnvironment variables: ${[...new Set(envVars)].join(', ')}` : ''}
+${urls.length > 0 ? `\nExternal URLs: ${[...new Set(urls)].join(', ')}` : ''}
+${packages.length > 0 ? `\nPackages/imports: ${[...new Set(packages)].slice(0, 50).join(', ')}` : ''}
+${configs.length > 0 ? `\nConfig files: ${[...new Set(configs)].join(', ')}` : ''}
+${domains.length > 0 ? `\nDomains: ${[...new Set(domains)].join(', ')}` : ''}
+${ciSecrets.length > 0 ? `\nCI secrets: ${[...new Set(ciSecrets)].join(', ')}` : ''}
+${fileContents.length > 0 ? `\nSource code:\n${fileContents.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')}` : ''}
+
+Identify every external service this project uses. For each service, determine:
+- The actual service name (e.g., "Stripe", "PostgreSQL", "AWS S3" — not generic names like "Database")
+- Its category
+- Confidence level based on the strength of the evidence
+
+Return ONLY a valid JSON array (empty [] if nothing found):
+[{
+  "name": "Service Name",
+  "category": one of: "domain","hosting","cicd","database","auth","payments","email","analytics","monitoring","cdn","storage","infra","ai","mobile","gaming","data","messaging","support","other",
+  "confidence": "high" or "medium" or "low",
+  "reason": "what evidence points to this service",
+  "inferredFrom": "AI classification"
+}]
+
+Rules:
+- Only include REAL external services, not internal code or generic infrastructure
+- Do not include development tools (eslint, prettier, webpack, vite, etc.)
+- Do not include frameworks (React, Vue, Express, etc.)
+- Do not include utility libraries (lodash, dayjs, zod, etc.)
+- If an env var like STRIPE_SECRET_KEY exists, that's high confidence for Stripe
+- If a URL like api.openai.com is called, that's high confidence for OpenAI`
+
+  const text = await callAI(provider, prompt, 2000)
+  const parsed = safeParseJSON<any[]>(text, [])
+  if (!Array.isArray(parsed)) return []
+
+  return parsed
+    .filter(s => s.name && s.category)
+    .map(s => ({
+      id: String(s.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      name: String(s.name),
+      category: s.category as ServiceCategory,
+      plan: 'unknown' as const,
+      source: 'inferred' as const,
+      confidence: (s.confidence ?? 'medium') as 'high' | 'medium' | 'low',
+      needsReview: s.confidence === 'low',
+      confidenceReasons: [s.reason ?? 'AI classification'],
+      inferredFrom: s.inferredFrom ?? 'AI classification',
+    }))
+}
+
 // ── Orchestrator ──
 
 export async function runDeepAnalysis(

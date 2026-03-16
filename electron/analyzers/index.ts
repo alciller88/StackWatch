@@ -4,7 +4,7 @@ import { classifyEvidences } from './heuristic'
 import { deduplicateServices } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
 import { enhanceWithAI } from '../ai/provider'
-import { runDeepAnalysis } from '../ai/deepAnalyzer'
+import { runDeepAnalysis, classifyEvidencesWithAI } from '../ai/deepAnalyzer'
 
 export async function analyzeLocalRepo(
   folderPath: string,
@@ -55,6 +55,21 @@ async function runPipeline(
   let aiError: string | undefined
   if (useAI) {
     try {
+      // In ai-only mode, let AI classify the raw evidences first
+      if (scanMode === 'ai-only') {
+        const aiServices = await classifyEvidencesWithAI(
+          evidences,
+          repoPath ?? null,
+          aiSettings!.provider,
+        )
+        services = aiServices
+        if (excludedServices && excludedServices.length > 0) {
+          const excluded = new Set(excludedServices)
+          services = services.filter((s) => !excluded.has(s.id))
+        }
+      }
+
+      // Deep analysis: context, hidden services, edge types
       deepAnalysis = await runDeepAnalysis(
         services,
         evidences,
@@ -78,6 +93,7 @@ async function runPipeline(
           const excluded = new Set(excludedServices)
           services = services.filter((s) => !excluded.has(s.id))
         }
+        aiError += ' — showing heuristic results as fallback'
       }
     }
   }

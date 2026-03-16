@@ -133,7 +133,15 @@ Services with low confidence appear in a "Needs Review" section at the top of th
 
 ## AI analysis (optional)
 
-StackWatch works 100% offline without AI. When an AI provider is configured, a deep analysis pass enriches results with three capabilities:
+StackWatch works 100% offline without AI. Three scan modes are available in **Settings**:
+
+| Mode | Speed | Requires AI | Description |
+|------|-------|-------------|-------------|
+| **Heuristic only** | Fast | No | Pattern-based detection (~80% coverage). Default. |
+| **Heuristic + AI** | Medium | Yes | Heuristics first, AI enhances and finds hidden services (~95%) |
+| **AI only** | Slow | Yes | Full AI-powered classification from raw evidences. Falls back to heuristics if AI fails |
+
+When an AI provider is configured, a deep analysis pass enriches results with three capabilities:
 
 | Capability | What it does |
 |---|---|
@@ -174,9 +182,9 @@ The Flow panel provides a canvas-based architecture visualisation powered by Rea
 
 | Action | Format |
 |---|---|
-| **Import config** | Load an existing `stackwatch.config.json` |
-| **Export config** | Save full config as JSON (all services, accounts, graph layout) |
-| **Export services** | Save services as a formatted Markdown table (SERVICES.md) |
+| **Import config** | Load an existing `stackwatch.config.json` — works with or without a repo loaded (standalone = unlinked) |
+| **Export config** | Save full config as JSON (all services, accounts, graph layout) — reimportable |
+| **Export report** | Save services as a formatted Markdown table — read-only documentation |
 
 ---
 
@@ -267,16 +275,19 @@ StackWatch/
 │   └── setup.js             # Postinstall: system deps on WSL
 ├── src/
 │   ├── components/
+│   │   ├── TitleBar.tsx     # Custom frameless titlebar (minimize/maximize/close)
+│   │   ├── ConfirmDialog.tsx # Themed confirmation modals (replaces native OS dialogs)
 │   │   ├── Dashboard/       # Welcome screen + loading state
 │   │   ├── TopBar/          # Folder picker, GitHub, re-analyze, import/export, link status
 │   │   ├── Sidebar/         # Panel navigation (4 panels)
 │   │   ├── ServicesPanel/   # Service cards, filters, add/edit form, confidence badges
 │   │   ├── DepsPanel/       # Dependencies table with sort/filter
 │   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
-│   │   └── Settings/        # AI provider configuration + connection testing
+│   │   └── Settings/        # AI provider config, scan mode selector, connection testing
 │   ├── store/
 │   │   ├── useStore.ts      # Global Zustand state (services, deps, config, AI)
-│   │   └── graphStore.ts    # Graph-specific state (nodes, edges, excluded)
+│   │   ├── graphStore.ts    # Graph-specific state (nodes, edges, excluded)
+│   │   └── dialogStore.ts   # Promise-based confirm dialog state
 │   └── types.ts             # Renderer-side type definitions
 ├── SPEC.md                  # Full technical specification
 ├── CONTEXT.md               # AI agent context (keep updated)
@@ -314,6 +325,9 @@ StackWatch/
 - [x] Import/export (JSON config + Markdown table)
 - [x] Confidence levels with color-coded borders + editable in form (v0.3.3)
 - [x] Unit tests — 58 tests across 5 suites
+- [x] Custom frameless titlebar + themed confirmation dialogs (v0.3.4)
+- [x] Standalone import (no repo required) + scan mode selector (heuristic/hybrid/ai-only)
+- [x] Generic name filtering to reduce false positives (Admin, $Domain, etc.)
 - [ ] Production build validation
 - [ ] UI component tests
 - [ ] macOS / Windows / Linux distributable builds
