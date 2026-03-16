@@ -124,6 +124,7 @@ export interface UserConfig {
     accountEmail: string;
   }[];
   graph?: GraphConfig;
+  confidenceOverrides?: Record<string, 'high' | 'medium' | 'low'>;
 }
 
 export interface Evidence {

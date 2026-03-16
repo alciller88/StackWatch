@@ -43,11 +43,13 @@ interface StoreState {
   addManualService: (service: Service) => Promise<void>;
   updateManualService: (service: Service) => Promise<void>;
   deleteManualService: (serviceId: string) => Promise<void>;
+  updateServiceConfidence: (serviceId: string, confidence: 'high' | 'medium' | 'low') => Promise<void>;
 }
 
 function mergeServices(
   inferred: Service[],
-  manual: Service[]
+  manual: Service[],
+  confidenceOverrides?: Record<string, 'high' | 'medium' | 'low'>
 ): Service[] {
   const merged = new Map<string, Service>();
   for (const s of inferred) {
@@ -55,6 +57,12 @@ function mergeServices(
   }
   for (const s of manual) {
     merged.set(s.id, s);
+  }
+  if (confidenceOverrides) {
+    for (const [id, confidence] of Object.entries(confidenceOverrides)) {
+      const s = merged.get(id);
+      if (s) merged.set(id, { ...s, confidence });
+    }
   }
   return Array.from(merged.values());
 }
@@ -100,7 +108,7 @@ export const useStore = create<StoreState>((set, get) => ({
       }
       const manualServices = config?.services ?? [];
       set({
-        services: mergeServices(result.services, manualServices),
+        services: mergeServices(result.services, manualServices, config?.confidenceOverrides),
         dependencies: result.dependencies,
         flowNodes: result.flowNodes,
         flowEdges: result.flowEdges,
@@ -139,7 +147,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const config = get().config;
       const manualServices = config?.services ?? [];
       set({
-        services: mergeServices(result.services, manualServices),
+        services: mergeServices(result.services, manualServices, config?.confidenceOverrides),
         dependencies: result.dependencies,
         flowNodes: result.flowNodes,
         flowEdges: result.flowEdges,
@@ -341,6 +349,23 @@ export const useStore = create<StoreState>((set, get) => ({
     await get().saveConfig(updatedConfig);
     set((state) => ({
       services: state.services.filter(s => s.id !== serviceId),
+    }));
+  },
+
+  updateServiceConfidence: async (serviceId: string, confidence: 'high' | 'medium' | 'low') => {
+    const currentConfig = ensureConfig(get().config);
+    const updatedConfig = {
+      ...currentConfig,
+      confidenceOverrides: {
+        ...currentConfig.confidenceOverrides,
+        [serviceId]: confidence,
+      },
+    };
+    await get().saveConfig(updatedConfig);
+    set((state) => ({
+      services: state.services.map(s =>
+        s.id === serviceId ? { ...s, confidence } : s
+      ),
     }));
   },
 }));

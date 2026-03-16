@@ -299,9 +299,9 @@ const ServiceForm: React.FC<{
         )}
       </div>
 
-      {/* Row 1: Name, Category, Plan */}
-      <div className="flex items-end gap-3">
-        <div className="flex-1">
+      {/* Row 1: Name, Category, Plan, Confidence */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[160px]">
           <label className="block text-xs text-gray-400 mb-1">Name *</label>
           <input
             type="text"
@@ -342,9 +342,9 @@ const ServiceForm: React.FC<{
             onChange={e => setConfidence(e.target.value as NonNullable<Service['confidence']>)}
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
           >
-            <option value="high">High — confirmed service</option>
-            <option value="medium">Medium — likely service, review recommended</option>
-            <option value="low">Low — uncertain, needs confirmation</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
           </select>
         </div>
       </div>

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Service, ServiceContext } from '../../types';
+import { useStore } from '../../store/useStore';
 
 const categoryIcons: Record<Service['category'], string> = {
   domain: '\uD83C\uDF10',
@@ -71,6 +72,20 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
   const days = service.renewalDate ? daysUntil(service.renewalDate) : null;
   const confidence = service.confidence ?? 'high';
   const badge = confidenceBadge[confidence];
+  const updateServiceConfidence = useStore(s => s.updateServiceConfidence);
+  const [showConfDropdown, setShowConfDropdown] = useState(false);
+  const confRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showConfDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (confRef.current && !confRef.current.contains(e.target as Node)) {
+        setShowConfDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showConfDropdown]);
 
   let renewalColor = 'text-gray-400';
   if (days !== null) {
@@ -102,18 +117,42 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Confidence badge */}
-          {badge.label && (
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${badge.bg} ${badge.text} border ${
-                confidence === 'low' ? 'border-orange-800' : 'border-yellow-800'
+          {/* Confidence badge — clickable */}
+          <div className="relative" ref={confRef}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowConfDropdown(v => !v); }}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium border cursor-pointer transition-colors ${
+                confidence === 'high'
+                  ? 'bg-green-900/40 text-green-400 border-green-800 hover:bg-green-900/60'
+                  : confidence === 'medium'
+                  ? `${badge.bg} ${badge.text} border-yellow-800 hover:bg-yellow-900/60`
+                  : `${badge.bg} ${badge.text} border-orange-800 hover:bg-orange-900/60`
               }`}
-              title={service.confidenceReasons?.join('\n') ?? ''}
+              title={service.confidenceReasons?.join('\n') ?? 'Click to change confidence'}
             >
               {confidence === 'low' && '\u26A0 '}
-              {badge.label}
-            </span>
-          )}
+              {confidence === 'high' ? 'confirmed' : badge.label}
+            </button>
+            {showConfDropdown && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-gray-800 border border-gray-700 rounded shadow-lg py-1 min-w-[140px]">
+                {(['high', 'medium', 'low'] as const).map(level => (
+                  <button
+                    key={level}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateServiceConfidence(service.id, level);
+                      setShowConfDropdown(false);
+                    }}
+                    className={`w-full text-left text-xs px-3 py-1.5 hover:bg-gray-700 transition-colors ${
+                      level === confidence ? 'text-blue-400 font-medium' : 'text-gray-300'
+                    }`}
+                  >
+                    {level === 'high' ? 'High — confirmed' : level === 'medium' ? 'Medium — review' : 'Low — uncertain'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Source badge */}
           <span
