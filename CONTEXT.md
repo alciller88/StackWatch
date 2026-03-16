@@ -1,132 +1,161 @@
 # CONTEXT.md — StackWatch
 
-> Este fichero es memoria viva para agentes de IA (Claude, Copilot, Cursor, etc.).
-> Actualízalo después de cada sesión significativa de desarrollo.
-> NO es documentación de usuario — es contexto operativo para el agente.
+> This file is living memory for AI agents (Claude, Copilot, Cursor, etc.).
+> Update it after each significant development session.
+> NOT user documentation — this is operational context for the agent.
 
 ---
 
-## Qué es este proyecto
+## What this project is
 
-App de escritorio Electron + React que analiza cualquier proyecto de software (local o GitHub) e infiere todos los servicios externos, dependencias y cuentas que usa el proyecto. Soporta ecosistemas web, Python, Rust, Go, Terraform y más. El resultado se muestra en un dashboard con tres paneles: servicios, dependencias y grafo de flujo.
+Electron + React desktop app that analyzes any software project (local or GitHub) and infers all external services, dependencies and accounts the project uses. Supports web, Python, Rust, Go, Terraform ecosystems and more. Results are displayed in a dashboard with three panels: services, dependencies and flow graph.
 
-El fichero de configuración manual del usuario es `stackwatch.config.json` en la raíz del repo analizado (no del repo de la app).
+The user's manual configuration file is `stackwatch.config.json` in the root of the analyzed repo (not the app's repo).
 
-Spec completa: `SPEC.md`
+Full spec: `SPEC.md`
 
 ---
 
-## Estado actual del desarrollo
+## Current development state
 
-> ⚠️ Actualizar esta sección al inicio de cada sesión.
+> ⚠️ Update this section at the start of each session.
 
-- **Fase**: v0.3.1 — análisis profundo con IA
-- **Último hito**: deep AI analysis (2026-03-16)
-  - **FEAT:** cuando la IA está configurada, el pipeline ejecuta análisis profundo con tres capacidades:
-    - **Contexto de uso**: para cada servicio detectado, la IA lee el código y explica cómo se usa, su criticidad, y detecta warnings (credenciales hardcoded, etc.)
-    - **Detección de servicios ocultos**: la IA lee ficheros prioritarios (lib/, services/, api/) y encuentra servicios consumidos via wrappers o SDKs que la heurística no detectó
-    - **Inferencia de aristas del grafo**: la IA determina el tipo de conexión correcto (data/auth/payment/webhook) basándose en el contexto de uso
-  - **ARCH:** nuevo `electron/ai/deepAnalyzer.ts` con `runDeepAnalysis()` que orquesta las tres capacidades en paralelo
-  - **UI:** ServiceCard muestra contexto de uso (quote), criticidad (critical/important/optional con colores), y warnings de la IA
-  - **UX:** TopBar muestra "AI analysis..." durante análisis con IA activa; sin IA, comportamiento idéntico al anterior
-  - **TYPES:** nuevos tipos `ServiceContext`, `DeepAnalysisResult` en ambas capas; `AnalysisResult.deepAnalysis` opcional
-  - **CONTROL:** máx 5 ficheros/servicio, 500 líneas/fichero, 10 ficheros para detección oculta, batches de 3 llamadas concurrentes
+- **Phase**: v0.3.1 — deep AI analysis
+- **Latest milestone**: deep AI analysis (2026-03-16)
+  - **FEAT:** when AI is configured, the pipeline runs deep analysis with three capabilities:
+    - **Usage context**: for each detected service, AI reads the code and explains how it's used, its criticality, and detects warnings (hardcoded credentials, etc.)
+    - **Hidden service detection**: AI reads priority files (lib/, services/, api/) and finds services consumed via wrappers or SDKs that heuristic analysis missed
+    - **Graph edge inference**: AI determines the correct connection type (data/auth/payment/webhook) based on usage context
+  - **ARCH:** new `electron/ai/deepAnalyzer.ts` with `runDeepAnalysis()` orchestrating all three capabilities in parallel
+  - **UI:** ServiceCard shows usage context (quote), criticality (critical/important/optional with colors), and AI warnings
+  - **UX:** TopBar shows "AI analysis..." during analysis when AI is active; without AI, behavior is identical to before
+  - **TYPES:** new types `ServiceContext`, `DeepAnalysisResult` in both layers; `AnalysisResult.deepAnalysis` optional
+  - **CONTROL:** max 5 files/service, 500 lines/file, 10 files for hidden detection, batches of 3 concurrent calls
   - 58 tests passing (heuristic: 13, deduplicator: 6, extractor: 26, pipeline: 4, flowInference: 9)
-- **Hitos anteriores**:
-  - v0.3.0: grafo de flujo interactivo (context menus, node editing, custom connections, graphStore)
-  - v0.2.5: fix detección de APIs en constantes y env vars con sufijos KEY/SECRET/TOKEN
+- **Previous milestones**:
+  - v0.3.0: interactive flow graph (context menus, node editing, custom connections, graphStore)
+  - v0.2.5: fix API detection in constants and env vars with KEY/SECRET/TOKEN suffixes
   - v0.2.4: fix own project name filtering + import config
-  - v0.2.3: extractor filtra solo llamadas de red reales, IGNORED_DOMAINS ampliado, excepción api.*, process.env URL detection
-  - v0.2.2: purga de bugs, eliminación de duplicación, tests del extractor
-  - v0.2.1: proveedores IA recomendados + formulario de servicios manuales
-  - v0.2: reingeniería completa del sistema de detección — heurística semántica + IA opcional
-  - v0.1: scaffolding completo, 11 analizadores hardcodeados, UI React completa, WSL support
-  - Multi-ecosistema: Python, Rust, Go, Terraform
-  - WSL2 auto-download de Electron binary
-  - CommonJS fix para Electron main process
-- **Próximo paso**: validar build de producción (`npm run build`), tests de componentes UI
+  - v0.2.3: extractor filters only real network calls, IGNORED_DOMAINS expanded, api.* exception, process.env URL detection
+  - v0.2.2: bug fixes, code deduplication, extractor tests
+  - v0.2.1: recommended AI providers + manual service form
+  - v0.2: complete reengineering of detection system — semantic heuristics + optional AI
+  - v0.1: complete scaffolding, 11 hardcoded analyzers, full React UI, WSL support
+  - Multi-ecosystem: Python, Rust, Go, Terraform
+  - WSL2 auto-download of Electron binary
+  - CommonJS fix for Electron main process
+- **Next step**: validate production build (`npm run build`), UI component tests
 
 ---
 
-## Decisiones de arquitectura tomadas (no reabrir sin motivo)
+## Architecture decisions (do not reopen without reason)
 
-| Decisión | Alternativa descartada | Motivo |
+| Decision | Rejected alternative | Reason |
 |---|---|---|
-| Heurística semántica sin mapas fijos | Mapas hardcodeados por servicio | Escalabilidad — detecta servicios nuevos sin actualizar código |
-| IA opcional con fallback silencioso | IA requerida | La app debe funcionar 100% offline sin config |
-| OpenAI-compatible API para IA | SDK específicos por proveedor | Un solo formato cubre Ollama, LM Studio, Groq, OpenAI, Mistral, Custom |
-| electron-store para AI settings | Fichero JSON manual | Integrado con Electron, sin I/O manual |
-| `ignore` (npm) para .gitignore | Regex manual | Edge cases resueltos, es el estándar |
-| `electron-store` para persistencia | SQLite | Suficiente para v1, sin dependencia nativa |
-| React Flow para el grafo | D3.js | Mejor DX con React, nodos React nativos |
-| Zustand para estado global | Redux / Context | Menos boilerplate, suficiente para la escala |
-| graphStore separado del store principal | Un solo store | El grafo interactivo tiene estado propio (nodes, edges, excluded) con ciclo de vida diferente |
-| Posiciones de nodo en config.graph | electron-store | Las posiciones deben versionarse con el repo, no ser globales al sistema |
-| Panel inline sobre modal/drawer | Modal | No interrumpe el flujo visual del grafo |
-| Deep analysis con IA enriquece en lugar de reemplazar | IA reemplaza heurística | La heurística es rápida y funciona offline; la IA es complementaria |
-| Tres capacidades de IA en paralelo | Secuencial | Minimiza latencia total, cada paso es independiente |
+| Semantic heuristics without fixed maps | Hardcoded per-service maps | Scalability — detects new services without code changes |
+| Optional AI with silent fallback | AI required | App must work 100% offline without config |
+| OpenAI-compatible API for AI | Provider-specific SDKs | One format covers Ollama, LM Studio, Groq, OpenAI, Mistral, Custom |
+| electron-store for AI settings | Manual JSON file | Integrated with Electron, no manual I/O |
+| `ignore` (npm) for .gitignore | Manual regex | Edge cases handled, it's the standard |
+| `electron-store` for persistence | SQLite | Sufficient for v1, no native dependency |
+| React Flow for the graph | D3.js | Better DX with React, native React nodes |
+| Zustand for global state | Redux / Context | Less boilerplate, sufficient for the scale |
+| Separate graphStore from main store | Single store | Interactive graph has its own state (nodes, edges, excluded) with a different lifecycle |
+| Node positions in config.graph | electron-store | Positions should be versioned with the repo, not global to the system |
+| Inline panel over modal/drawer | Modal | Doesn't interrupt the visual flow of the graph |
+| Deep AI analysis enriches instead of replacing | AI replaces heuristics | Heuristics are fast and work offline; AI is complementary |
+| Three AI capabilities in parallel | Sequential | Minimizes total latency, each step is independent |
 
 ---
 
-## Convenciones del proyecto
+## Project conventions
 
-- **TypeScript estricto** en todo el codebase (`strict: true`)
-- **Nomenclatura**: camelCase para variables/funciones, PascalCase para componentes y tipos
-- **Imports**: rutas absolutas desde `src/` configuradas en `tsconfig.json`
-- **IPC**: todos los canales definidos en `electron/preload.ts`, nunca exponer `ipcRenderer` directamente
-- **Análisis**: flujo extract → classify → dedup → (AI) → flow. Cada paso es puro y testeable.
-- **Sin secretos en el repo**: el token de GitHub y la API key de IA se guardan con `electron-store`
+- **Strict TypeScript** across the entire codebase (`strict: true`)
+- **Naming**: camelCase for variables/functions, PascalCase for components and types
+- **Imports**: absolute paths from `src/` configured in `tsconfig.json`
+- **IPC**: all channels defined in `electron/preload.ts`, never expose `ipcRenderer` directly
+- **Analysis**: pipeline flow extract → classify → dedup → (AI) → flow. Each step is pure and testable.
+- **No secrets in the repo**: GitHub token and AI API key are stored with `electron-store`
 
 ---
 
-## Ficheros clave que el agente debe conocer
+## Key files the agent must know
 
 ```
-SPEC.md                              ← especificación completa (v0.2)
-CONTEXT.md                           ← este fichero
-electron/types.ts                    ← todos los tipos: Service, Evidence, AIProvider, etc.
-electron/main.ts                     ← entry point + IPC handlers (análisis + AI settings)
-electron/preload.ts                  ← bridge IPC (11 canales)
-electron/analyzers/extractor.ts      ← extracción de evidencias del repo
-electron/analyzers/heuristic.ts      ← clasificación semántica
-electron/analyzers/deduplicator.ts   ← agrupación y deduplicación
-electron/analyzers/index.ts          ← orquestador del pipeline completo
-electron/analyzers/flowInference.ts  ← inferencia de grafo de flujo
-electron/ai/provider.ts              ← cliente IA OpenAI-compatible + presets
-electron/ai/deepAnalyzer.ts          ← análisis profundo: contexto, detección oculta, aristas
-src/store/useStore.ts                ← estado global Zustand (servicios, deps, config)
-src/store/graphStore.ts              ← estado del grafo interactivo (nodes, edges, excluded)
-src/components/Settings/Settings.tsx ← configuración de IA
-src/components/ServicesPanel/        ← panel con badges de confianza
-src/components/FlowGraph/            ← grafo interactivo con context menus
-src/components/FlowGraph/ContextMenu.tsx  ← menú contextual genérico
-src/components/FlowGraph/NodeEditPanel.tsx ← panel inline de edición de nodos
+SPEC.md                              ← full specification (v0.3)
+CONTEXT.md                           ← this file
+electron/types.ts                    ← all types: Service, Evidence, AIProvider, ServiceContext, etc.
+electron/main.ts                     ← entry point + IPC handlers (analysis + AI settings)
+electron/preload.ts                  ← IPC bridge (12 channels)
+electron/analyzers/extractor.ts      ← evidence extraction from repo
+electron/analyzers/heuristic.ts      ← semantic classification
+electron/analyzers/deduplicator.ts   ← grouping and deduplication
+electron/analyzers/index.ts          ← full pipeline orchestrator
+electron/analyzers/flowInference.ts  ← flow graph inference
+electron/ai/provider.ts              ← OpenAI-compatible AI client + presets
+electron/ai/deepAnalyzer.ts          ← deep analysis: context, hidden detection, edge inference
+src/store/useStore.ts                ← global Zustand state (services, deps, config, deepAnalysis)
+src/store/graphStore.ts              ← interactive graph state (nodes, edges, excluded)
+src/components/Settings/Settings.tsx ← AI configuration
+src/components/ServicesPanel/        ← panel with confidence badges + AI context
+src/components/FlowGraph/            ← interactive graph with context menus
+src/components/FlowGraph/ContextMenu.tsx  ← generic context menu
+src/components/FlowGraph/NodeEditPanel.tsx ← inline node edit panel
 ```
 
 ---
 
-## Lo que NO hacer (lecciones aprendidas)
+## Patterns to follow
 
-- **No usar mapas hardcodeados de servicios** — el sistema heurístico clasifica por semántica
-- **No usar `nodeIntegration: true`** en webPreferences — todo IPC via `contextBridge`
-- **No parsear `.env` con regex casero** — usar parseo line-by-line con split en `=`
-- **No bloquear el proceso principal** con análisis síncronos — usar `fs.promises`
-- **No hardcodear rutas** — usar `path.join` siempre
-- **No asumir IA disponible** — siempre fallback al resultado heurístico
+### Adding a new analyzer
+1. Add extraction logic in `electron/analyzers/extractor.ts` (new file type or pattern)
+2. Add classification rules in `electron/analyzers/heuristic.ts` if needed
+3. Add tests in `electron/analyzers/__tests__/`
+4. The pipeline in `index.ts` picks up new evidence types automatically
+
+### Adding a new service to automatic detection
+Don't. The system uses semantic heuristics — it detects services by name patterns, not hardcoded lists. If a service isn't detected, improve the extraction patterns or heuristic rules.
+
+### Adding a new dashboard panel
+1. Create component in `src/components/NewPanel/`
+2. Add panel type to `ActivePanel` union in `src/store/useStore.ts`
+3. Add tab button in the sidebar/navigation
+4. Add panel rendering in the main layout
 
 ---
 
-## Contexto de producto (para decisiones de UX)
+## What NOT to do (lessons learned)
 
-- **Usuario objetivo**: cualquier desarrollador o equipo pequeño que gestiona un proyecto de software
-- **Dolor principal**: no saber qué servicios están activos, cuáles son de pago, cuándo renuevan
-- **Caso de uso más frecuente**: abrir la app al empezar el día para ver el estado del proyecto
-- **Caso de uso secundario**: incorporar a un nuevo desarrollador al equipo
+- **Do not use hardcoded service maps** — the heuristic system classifies by semantics
+- **Do not use `nodeIntegration: true`** in webPreferences — all IPC via `contextBridge`
+- **Do not parse `.env` with custom regex** — use line-by-line parsing with split on `=`
+- **Do not block the main process** with synchronous analysis — use `fs.promises`
+- **Do not hardcode paths** — always use `path.join`
+- **Do not assume AI is available** — always fallback to heuristic results
 
 ---
 
-## Preguntas abiertas (para próximas sesiones)
+## Product context (for UX decisions)
 
-- ¿Soporte para monorepos en v1 o v2?
-- ¿Alertas de renovación como notificaciones del sistema operativo?
-- ¿El `stackwatch.config.json` se cifra o va en claro al repo?
+- **Target user**: any developer or small team managing a software project
+- **Main pain point**: not knowing which services are active, which are paid, when they renew
+- **Primary use case**: open the app at the start of the day to see the project's status
+- **Secondary use case**: onboarding a new developer to the team
+
+---
+
+## Open questions (for future sessions)
+
+- Monorepo support in v1 or v2?
+- Renewal alerts as OS notifications?
+- Should `stackwatch.config.json` be encrypted or stored in plain text in the repo?
+
+---
+
+## How to use this file as an agent
+
+1. **Read this file first** at the start of every session to understand project state
+2. **Check "Current development state"** to know what was done last and what's next
+3. **Check "Architecture decisions"** before proposing structural changes
+4. **Check "What NOT to do"** to avoid known pitfalls
+5. **Update this file** after making significant changes — keep the living memory current

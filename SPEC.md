@@ -1,138 +1,148 @@
 # SPEC.md — StackWatch
 
-> Documento de especificación técnica. Fuente de verdad para agentes de IA y desarrolladores.
-> Última actualización: 2026-03-15 | Estado: borrador v0.2
+> Technical specification document. Source of truth for AI agents and developers.
+> Last updated: 2026-03-16 | Status: draft v0.3
 
 ---
 
-## 1. Visión del producto
+## 1. Product vision
 
-**StackWatch** es una aplicación de escritorio (Electron) que permite a desarrolladores visualizar, documentar y monitorizar todos los servicios, dependencias y cuentas externas que componen cualquier proyecto de software, infiriéndolos automáticamente desde el repositorio y permitiendo enriquecer esa información manualmente.
+**StackWatch** is a desktop application (Electron) that lets developers visualize, document and monitor all services, dependencies and external accounts that make up any software project — by automatically inferring them from the repository and allowing manual enrichment.
 
-### Problema que resuelve
-Los proyectos modernos dependen de decenas de servicios externos (hosting, dominio, CI/CD, analytics, pagos, APIs...) distribuidos en múltiples cuentas y proveedores. No existe una vista unificada de todo ese ecosistema.
+### Problem it solves
+Modern projects depend on dozens of external services (hosting, domain, CI/CD, analytics, payments, APIs...) spread across multiple accounts and providers. There is no unified view of the entire ecosystem.
 
-### Propuesta de valor
-- **Inferencia automática inteligente**: detecta servicios mediante heurística semántica — sin listas hardcodeadas de servicios
-- **IA opcional**: mejora la detección de casos ambiguos con cualquier proveedor OpenAI-compatible, incluyendo modelos locales gratuitos (Ollama, LM Studio)
-- **Enriquecimiento manual**: el usuario añade lo que no se puede inferir (contraseñas, cuentas de pago, fechas de renovación, servicios sin rastro en el código)
-- **Vista unificada**: dashboard con tres paneles — servicios (con niveles de confianza), dependencias y grafo de flujo
-- **Portable y offline**: toda la información vive en el propio repo como ficheros de texto versionables
+### Value proposition
+- **Smart automatic inference**: detects services via semantic heuristics — no hardcoded service lists
+- **Optional AI**: enhances detection of ambiguous cases with any OpenAI-compatible provider, including free local models (Ollama, LM Studio)
+- **Deep AI analysis**: when AI is configured, analyzes service usage context, detects hidden services consumed via wrappers, and infers correct graph edge types
+- **Manual enrichment**: user adds what cannot be inferred (credentials, billing accounts, renewal dates, services with no code footprint)
+- **Unified view**: dashboard with three panels — services (with confidence levels), dependencies and flow graph
+- **Portable and offline**: all information lives in the repo itself as versionable text files
 
 ---
 
-## 2. Stack técnico
+## 2. Tech stack
 
-| Capa | Tecnología | Justificación |
+| Layer | Technology | Rationale |
 |---|---|---|
-| Shell de app | Electron | Acceso a fs local + empaquetado multiplataforma |
-| UI / renderer | React + Vite | Ecosistema maduro, HMR rápido |
-| Estilos | Tailwind CSS | Utilidad, sin CSS custom |
-| Grafo interactivo | React Flow | Nodos arrastrables, fácil integración con React |
-| Análisis de deps | Node.js (main process) | Acceso directo a fs sin CORS |
-| GitHub remoto | Octokit (`@octokit/rest`) | Cliente oficial, bien documentado |
-| Persistencia local | `electron-store` | JSON cifrable, sin necesidad de SQLite |
-| IPC | `contextBridge` + `ipcMain/ipcRenderer` | Separación segura main ↔ renderer |
-| .gitignore | `ignore` (npm) | Respetar exclusiones del repo en el escaneo recursivo |
+| App shell | Electron | Local fs access + cross-platform packaging |
+| UI / renderer | React + Vite | Mature ecosystem, fast HMR |
+| Styles | Tailwind CSS | Utility-first, no custom CSS |
+| Interactive graph | React Flow | Draggable nodes, easy React integration |
+| Dependency analysis | Node.js (main process) | Direct fs access without CORS |
+| Remote GitHub | Octokit (`@octokit/rest`) | Official client, well documented |
+| Local persistence | `electron-store` | Encryptable JSON, no SQLite needed |
+| IPC | `contextBridge` + `ipcMain/ipcRenderer` | Secure main ↔ renderer separation |
+| .gitignore | `ignore` (npm) | Respect repo exclusions during recursive scan |
 
-### Estructura de carpetas del proyecto
+### Project folder structure
 
 ```
 stackwatch/
 ├── electron/
-│   ├── main.ts              # Proceso principal, IPC handlers
-│   ├── preload.ts           # Bridge seguro al renderer
-│   ├── types.ts             # Tipos compartidos (Service, Evidence, AIProvider, etc.)
+│   ├── main.ts              # Main process, IPC handlers
+│   ├── preload.ts           # Secure bridge to renderer
+│   ├── types.ts             # Shared types (Service, Evidence, AIProvider, etc.)
 │   ├── analyzers/
-│   │   ├── extractor.ts     # Extrae evidencias en bruto del repo (recursivo, respeta .gitignore)
-│   │   ├── heuristic.ts     # Clasifica evidencias por semántica (sin listas fijas)
-│   │   ├── deduplicator.ts  # Agrupa y deduplica servicios detectados
-│   │   ├── flowInference.ts # Infiere grafo de flujo de la arquitectura
-│   │   └── index.ts         # Orquesta el flujo completo: extract → classify → dedup → AI → flow
+│   │   ├── extractor.ts     # Extracts raw evidence from repo (recursive, respects .gitignore)
+│   │   ├── heuristic.ts     # Classifies evidence by semantics (no fixed lists)
+│   │   ├── deduplicator.ts  # Groups and deduplicates detected services
+│   │   ├── flowInference.ts # Infers architecture flow graph
+│   │   └── index.ts         # Orchestrates the full pipeline: extract → classify → dedup → AI → flow
 │   └── ai/
-│       └── provider.ts      # Cliente OpenAI-compatible + presets de proveedores
+│       ├── provider.ts      # OpenAI-compatible client + provider presets
+│       └── deepAnalyzer.ts  # Deep AI analysis: context, hidden detection, edge inference
 ├── src/
 │   ├── components/
 │   │   ├── Dashboard/
-│   │   ├── ServicesPanel/    # ServiceCard con badges de confianza, sección "Needs Review"
+│   │   ├── ServicesPanel/    # ServiceCard with confidence badges, "Needs Review" section
 │   │   ├── DepsPanel/
-│   │   ├── FlowGraph/       # Nodos con indicadores de confianza (borde discontinuo)
-│   │   └── Settings/        # Configuración de proveedor de IA
-│   ├── store/               # Estado global (Zustand) + AI settings
+│   │   ├── FlowGraph/       # Interactive graph with context menus, inline editing
+│   │   ├── TopBar/           # Import/export, re-analyze, GitHub connect
+│   │   └── Settings/        # AI provider configuration
+│   ├── store/               # Global state (Zustand) — useStore + graphStore
 │   └── main.tsx
-├── stackwatch.config.json   # Config manual del usuario (versionable)
-└── CONTEXT.md               # Contexto vivo para agentes
+├── stackwatch.config.json   # User manual config (versionable)
+└── CONTEXT.md               # Living context for agents
 ```
 
 ---
 
-## 3. Arquitectura de detección (v0.2)
+## 3. Detection architecture (v0.3)
 
-### Flujo de análisis en dos capas
+### Two-layer analysis pipeline
 
 ```
-repo (local o GitHub)
+repo (local or GitHub)
     ↓
-Extractor de evidencias  →  Evidence[]  (determinista, rápido)
+Evidence extractor  →  Evidence[]  (deterministic, fast)
     ↓
-Clasificador heurístico  →  HeuristicResult[]  (semántica, sin listas fijas)
+Heuristic classifier  →  HeuristicResult[]  (semantic, no fixed lists)
     ↓
-Deduplicador             →  DetectedService[]  (agrupado, sin duplicados)
-    ↓ (si IA configurada)
-Mejora con IA            →  DetectedService[]  (solo casos ambiguos)
+Deduplicator  →  DetectedService[]  (grouped, no duplicates)
+    ↓ (if AI configured)
+Deep AI analysis  →  enriched services + hidden services + smart edge types
     ↓
-Merge con stackwatch.config.json  →  servicios manuales del usuario
+Merge with stackwatch.config.json  →  user's manual services
     ↓
-Dashboard: panel servicios + grafo de flujo con niveles de confianza
+Dashboard: services panel + flow graph with confidence levels
 ```
 
-### 3.1 Extractor de evidencias (`extractor.ts`)
+### 3.1 Evidence extractor (`extractor.ts`)
 
-Recorre el repo recursivamente y extrae señales en bruto:
+Walks the repo recursively and extracts raw signals:
 
-| Tipo | Fuente | Cómo |
+| Type | Source | How |
 |---|---|---|
-| `npm_package` | `package.json` (todos los niveles) | Lee dependencies + devDependencies |
-| `env_var` | Todos los `.env*` del repo | Parsea key=value |
-| `url` | Ficheros de código (.ts, .tsx, .js, .jsx, .py, .go, .rs) | Regex `https?://...` |
-| `import` | Mismos ficheros de código | Regex `from '...'` y `require('...')` |
-| `config_file` | Raíz del repo | Presencia de vercel.json, firebase.json, fly.toml, etc. |
-| `ci_secret` | `.github/workflows/*.yml`, `.gitlab-ci.yml` | Regex `secrets.NOMBRE` |
-| `domain` | Todo el código | Extraer dominio de URLs |
+| `npm_package` | `package.json` (all levels) | Reads dependencies + devDependencies |
+| `env_var` | All `.env*` files in the repo | Parses key=value |
+| `url` | Code files (.ts, .tsx, .js, .jsx, .py, .go, .rs) | Regex in API call patterns + constant assignments |
+| `import` | Same code files | Regex `from '...'` and `require('...')` |
+| `config_file` | Repo root | Presence of vercel.json, firebase.json, fly.toml, etc. |
+| `ci_secret` | `.github/workflows/*.yml`, `.gitlab-ci.yml` | Regex `secrets.NAME` |
+| `domain` | All code | Extract domain from URLs |
 
-**Exclusiones:** node_modules, dist, .next, build, .git, coverage + respeta .gitignore
+**Exclusions:** node_modules, dist, .next, build, .git, coverage + respects .gitignore
 
-### 3.2 Clasificador heurístico (`heuristic.ts`)
+### 3.2 Heuristic classifier (`heuristic.ts`)
 
-Clasifica las evidencias usando semántica, sin ninguna lista hardcodeada:
+Classifies evidence using semantics, with no hardcoded lists:
 
-- **Variables de entorno:** Extrae nombre del servicio eliminando prefijos genéricos (NEXT_PUBLIC_, VITE_, etc.) y sufijos (_KEY, _SECRET, _URL, etc.). Confianza alta si es credencial o endpoint.
-- **URLs externas:** Extrae dominio, quita subdominios comunes (api., app., cdn.). Confianza alta si contiene `/api/`.
-- **Paquetes npm:** Ignora utilidades, frameworks y herramientas de dev. Extrae nombre del servicio del nombre del paquete.
-- **Config files:** Mapeo directo de fichero a servicio (vercel.json → Vercel, etc.)
-- **Inferencia de categoría:** Regex semántica contra el nombre normalizado para 19 categorías.
+- **Environment variables:** Extracts service name by removing common prefixes (NEXT_PUBLIC_, VITE_, etc.) and suffixes (_KEY, _SECRET, _URL, etc.). High confidence if it's a credential or endpoint.
+- **External URLs:** Extracts domain, strips common subdomains (api., app., cdn.). High confidence if contains `/api/`.
+- **npm packages:** Ignores utilities, frameworks and dev tools. Extracts service name from package name.
+- **Config files:** Direct file-to-service mapping (vercel.json → Vercel, etc.)
+- **Category inference:** Semantic regex against normalized name for 19 categories.
 
-### 3.3 IA opcional (`ai/provider.ts`)
+### 3.3 Deep AI analysis (`ai/deepAnalyzer.ts`)
 
-Solo se ejecuta si el usuario la configura. Actúa sobre evidencias con confianza baja.
+Only runs if the user configures an AI provider. Three capabilities executed in parallel:
 
-**Proveedores preconfigurados:**
-- Ollama (local, gratuito) — `localhost:11434`
-- LM Studio (local, gratuito) — `localhost:1234`
-- Groq (rápido, tier gratuito)
+1. **Service context**: For each detected service, reads relevant code files and determines usage description, criticality level (critical/important/optional), and warnings (hardcoded secrets, missing error handling).
+2. **Hidden service detection**: Reads priority files (lib/, services/, api/) and finds services consumed via wrappers or custom SDKs that heuristic analysis missed.
+3. **Smart graph edges**: Determines correct edge type (data/auth/payment/webhook) based on actual service usage context.
+
+**Preconfigured providers:**
+- Ollama (local, free) — `localhost:11434`
+- LM Studio (local, free) — `localhost:1234`
+- Groq (fast, free tier)
 - OpenAI — `gpt-4o-mini`
 - Mistral — `mistral-small-latest`
-- Custom (cualquier endpoint OpenAI-compatible)
+- Anthropic — `claude-haiku-4-5`
+- Custom (any OpenAI-compatible endpoint)
 
-Si la IA falla, fallback silencioso al resultado heurístico.
+If AI fails, silent fallback to heuristic results.
 
-### 3.4 Configuración manual (`stackwatch.config.json`)
+**Token control:** max 5 files/service, 500 lines/file, 10 files for hidden detection, batches of 3 concurrent calls.
 
-El usuario puede añadir servicios manualmente desde la UI con formulario expandido: nombre, categoría, plan, coste, fecha de renovación, email de cuenta, notas, URL. Se persisten con `source: "manual"`.
+### 3.4 Manual configuration (`stackwatch.config.json`)
+
+The user can add services manually from the UI with an expanded form: name, category, plan, cost, renewal date, account email, notes, URL. Persisted with `source: "manual"`.
 
 ---
 
-## 4. Modelo de datos
+## 4. Data model
 
 ### Service
 
@@ -140,7 +150,7 @@ El usuario puede añadir servicios manualmente desde la UI con formulario expand
 interface Service {
   id: string
   name: string
-  category: ServiceCategory  // 19 categorías
+  category: ServiceCategory  // 19 categories
   plan: 'free' | 'paid' | 'trial' | 'unknown'
   source: 'inferred' | 'manual'
   confidence?: 'high' | 'medium' | 'low'
@@ -155,7 +165,7 @@ interface Service {
 }
 ```
 
-### Evidence (interno)
+### Evidence (internal)
 
 ```typescript
 interface Evidence {
@@ -182,35 +192,58 @@ interface AISettings {
 }
 ```
 
+### ServiceContext / DeepAnalysisResult
+
+```typescript
+interface ServiceContext {
+  serviceId: string
+  usage: string
+  criticalityLevel: 'critical' | 'important' | 'optional'
+  usageLocations: string[]
+  warnings?: string[]
+}
+
+interface DeepAnalysisResult {
+  serviceContexts: ServiceContext[]
+  hiddenServices: Service[]
+  inferredEdgeTypes: { serviceId: string; flowType: FlowEdge['flowType']; reason: string }[]
+}
+```
+
 ### Dependency, FlowNode, FlowEdge
 
-Sin cambios respecto a v0.1.
+No changes from v0.1.
 
 ---
 
-## 5. UI — Niveles de confianza
+## 5. UI — Confidence levels
 
-### Panel de Servicios
-- `high` → tarjeta normal, sin badge extra
-- `medium` → badge amarillo "review"
-- `low` → badge naranja "incomplete" + icono warning + tooltip con la razón
-- Sección "Needs Review" al inicio del panel si hay servicios con `needsReview: true`
+### Services panel
+- `high` → normal card, no extra badge
+- `medium` → yellow "review" badge
+- `low` → orange "incomplete" badge + warning icon + tooltip with reason
+- "Needs Review" section at the top of the panel if any services have `needsReview: true`
+- When deep AI analysis is available, cards show usage context quote, criticality badge, and warnings
 
-### Grafo de flujo
-- Nodos `confidence: 'low'` → borde discontinuo + color naranja + "?" marker
-- Tooltip en hover con razón de detección
+### Flow graph
+- Nodes with `confidence: 'low'` → dashed border + orange color + "?" marker
+- Tooltip on hover with detection reason
+- Interactive: right-click context menus for nodes, edges, and canvas
+- Inline edit panel for node properties (name, type, category, plan, URL, notes)
+- Drag-from-handle to create edges; snap to grid (16px)
+- Edge types colored by flow type (data/auth/payment/webhook)
 
 ### Settings
-- Toggle "Enhance analysis with AI" (desactivado por defecto)
-- Dropdown proveedor (presets + Custom)
-- Campo API Key (oculto para Ollama y LM Studio)
-- Campo Base URL y Model (editables para Custom/Local)
-- Botón "Test Connection"
-- Nota sobre privacidad de proveedores locales
+- Toggle "Enhance analysis with AI" (disabled by default)
+- Provider dropdown (presets + Custom)
+- API Key field (hidden for Ollama and LM Studio)
+- Base URL and Model fields (editable for Custom/Local)
+- "Test Connection" button
+- Privacy note for local providers
 
 ---
 
-## 6. Comunicación IPC (main ↔ renderer)
+## 6. IPC communication (main ↔ renderer)
 
 ```typescript
 interface StackWatchAPI {
@@ -222,27 +255,33 @@ interface StackWatchAPI {
   getAISettings(): Promise<AISettings>
   setAISettings(settings: AISettings): Promise<void>
   testAIConnection(provider: AIProvider): Promise<{ ok: boolean; error?: string }>
+  getAIPresets(): Promise<AIProvider[]>
+  importConfig(repoPath: string): Promise<string | null>
+  exportConfig(content: string): Promise<boolean>
+  exportServicesMd(content: string): Promise<boolean>
 }
 ```
 
 ---
 
-## 7. Fuera de alcance (v1)
+## 7. Out of scope (v1)
 
-- Notificaciones push / alertas por email de renovaciones
-- Multi-proyecto (v1 gestiona un proyecto a la vez)
-- Integración con APIs de facturación de servicios
-- Detección de vulnerabilidades en dependencias
-- Soporte para monorepos
+- Push notifications / email alerts for renewals
+- Multi-project (v1 manages one project at a time)
+- Integration with service billing APIs
+- Dependency vulnerability detection
+- Monorepo support
 
 ---
 
-## 8. Criterios de aceptación (v0.2)
+## 8. Acceptance criteria (v0.3)
 
-- [x] Sin ninguna configuración, StackWatch detecta servicios por semántica — cero listas hardcodeadas
-- [x] Variables como TWITTER_API_KEY o GA_MEASUREMENT_ID generan entradas con confianza high/medium aunque el servicio no esté en ninguna lista
-- [x] El usuario puede añadir servicios manualmente desde la UI — se persisten en stackwatch.config.json
-- [x] La configuración de IA acepta cualquier proveedor OpenAI-compatible incluyendo Ollama y LM Studio sin API key
-- [x] Si la IA falla, la app muestra el resultado heurístico sin errores
-- [x] El grafo de flujo muestra indicadores de confianza (bordes discontinuos para low confidence)
-- [x] 19 tests passing para heurística y deduplicación
+- [x] Without any configuration, StackWatch detects services semantically — zero hardcoded lists
+- [x] Variables like TWITTER_API_KEY or GA_MEASUREMENT_ID generate entries with high/medium confidence even if the service is not in any list
+- [x] User can add services manually from the UI — persisted in stackwatch.config.json
+- [x] AI configuration accepts any OpenAI-compatible provider including Ollama and LM Studio without API key
+- [x] If AI fails, the app shows heuristic results without errors
+- [x] Flow graph shows confidence indicators (dashed borders for low confidence)
+- [x] Interactive flow graph with context menus, node editing, and custom connections
+- [x] Deep AI analysis provides service context, hidden detection, and smart edge types
+- [x] 58 tests passing for heuristic, deduplication, extraction, pipeline, and flow inference
