@@ -117,11 +117,35 @@ export const useStore = create<StoreState>((set, get) => ({
         // Config may not exist yet
       }
       const manualServices = config?.services ?? [];
+      const allServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
+
+      // Ensure every service has a flow node (manual services aren't in pipeline output)
+      const pipelineNodeServiceIds = new Set(
+        result.flowNodes.map((n: FlowNode) => n.serviceId).filter(Boolean)
+      );
+      const extraNodes: FlowNode[] = [];
+      const extraEdges: FlowEdge[] = [];
+      for (const svc of allServices) {
+        if (!pipelineNodeServiceIds.has(svc.id)) {
+          extraNodes.push({
+            id: `svc-${svc.id}`,
+            label: svc.name,
+            type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
+            serviceId: svc.id,
+          });
+          extraEdges.push({
+            source: 'user',
+            target: `svc-${svc.id}`,
+            flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
+          });
+        }
+      }
+
       set({
-        services: mergeServices(result.services, manualServices, config?.confidenceOverrides),
+        services: allServices,
         dependencies: result.dependencies,
-        flowNodes: result.flowNodes,
-        flowEdges: result.flowEdges,
+        flowNodes: [...result.flowNodes, ...extraNodes],
+        flowEdges: [...result.flowEdges, ...extraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
         analysisPhase: null,
@@ -166,11 +190,34 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ analysisPhase: 'Loading configuration...' });
       const config = get().config;
       const manualServices = config?.services ?? [];
+      const allGhServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
+
+      const ghPipelineNodeIds = new Set(
+        result.flowNodes.map((n: FlowNode) => n.serviceId).filter(Boolean)
+      );
+      const ghExtraNodes: FlowNode[] = [];
+      const ghExtraEdges: FlowEdge[] = [];
+      for (const svc of allGhServices) {
+        if (!ghPipelineNodeIds.has(svc.id)) {
+          ghExtraNodes.push({
+            id: `svc-${svc.id}`,
+            label: svc.name,
+            type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
+            serviceId: svc.id,
+          });
+          ghExtraEdges.push({
+            source: 'user',
+            target: `svc-${svc.id}`,
+            flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
+          });
+        }
+      }
+
       set({
-        services: mergeServices(result.services, manualServices, config?.confidenceOverrides),
+        services: allGhServices,
         dependencies: result.dependencies,
-        flowNodes: result.flowNodes,
-        flowEdges: result.flowEdges,
+        flowNodes: [...result.flowNodes, ...ghExtraNodes],
+        flowEdges: [...result.flowEdges, ...ghExtraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
         analysisPhase: null,
