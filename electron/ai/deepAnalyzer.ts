@@ -432,17 +432,27 @@ export async function classifyEvidencesWithAI(
     }
   }
 
-  // Run D1–D4 in parallel (each is a focused, small prompt)
-  const [fromEnv, fromUrls, fromPackages, fromCode, fromConfigs] = await Promise.all([
-    aiClassifyBatch(provider, 'environment variables and CI secrets', [...envVars, ...ciSecrets]),
-    aiClassifyBatch(provider, 'external URLs and domains', [...urls, ...domains]),
-    aiClassifyBatch(provider, 'packages and imports', packages),
-    aiClassifySourceCode(provider, fileContents),
-    configs.length > 0 ? aiClassifyBatch(provider, 'config files', configs) : Promise.resolve([]),
-  ])
+  // Run D1–D4 sequentially to avoid rate limits (429) on free-tier providers
+  const allCandidates: Partial<Service>[] = []
+
+  const fromEnv = await aiClassifyBatch(provider, 'environment variables and CI secrets', [...envVars, ...ciSecrets])
+  allCandidates.push(...fromEnv)
+
+  const fromUrls = await aiClassifyBatch(provider, 'external URLs and domains', [...urls, ...domains])
+  allCandidates.push(...fromUrls)
+
+  const fromPackages = await aiClassifyBatch(provider, 'packages and imports', packages)
+  allCandidates.push(...fromPackages)
+
+  const fromCode = await aiClassifySourceCode(provider, fileContents)
+  allCandidates.push(...fromCode)
+
+  if (configs.length > 0) {
+    const fromConfigs = await aiClassifyBatch(provider, 'config files', configs)
+    allCandidates.push(...fromConfigs)
+  }
 
   // D5: Consolidate all candidates
-  const allCandidates = [...fromEnv, ...fromUrls, ...fromPackages, ...fromCode, ...fromConfigs]
   return aiConsolidate(provider, allCandidates)
 }
 
@@ -486,27 +496,23 @@ export async function runDeepAnalysis(
     }
   }
 
-  // Run all three steps in parallel
-  const [contexts, hiddenServices, edgeTypes] = await Promise.all([
-    // Step A: Analyze context for each service (run in parallel, max 5 concurrently)
-    analyzeAllServiceContexts(servicesToAnalyze, evidences, filesToRead, provider),
+  // Run steps sequentially to avoid rate limits on free-tier providers
 
-    // Step B: Detect hidden services
-    (async () => {
-      const codeFiles = hiddenDetectionFiles
-        .filter((f) => filesToRead.has(f))
-        .map((f) => ({ path: f, content: filesToRead.get(f)! }))
-      if (codeFiles.length === 0) return []
-      try {
-        return await detectHiddenServices(services, codeFiles, provider)
-      } catch {
-        return []
-      }
-    })(),
+  // Step A: Analyze context for each service
+  const contexts = await analyzeAllServiceContexts(servicesToAnalyze, evidences, filesToRead, provider)
 
-    // Step C will run after A completes — we need contexts for it
-    Promise.resolve([]),
-  ])
+  // Step B: Detect hidden services
+  let hiddenServices: Service[] = []
+  const codeFiles = hiddenDetectionFiles
+    .filter((f) => filesToRead.has(f))
+    .map((f) => ({ path: f, content: filesToRead.get(f)! }))
+  if (codeFiles.length > 0) {
+    try {
+      hiddenServices = await detectHiddenServices(services, codeFiles, provider)
+    } catch {
+      // silent fallback
+    }
+  }
 
   // Step C: Now infer edge types with the contexts we have
   let inferredEdges: { serviceId: string; flowType: FlowEdge['flowType']; reason: string }[] = []
