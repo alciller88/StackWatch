@@ -11,6 +11,7 @@ const CATEGORIES: ServiceCategory[] = [
 ]
 
 const PLANS = ['free', 'paid', 'trial', 'unknown'] as const
+const CONFIDENCES = ['high', 'medium', 'low'] as const
 
 interface NodeEditPanelProps {
   x: number
@@ -20,6 +21,7 @@ interface NodeEditPanelProps {
     nodeType: FlowNode['type']
     category?: ServiceCategory
     plan?: string
+    confidence?: 'high' | 'medium' | 'low'
     url?: string
     note?: string
   }
@@ -28,6 +30,7 @@ interface NodeEditPanelProps {
     nodeType: FlowNode['type']
     category?: ServiceCategory
     plan?: 'free' | 'paid' | 'trial' | 'unknown'
+    confidence?: 'high' | 'medium' | 'low'
     url?: string
     note?: string
   }) => void
@@ -45,6 +48,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
   const [nodeType, setNodeType] = useState<FlowNode['type']>(initialData.nodeType)
   const [category, setCategory] = useState<ServiceCategory>(initialData.category ?? 'other')
   const [plan, setPlan] = useState(initialData.plan ?? 'unknown')
+  const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>(initialData.confidence ?? 'high')
   const [url, setUrl] = useState(initialData.url ?? '')
   const [note, setNote] = useState(initialData.note ?? '')
 
@@ -69,38 +73,60 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
       nodeType,
       category,
       plan: plan as 'free' | 'paid' | 'trial' | 'unknown',
+      confidence,
       url: url.trim() || undefined,
       note: note.trim() || undefined,
     })
   }
 
-  const selectClass =
-    'w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-xs focus:border-blue-500 focus:outline-none'
-  const inputClass = selectClass
+  const fieldStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--color-bg-primary)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 0,
+    padding: '4px 8px',
+    color: 'var(--color-text-primary)',
+    fontSize: '11px',
+    fontFamily: 'IBM Plex Mono',
+    outline: 'none',
+  }
 
   return (
     <div
       ref={ref}
-      style={{ position: 'absolute', left: x, top: y, zIndex: 50 }}
-      className="w-64 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 text-sm"
+      style={{
+        position: 'absolute',
+        left: x,
+        top: y,
+        zIndex: 50,
+        width: 256,
+        background: 'var(--color-bg-secondary)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 0,
+        padding: 12,
+        fontFamily: 'IBM Plex Mono',
+        fontSize: '11px',
+      }}
     >
-      <div className="text-gray-400 text-xs font-medium mb-2">Edit Node</div>
+      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-muted)', marginBottom: 8 }}>Edit Node</div>
 
       <div className="space-y-2">
         <div>
-          <label className="text-gray-400 text-[11px] block mb-0.5">Name</label>
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Name</label>
           <input
-            className={inputClass}
+            style={fieldStyle}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
           />
         </div>
 
         <div>
-          <label className="text-gray-400 text-[11px] block mb-0.5">Node type</label>
-          <select className={selectClass} value={nodeType} onChange={(e) => setNodeType(e.target.value as FlowNode['type'])}>
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Node type</label>
+          <select style={fieldStyle} value={nodeType} onChange={(e) => setNodeType(e.target.value as FlowNode['type'])}>
             {NODE_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
@@ -108,8 +134,8 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
         </div>
 
         <div>
-          <label className="text-gray-400 text-[11px] block mb-0.5">Service category</label>
-          <select className={selectClass} value={category} onChange={(e) => setCategory(e.target.value as ServiceCategory)}>
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Service category</label>
+          <select style={fieldStyle} value={category} onChange={(e) => setCategory(e.target.value as ServiceCategory)}>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -117,8 +143,8 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
         </div>
 
         <div>
-          <label className="text-gray-400 text-[11px] block mb-0.5">Plan</label>
-          <select className={selectClass} value={plan} onChange={(e) => setPlan(e.target.value)}>
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Plan</label>
+          <select style={fieldStyle} value={plan} onChange={(e) => setPlan(e.target.value)}>
             {PLANS.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
@@ -126,34 +152,80 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
         </div>
 
         <div>
-          <label className="text-gray-400 text-[11px] block mb-0.5">URL</label>
-          <input className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Confidence</label>
+          <select style={fieldStyle} value={confidence} onChange={(e) => setConfidence(e.target.value as 'high' | 'medium' | 'low')}>
+            {CONFIDENCES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
 
         <div>
-          <label className="text-gray-400 text-[11px] block mb-0.5">Notes</label>
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>URL</label>
+          <input
+            style={fieldStyle}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://..."
+            onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Notes</label>
           <textarea
-            className={`${inputClass} resize-none`}
+            style={{ ...fieldStyle, resize: 'none' }}
             value={note}
             onChange={(e) => setNote(e.target.value.slice(0, 200))}
             rows={2}
             maxLength={200}
             placeholder="Max 200 characters"
+            onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
           />
-          <div className="text-gray-500 text-[10px] text-right">{note.length}/200</div>
+          <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', color: 'var(--color-text-muted)', textAlign: 'right' }}>{note.length}/200</div>
         </div>
       </div>
 
       <div className="flex gap-2 mt-3">
         <button
           onClick={handleSave}
-          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs py-1.5 rounded transition-colors"
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: '1px solid var(--color-accent)',
+            color: 'var(--color-accent)',
+            fontFamily: 'IBM Plex Mono',
+            fontSize: '10px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            padding: '6px 0',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-bg-primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-accent)' }}
         >
           Save
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs py-1.5 rounded transition-colors"
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'IBM Plex Mono',
+            fontSize: '10px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            padding: '6px 0',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
         >
           Cancel
         </button>

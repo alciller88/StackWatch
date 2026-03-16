@@ -11,18 +11,18 @@ import {
 } from 'reactflow'
 import dagre from '@dagrejs/dagre'
 import type { FlowNode, FlowEdge, GraphConfig, GraphNodeData, ServiceCategory } from '../types'
-import { getNodeColor, getEdgeColor } from '../components/FlowGraph/flowUtils'
+import { getNodeColor, getEdgeColor, getConfidenceBackground } from '../components/FlowGraph/flowUtils'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
 
 // ── helpers ──
 
-function buildNodeStyle(nodeType: FlowNode['type']) {
+function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'medium' | 'low') {
   return {
     width: NODE_WIDTH,
     height: NODE_HEIGHT,
-    background: '#1f2937',
+    background: getConfidenceBackground(confidence),
     border: `2px solid ${getNodeColor(nodeType)}`,
     borderRadius: '12px',
     color: '#f9fafb',
@@ -91,6 +91,7 @@ function flowNodesToRFNodes(
       serviceId: node.serviceId,
       category: undefined as ServiceCategory | undefined,
       plan: 'unknown' as string,
+      confidence: undefined as 'high' | 'medium' | 'low' | undefined,
       url: undefined as string | undefined,
       note: undefined as string | undefined,
       source: (node.serviceId ? 'inferred' : 'manual') as 'inferred' | 'manual',
@@ -187,7 +188,10 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     // Apply saved data overrides (edited labels, categories, etc.)
     rfNodes = rfNodes.map((n) => {
       const saved = savedNodeData.get(n.id)
+      const svc = services.find((s) => s.id === n.data.serviceId)
+      const svcConfidence = svc?.confidence ?? 'high'
       if (saved) {
+        const confidence = saved.confidence ?? svcConfidence
         return {
           ...n,
           data: {
@@ -196,15 +200,15 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
             nodeType: saved.nodeType ?? n.data.nodeType,
             category: saved.category ?? n.data.category,
             plan: saved.plan ?? n.data.plan,
+            confidence,
             url: saved.url ?? n.data.url,
             note: saved.note ?? n.data.note,
             source: saved.source ?? n.data.source,
           },
-          style: buildNodeStyle(saved.nodeType ?? n.data.nodeType),
+          style: buildNodeStyle(saved.nodeType ?? n.data.nodeType, confidence),
         }
       }
       // Enrich with service data
-      const svc = services.find((s) => s.id === n.data.serviceId)
       if (svc) {
         return {
           ...n,
@@ -212,10 +216,12 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
             ...n.data,
             category: svc.category,
             plan: svc.plan,
+            confidence: svcConfidence,
             url: svc.url,
             note: svc.notes,
             source: svc.source,
           },
+          style: buildNodeStyle(n.data.nodeType, svcConfidence),
         }
       }
       return n
@@ -234,11 +240,12 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
               serviceId: undefined,
               category: gn.data.category,
               plan: gn.data.plan ?? 'unknown',
+              confidence: gn.data.confidence ?? 'high',
               url: gn.data.url,
               note: gn.data.note,
               source: gn.data.source ?? 'manual',
             },
-            style: buildNodeStyle(gn.data.nodeType ?? 'external'),
+            style: buildNodeStyle(gn.data.nodeType ?? 'external', gn.data.confidence),
           })
         }
       }
@@ -312,11 +319,12 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
         serviceId: undefined,
         category: data.category,
         plan: data.plan ?? 'unknown',
+        confidence: data.confidence ?? 'high',
         url: data.url,
         note: data.note,
         source: data.source ?? 'manual',
       },
-      style: buildNodeStyle(nodeType),
+      style: buildNodeStyle(nodeType, data.confidence),
     }
     set((state) => ({ nodes: [...state.nodes, newNode] }))
     get().persistToConfig()
@@ -328,10 +336,11 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
         if (n.id !== id) return n
         const newData = { ...n.data, ...data }
         const nodeType = data.nodeType ?? n.data.nodeType
+        const confidence = data.confidence ?? n.data.confidence
         return {
           ...n,
           data: newData,
-          style: buildNodeStyle(nodeType),
+          style: buildNodeStyle(nodeType, confidence),
         }
       }),
     }))
@@ -441,6 +450,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
           category: n.data.category,
           nodeType: n.data.nodeType,
           plan: n.data.plan,
+          confidence: n.data.confidence,
           url: n.data.url,
           note: n.data.note,
           source: n.data.source,

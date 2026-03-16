@@ -80,6 +80,7 @@ export interface GraphNodeData {
   category?: ServiceCategory;
   nodeType?: FlowNode['type'];
   plan?: Service['plan'];
+  confidence?: 'high' | 'medium' | 'low';
   url?: string;
   note?: string;
   source?: 'inferred' | 'manual';

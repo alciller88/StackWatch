@@ -52,12 +52,6 @@ export const FlowGraph: React.FC = () => {
     initialized.current = true
   }, [flowNodes, flowEdges]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build confidence map
-  const confidenceMap = new Map<string, string>()
-  for (const s of services) {
-    confidenceMap.set(s.id, s.confidence ?? 'high')
-  }
-
   // Close menus on outside events
   const closeAll = useCallback(() => {
     setContextMenu(null)
@@ -272,6 +266,7 @@ export const FlowGraph: React.FC = () => {
     nodeType: FlowNode['type']
     category?: ServiceCategory
     plan?: 'free' | 'paid' | 'trial' | 'unknown'
+    confidence?: 'high' | 'medium' | 'low'
     url?: string
     note?: string
   }) => {
@@ -282,6 +277,7 @@ export const FlowGraph: React.FC = () => {
         nodeType: data.nodeType,
         category: data.category,
         plan: data.plan,
+        confidence: data.confidence,
         url: data.url,
         note: data.note,
       })
@@ -294,6 +290,7 @@ export const FlowGraph: React.FC = () => {
         nodeType: data.nodeType,
         category: data.category,
         plan: data.plan,
+        confidence: data.confidence,
         url: data.url,
         note: data.note,
         source: 'manual',
@@ -311,6 +308,7 @@ export const FlowGraph: React.FC = () => {
           nodeType: node.data.nodeType ?? 'external',
           category: node.data.category,
           plan: node.data.plan,
+          confidence: node.data.confidence,
           url: node.data.url,
           note: node.data.note,
         }
@@ -322,6 +320,7 @@ export const FlowGraph: React.FC = () => {
       nodeType: (editPanel?.isCustom ? 'external' : 'external') as FlowNode['type'],
       category: editPanel?.isCustom ? ('other' as ServiceCategory) : undefined,
       plan: 'unknown',
+      confidence: 'high' as const,
       url: undefined,
       note: undefined,
     }
@@ -331,22 +330,30 @@ export const FlowGraph: React.FC = () => {
 
   if (flowNodes.length === 0 && graphStore.nodes.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
-        No flow data available. Analyze a repository to generate the architecture graph.
+      <div
+        style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'IBM Plex Mono', fontSize: '11px', letterSpacing: '0.1em',
+          color: 'var(--color-text-muted)', background: 'var(--color-bg-primary)',
+          backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          textTransform: 'uppercase',
+        }}
+      >
+        NO FLOW DATA — ANALYZE A REPOSITORY TO GENERATE THE GRAPH
       </div>
     )
   }
 
   // Apply confidence styling + icons to nodes for rendering
   const styledNodes = graphStore.nodes.map((n) => {
-    const serviceId = n.data.serviceId
-    const confidence = serviceId ? confidenceMap.get(serviceId) : 'high'
+    const confidence = n.data.confidence ?? 'high'
     const isLowConfidence = confidence === 'low'
 
     return {
       ...n,
       style: isLowConfidence
-        ? { ...n.style, borderStyle: 'dashed', borderColor: '#c2410c', opacity: 0.8 }
+        ? { ...n.style, borderStyle: 'dashed', opacity: 0.7 }
         : n.style,
       data: {
         ...n.data,
@@ -357,7 +364,7 @@ export const FlowGraph: React.FC = () => {
           >
             <span>{getNodeIcon(n.data.nodeType ?? 'external')}</span>
             <span className="truncate">{n.data.label}</span>
-            {isLowConfidence && <span className="text-orange-400 text-[10px]">?</span>}
+            {isLowConfidence && <span className="text-[var(--color-accent)] text-[10px]">?</span>}
           </div>
         ),
       },
@@ -367,23 +374,33 @@ export const FlowGraph: React.FC = () => {
   return (
     <div ref={containerRef} className="flex-1 relative" style={{ height: '100%' }}>
       {/* Legend */}
-      <div className="absolute top-4 right-4 z-10 bg-gray-900/90 border border-gray-700 rounded-lg p-3 text-xs space-y-1.5">
-        <div className="text-gray-400 font-medium mb-2">Edge Types</div>
+      <div
+        className="absolute top-4 right-4 z-10 space-y-1.5"
+        style={{
+          background: 'var(--color-bg-secondary)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 0,
+          padding: '10px 12px',
+          fontSize: '10px',
+          fontFamily: 'IBM Plex Mono',
+        }}
+      >
+        <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>Edge Types</div>
         {[
-          { color: 'bg-blue-500', label: 'Data' },
-          { color: 'bg-green-500', label: 'Auth' },
-          { color: 'bg-amber-500', label: 'Payment' },
-          { color: 'bg-red-500', label: 'Webhook' },
+          { color: '#4a8ab0', label: 'Data' },
+          { color: '#3d8c5e', label: 'Auth' },
+          { color: '#e2b04a', label: 'Payment' },
+          { color: '#c05050', label: 'Webhook' },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-2">
-            <span className={`w-4 h-0.5 ${item.color} inline-block`} />
-            <span className="text-gray-400">{item.label}</span>
+            <span className="w-4 h-0.5 inline-block" style={{ background: item.color }} />
+            <span style={{ color: 'var(--color-text-secondary)' }}>{item.label}</span>
           </div>
         ))}
-        <div className="border-t border-gray-700 pt-1.5 mt-1.5">
+        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '6px', marginTop: '6px' }}>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-0.5 border-t border-dashed border-orange-500 inline-block" />
-            <span className="text-gray-400">Low confidence</span>
+            <span className="w-4 h-0.5 inline-block" style={{ borderTop: '1px dashed var(--color-accent)' }} />
+            <span style={{ color: 'var(--color-text-secondary)' }}>Low confidence</span>
           </div>
         </div>
       </div>
@@ -408,20 +425,20 @@ export const FlowGraph: React.FC = () => {
         attributionPosition="bottom-left"
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#374151" gap={20} />
+        <Background color="var(--color-border)" gap={32} size={1} />
         <Controls
           style={{
-            background: '#1f2937',
-            border: '1px solid #374151',
-            borderRadius: '8px',
+            background: 'var(--color-bg-secondary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 0,
           }}
         />
         <MiniMap
           nodeColor={(node) => getNodeColor(node.data?.nodeType ?? 'external')}
           style={{
-            background: '#111827',
-            border: '1px solid #374151',
-            borderRadius: '8px',
+            background: 'var(--color-bg-primary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 0,
           }}
         />
       </ReactFlow>
@@ -456,8 +473,19 @@ export const FlowGraph: React.FC = () => {
       {/* Tooltip */}
       {tooltip && (
         <div
-          style={{ position: 'absolute', left: tooltip.x, top: tooltip.y, zIndex: 50 }}
-          className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-gray-300 shadow-lg"
+          style={{
+            position: 'absolute',
+            left: tooltip.x,
+            top: tooltip.y,
+            zIndex: 50,
+            background: 'var(--color-bg-secondary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 0,
+            padding: '4px 8px',
+            fontFamily: 'IBM Plex Mono',
+            fontSize: '10px',
+            color: 'var(--color-text-secondary)',
+          }}
         >
           {tooltip.text}
         </div>

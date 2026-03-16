@@ -22,6 +22,15 @@ export function getEdgeColor(flowType: FlowEdge['flowType']): string {
   return colors[flowType] ?? '#6b7280'
 }
 
+export function getConfidenceBackground(confidence: 'high' | 'medium' | 'low' | undefined): string {
+  switch (confidence) {
+    case 'high': return '#1a2e1a'
+    case 'medium': return '#2e2a1a'
+    case 'low': return '#2e1a1a'
+    default: return '#1f2937'
+  }
+}
+
 export function getNodeIcon(type: FlowNode['type']): string {
   const icons: Record<FlowNode['type'], string> = {
     user: '\u{1F464}',

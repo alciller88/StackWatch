@@ -25,16 +25,16 @@ const categoryIcons: Record<Service['category'], string> = {
 };
 
 const planColors: Record<Service['plan'], string> = {
-  free: 'bg-green-900/40 text-green-400 border-green-800',
-  paid: 'bg-amber-900/40 text-amber-400 border-amber-800',
-  trial: 'bg-blue-900/40 text-blue-400 border-blue-800',
-  unknown: 'bg-gray-800 text-gray-400 border-gray-700',
+  free: 'bg-[#1a3a1a] text-[#3d8c5e] border-[#2a5a2a]',
+  paid: 'bg-[#2a1e0a] text-[#e2b04a] border-[#6b3d0a]',
+  trial: 'bg-[#1a2a3a] text-[#4a8ab0] border-[#2a4a6a]',
+  unknown: 'bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border-[var(--color-border)]',
 };
 
 const confidenceBadge: Record<string, { bg: string; text: string; label: string }> = {
   high: { bg: '', text: '', label: '' },
-  medium: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', label: 'review' },
-  low: { bg: 'bg-orange-900/40', text: 'text-orange-400', label: 'incomplete' },
+  medium: { bg: 'bg-[#2a2010]', text: 'text-[#c8a040]', label: 'review' },
+  low: { bg: 'bg-[#2a1e0a]', text: 'text-[var(--color-accent)]', label: 'incomplete' },
 };
 
 function daysUntil(dateStr: string): number {
@@ -44,16 +44,16 @@ function daysUntil(dateStr: string): number {
 }
 
 const criticalityColors: Record<string, string> = {
-  critical: 'text-red-400',
-  important: 'text-amber-400',
-  optional: 'text-gray-500',
+  critical: 'text-[#c05050]',
+  important: 'text-[var(--color-accent)]',
+  optional: 'text-[var(--color-text-muted)]',
 };
 
 const confidenceBorder: Record<string, string> = {
-  high:    'border-green-800/50',
-  medium:  'border-yellow-800/50',
-  low:     'border-orange-800/50 border-dashed',
-  default: 'border-gray-800',
+  high:    'border-[#2a5a2a]',
+  medium:  'border-[#6b5520]',
+  low:     'border-[var(--color-accent)] border-dashed',
+  default: 'border-[var(--color-border)]',
 };
 
 const criticalityIcons: Record<string, string> = {
@@ -87,19 +87,20 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
     return () => document.removeEventListener('mousedown', handler);
   }, [showConfDropdown]);
 
-  let renewalColor = 'text-gray-400';
+  let renewalColor = 'text-[var(--color-text-secondary)]';
   if (days !== null) {
-    if (days < 7) renewalColor = 'text-red-400';
-    else if (days < 30) renewalColor = 'text-amber-400';
+    if (days < 7) renewalColor = 'text-[#c05050]';
+    else if (days < 30) renewalColor = 'text-[var(--color-accent)]';
   }
 
   const isClickable = !!onEdit;
 
   return (
     <div
-      className={`bg-gray-900 border rounded-xl p-4 transition-colors ${
+      className={`border rounded-none p-4 transition-colors ${
         confidenceBorder[service.confidence ?? 'default']
-      } ${isClickable ? 'cursor-pointer hover:border-blue-700/50' : 'hover:border-gray-700'}`}
+      } ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'}`}
+      style={{ background: 'var(--color-bg-secondary)' }}
       onClick={onEdit ? () => onEdit(service) : undefined}
     >
       {/* Header */}
@@ -109,8 +110,8 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
             {categoryIcons[service.category]}
           </span>
           <div>
-            <h3 className="text-sm font-medium text-gray-100">{service.name}</h3>
-            <span className="text-xs text-gray-500 capitalize">
+            <h3 className="font-mono text-[12px] font-medium text-[var(--color-text-primary)]">{service.name}</h3>
+            <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">
               {service.category}
             </span>
           </div>
@@ -121,12 +122,12 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
           <div className="relative" ref={confRef}>
             <button
               onClick={(e) => { e.stopPropagation(); setShowConfDropdown(v => !v); }}
-              className={`text-[10px] px-1.5 py-0.5 rounded font-medium border cursor-pointer transition-colors ${
+              className={`font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium border cursor-pointer transition-colors ${
                 confidence === 'high'
-                  ? 'bg-green-900/40 text-green-400 border-green-800 hover:bg-green-900/60'
+                  ? 'bg-[#1a3a1a] text-[#3d8c5e] border-[#2a5a2a] hover:bg-[#203a20]'
                   : confidence === 'medium'
-                  ? `${badge.bg} ${badge.text} border-yellow-800 hover:bg-yellow-900/60`
-                  : `${badge.bg} ${badge.text} border-orange-800 hover:bg-orange-900/60`
+                  ? `${badge.bg} ${badge.text} border-[#6b5520] hover:bg-[#302510]`
+                  : `${badge.bg} ${badge.text} border-[#6b3d0a] hover:bg-[#301e08]`
               }`}
               title={service.confidenceReasons?.join('\n') ?? 'Click to change confidence'}
             >
@@ -134,7 +135,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
               {confidence === 'high' ? 'confirmed' : badge.label}
             </button>
             {showConfDropdown && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-gray-800 border border-gray-700 rounded shadow-lg py-1 min-w-[140px]">
+              <div className="absolute right-0 top-full mt-1 z-50 py-1 min-w-[140px]" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}>
                 {(['high', 'medium', 'low'] as const).map(level => (
                   <button
                     key={level}
@@ -143,8 +144,8 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
                       updateServiceConfidence(service.id, level);
                       setShowConfDropdown(false);
                     }}
-                    className={`w-full text-left text-xs px-3 py-1.5 hover:bg-gray-700 transition-colors ${
-                      level === confidence ? 'text-blue-400 font-medium' : 'text-gray-300'
+                    className={`w-full text-left font-mono text-[10px] px-3 py-1.5 hover:bg-[var(--color-bg-hover)] transition-colors ${
+                      level === confidence ? 'text-[var(--color-accent)] font-medium' : 'text-[var(--color-text-secondary)]'
                     }`}
                   >
                     {level === 'high' ? 'High — confirmed' : level === 'medium' ? 'Medium — review' : 'Low — uncertain'}
@@ -156,10 +157,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
           {/* Source badge */}
           <span
-            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+            className={`font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium ${
               service.source === 'inferred'
-                ? 'bg-gray-800 text-gray-400 border border-gray-700'
-                : 'bg-blue-900/40 text-blue-400 border border-blue-800'
+                ? 'bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
+                : 'bg-[#1a2a3a] text-[#4a8ab0] border border-[#2a4a6a]'
             }`}
           >
             {service.source === 'inferred' ? 'auto' : 'manual'}
@@ -170,7 +171,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       {/* Plan badge */}
       <div className="flex items-center gap-2 mb-3">
         <span
-          className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${planColors[service.plan]}`}
+          className={`font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-none font-medium border ${planColors[service.plan]}`}
         >
           {service.plan}
         </span>
@@ -178,17 +179,17 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
       {/* Cost */}
       {service.cost && (
-        <div className="text-xs text-gray-400 mb-2">
-          <span className="text-gray-200 font-medium">
+        <div className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-2">
+          <span className="text-[var(--color-text-primary)] font-medium">
             {service.cost.currency} {service.cost.amount}
           </span>
-          <span className="text-gray-500"> / {service.cost.period}</span>
+          <span className="text-[var(--color-text-muted)]"> / {service.cost.period}</span>
         </div>
       )}
 
       {/* Renewal date */}
       {service.renewalDate && (
-        <div className={`text-xs mb-2 ${renewalColor}`}>
+        <div className={`font-mono text-[10px] mb-2 ${renewalColor}`}>
           Renews: {new Date(service.renewalDate).toLocaleDateString()}
           {days !== null && days < 30 && (
             <span className="ml-1 font-medium">
@@ -201,19 +202,19 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       {/* AI Context */}
       {context && (
         <div className="mt-2 space-y-1">
-          <div className="text-xs text-gray-300 italic leading-relaxed">
-            &ldquo;{context.usage}&rdquo;
+          <div className="font-mono text-[10px] text-[var(--color-text-secondary)] leading-relaxed">
+            — {context.usage}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px]">{criticalityIcons[context.criticalityLevel] ?? '\u{26AA}'}</span>
-            <span className={`text-[10px] font-medium capitalize ${criticalityColors[context.criticalityLevel] ?? 'text-gray-500'}`}>
+            <span className={`font-mono text-[9px] uppercase tracking-widest font-medium ${criticalityColors[context.criticalityLevel] ?? 'text-[var(--color-text-muted)]'}`}>
               {context.criticalityLevel}
             </span>
           </div>
           {context.warnings && context.warnings.length > 0 && (
             <div className="space-y-0.5">
               {context.warnings.map((w, i) => (
-                <div key={i} className="text-[10px] text-amber-400 flex items-start gap-1">
+                <div key={i} className="font-mono text-[9px] text-[var(--color-accent)] flex items-start gap-1">
                   <span className="shrink-0">{'\u26A0'}</span>
                   <span>{w}</span>
                 </div>
@@ -225,21 +226,21 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
       {/* Inferred from */}
       {service.source === 'inferred' && service.inferredFrom && (
-        <div className="text-[10px] text-gray-600 mt-2 truncate" title={service.inferredFrom}>
+        <div className="font-mono text-[9px] text-[var(--color-text-muted)] mt-2 truncate" title={service.inferredFrom}>
           Inferred from: {service.inferredFrom}
         </div>
       )}
 
       {/* Notes */}
       {service.notes && (
-        <div className="text-xs text-gray-500 mt-2 line-clamp-2">
+        <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-2 line-clamp-2">
           {service.notes}
         </div>
       )}
 
       {/* Edit hint for manual services */}
       {isClickable && (
-        <div className="text-[10px] text-blue-400/50 mt-2">
+        <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] opacity-40 mt-2">
           Click to edit
         </div>
       )}

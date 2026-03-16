@@ -7,14 +7,16 @@ interface NavItem {
   id: ActivePanel;
   label: string;
   icon: React.ReactNode;
+  section: 'views' | 'system';
 }
 
 const navItems: NavItem[] = [
   {
     id: 'services',
     label: 'Services',
+    section: 'views',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -27,8 +29,9 @@ const navItems: NavItem[] = [
   {
     id: 'dependencies',
     label: 'Dependencies',
+    section: 'views',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -41,8 +44,9 @@ const navItems: NavItem[] = [
   {
     id: 'flow',
     label: 'Flow Graph',
+    section: 'views',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -55,8 +59,9 @@ const navItems: NavItem[] = [
   {
     id: 'settings',
     label: 'Settings',
+    section: 'system',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -74,26 +79,37 @@ const navItems: NavItem[] = [
   },
 ];
 
+const sectionLabel = (text: string, collapsed: boolean) =>
+  !collapsed ? (
+    <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', letterSpacing: '0.2em', color: 'var(--color-text-muted)', padding: '0 12px', marginBottom: '4px', marginTop: '8px' }}>
+      {text}
+    </div>
+  ) : null;
+
 export const Sidebar: React.FC = () => {
   const { activePanel, setActivePanel } = useStore();
   const [collapsed, setCollapsed] = useState(false);
 
+  const viewItems = navItems.filter(i => i.section === 'views');
+  const systemItems = navItems.filter(i => i.section === 'system');
+
   return (
     <div
-      className={`bg-gray-900 border-r border-gray-800 flex flex-col shrink-0 transition-all duration-200 ${
+      className={`border-r flex flex-col shrink-0 transition-all duration-200 ${
         collapsed ? 'w-16' : 'w-52'
       }`}
+      style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
     >
       {/* Header */}
-      <div className="h-12 flex items-center justify-between px-3 border-b border-gray-800">
+      <div className="h-12 flex items-center justify-between px-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
         {!collapsed && (
-          <span className="text-sm font-semibold text-gray-200 tracking-wide">
-            <span className="text-blue-400">Stack</span>Watch
+          <span className="font-mono tracking-widest uppercase text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            <span style={{ color: 'var(--color-accent)' }}>STACK</span>WATCH
           </span>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1 text-gray-500 hover:text-gray-300 hover:bg-gray-800 rounded transition-colors"
+          className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <svg
@@ -113,18 +129,41 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-2 px-2 space-y-1">
-        {navItems.map((item) => {
+      <nav className="flex-1 py-2 px-2 space-y-0.5">
+        {sectionLabel('VIEWS', collapsed)}
+        {viewItems.map((item) => {
           const isActive = activePanel === item.id;
           return (
             <button
               key={item.id}
               onClick={() => setActivePanel(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
                 isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                  ? 'text-[var(--color-text-primary)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
               }`}
+              style={isActive ? { borderLeft: '2px solid var(--color-accent)', background: 'var(--color-bg-hover)' } : { borderLeft: '2px solid transparent' }}
+              title={collapsed ? item.label : undefined}
+            >
+              <span className="shrink-0">{item.icon}</span>
+              {!collapsed && <span>{item.label}</span>}
+            </button>
+          );
+        })}
+
+        {sectionLabel('SYSTEM', collapsed)}
+        {systemItems.map((item) => {
+          const isActive = activePanel === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActivePanel(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
+                isActive
+                  ? 'text-[var(--color-text-primary)]'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+              }`}
+              style={isActive ? { borderLeft: '2px solid var(--color-accent)', background: 'var(--color-bg-hover)' } : { borderLeft: '2px solid transparent' }}
               title={collapsed ? item.label : undefined}
             >
               <span className="shrink-0">{item.icon}</span>
@@ -135,9 +174,9 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t border-gray-800">
+      <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
         {!collapsed && (
-          <span className="text-xs text-gray-600">v0.2.1</span>
+          <span className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>v0.2.1</span>
         )}
       </div>
     </div>

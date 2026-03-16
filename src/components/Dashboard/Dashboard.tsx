@@ -5,13 +5,24 @@ export const Dashboard: React.FC = () => {
   const { openFolder, isAnalyzing } = useStore();
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div
+      className="flex-1 flex items-center justify-center p-8"
+      style={{
+        backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
+        backgroundSize: '32px 32px',
+      }}
+    >
       <div className="text-center max-w-md">
-        {/* Icon */}
-        <div className="mb-6 flex justify-center">
-          <div className="w-20 h-20 rounded-2xl bg-gray-800 border border-gray-700 flex items-center justify-center">
+        {/* Icon with corner brackets */}
+        <div className="relative mb-6 flex justify-center">
+          <div style={{ width: 52, height: 52, border: '1px solid var(--color-border)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ position:'absolute', top:-3, left:-3, width:8, height:8, borderTop:'1px solid var(--color-accent)', borderLeft:'1px solid var(--color-accent)' }} />
+            <span style={{ position:'absolute', top:-3, right:-3, width:8, height:8, borderTop:'1px solid var(--color-accent)', borderRight:'1px solid var(--color-accent)' }} />
+            <span style={{ position:'absolute', bottom:-3, left:-3, width:8, height:8, borderBottom:'1px solid var(--color-accent)', borderLeft:'1px solid var(--color-accent)' }} />
+            <span style={{ position:'absolute', bottom:-3, right:-3, width:8, height:8, borderBottom:'1px solid var(--color-accent)', borderRight:'1px solid var(--color-accent)' }} />
             <svg
-              className="w-10 h-10 text-blue-500"
+              className="w-6 h-6"
+              style={{ color: 'var(--color-accent)' }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -27,16 +38,16 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-gray-100 mb-2">
-          Welcome to <span className="text-blue-400">Stack</span>Watch
+        <h1 className="font-mono text-base font-medium tracking-wide uppercase text-[var(--color-text-primary)] mb-2">
+          Welcome to <span style={{ color: 'var(--color-accent)' }}>Stack</span>Watch
         </h1>
 
         {/* Description */}
-        <p className="text-gray-400 text-sm mb-2">
+        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-2">
           Visualize and monitor all the services, dependencies, and external
           accounts your project relies on.
         </p>
-        <p className="text-gray-500 text-xs mb-8">
+        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-8">
           Open a local repository or connect to GitHub to automatically detect
           your project&apos;s tech stack, services, and infrastructure.
         </p>
@@ -45,7 +56,7 @@ export const Dashboard: React.FC = () => {
         <button
           onClick={openFolder}
           disabled={isAnalyzing}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-7 py-2.5 bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-50 disabled:cursor-not-allowed font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
         >
           {isAnalyzing ? (
             <>
@@ -90,30 +101,30 @@ export const Dashboard: React.FC = () => {
           )}
         </button>
 
-        <p className="text-xs text-gray-500 mt-3">
+        <p className="font-mono text-[10px] tracking-wide text-[var(--color-text-muted)] mt-3">
           Or use the GitHub button in the top bar to analyze a remote repository
         </p>
 
         {/* Features */}
-        <div className="mt-10 grid grid-cols-3 gap-4 text-left">
-          <div className="p-3 rounded-lg bg-gray-900 border border-gray-800">
-            <div className="text-blue-400 text-lg mb-1">&#9881;</div>
-            <h3 className="text-xs font-medium text-gray-300 mb-1">Services</h3>
-            <p className="text-xs text-gray-500">
+        <div className="mt-10 grid grid-cols-3 gap-px text-left" style={{ background: 'var(--color-border)' }}>
+          <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">01 · SERVICES</div>
+            <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">Services</h3>
+            <p className="font-mono text-[10px] text-[var(--color-text-muted)]">
               Detect hosting, payments, auth, and more from your codebase.
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-gray-900 border border-gray-800">
-            <div className="text-green-400 text-lg mb-1">&#9776;</div>
-            <h3 className="text-xs font-medium text-gray-300 mb-1">Dependencies</h3>
-            <p className="text-xs text-gray-500">
+          <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">02 · DEPS</div>
+            <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">Dependencies</h3>
+            <p className="font-mono text-[10px] text-[var(--color-text-muted)]">
               Browse all packages with version, type, and ecosystem info.
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-gray-900 border border-gray-800">
-            <div className="text-amber-400 text-lg mb-1">&#9889;</div>
-            <h3 className="text-xs font-medium text-gray-300 mb-1">Flow Graph</h3>
-            <p className="text-xs text-gray-500">
+          <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">03 · GRAPH</div>
+            <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">Flow Graph</h3>
+            <p className="font-mono text-[10px] text-[var(--color-text-muted)]">
               Interactive architecture diagram of your app data flow.
             </p>
           </div>

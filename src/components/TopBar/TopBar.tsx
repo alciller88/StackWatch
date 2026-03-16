@@ -129,13 +129,13 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <div className="h-12 bg-gray-900 border-b border-gray-800 flex items-center px-4 gap-3 shrink-0">
+    <div className="h-12 border-b flex items-center px-4 gap-3 shrink-0" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
       {/* Left zone — Import / Export */}
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={handleImport}
           disabled={!repoPath || repoPath.startsWith('github:') || isAnalyzing}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-300 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed rounded border border-gray-700 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
           title="Import stackwatch.config.json"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -148,7 +148,7 @@ export const TopBar: React.FC = () => {
           <button
             onClick={() => setShowExportMenu(!showExportMenu)}
             disabled={services.length === 0 || isAnalyzing}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-300 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed rounded border border-gray-700 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
             title="Export analysis"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -158,16 +158,16 @@ export const TopBar: React.FC = () => {
           </button>
 
           {showExportMenu && (
-            <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[180px]">
+            <div className="absolute top-full left-0 mt-1 border rounded-none shadow-lg z-50 min-w-[180px]" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
               <button
                 onClick={handleExportConfig}
-                className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
+                className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
               >
                 Export config (.json)
               </button>
               <button
                 onClick={handleExportMd}
-                className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 transition-colors border-t border-gray-700"
+                className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
               >
                 Export as SERVICES.md
               </button>
@@ -178,33 +178,33 @@ export const TopBar: React.FC = () => {
 
       {/* Center zone — Repo path + link status */}
       <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
-        <span className="text-gray-500 text-sm shrink-0">
+        <span className="text-[var(--color-text-muted)] text-sm shrink-0">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
         </span>
-        <span className="text-sm text-gray-400 truncate">
+        <span className={repoPath ? 'text-sm text-[var(--color-text-secondary)] truncate' : 'font-mono text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] truncate'}>
           {repoPath ?? 'No repository loaded'}
         </span>
         {repoPath && (
           <div className="flex items-center gap-1.5 shrink-0">
             {linkStatus === 'linked' && (
-              <span className="flex items-center gap-1 text-[10px] text-green-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              <span className="flex items-center gap-1 text-[10px] text-[#3d8c5e]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#3d8c5e] inline-block" />
                 Linked
               </span>
             )}
             {linkStatus === 'unlinked' && (
               <>
-                <span className="flex items-center gap-1 text-[10px] text-yellow-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
+                <span className="flex items-center gap-1 text-[10px] text-[var(--color-accent)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] inline-block" />
                   Unlinked
                 </span>
                 <button
                   onClick={relinkLocal}
                   disabled={isAnalyzing}
-                  className="text-[10px] text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+                  className="text-[10px] text-[var(--color-accent)] hover:opacity-80 disabled:opacity-50 transition-colors"
                 >
                   Re-link
                 </button>
@@ -219,7 +219,7 @@ export const TopBar: React.FC = () => {
 
       {/* Error display */}
       {error && (
-        <div className="flex items-center gap-2 bg-red-900/30 border border-red-800 rounded px-3 py-1 shrink-0">
+        <div className="flex items-center gap-2 bg-red-950/30 border border-red-900/50 rounded-sm px-3 py-1 shrink-0">
           <span className="text-red-400 text-xs truncate max-w-64">{error}</span>
           <button onClick={clearError} className="text-red-400 hover:text-red-300 text-xs">x</button>
         </div>
@@ -233,19 +233,21 @@ export const TopBar: React.FC = () => {
             placeholder="owner/repo"
             value={githubRepo}
             onChange={(e) => setGithubRepo(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-gray-300 w-36 focus:outline-none focus:border-blue-500"
+            className="border rounded-sm px-2 py-1 text-sm text-[var(--color-text-primary)] w-36 focus:outline-none focus:border-[var(--color-accent)]"
+            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
           />
           <input
             type="password"
             placeholder="token (optional)"
             value={githubToken}
             onChange={(e) => setGithubToken(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-gray-300 w-32 focus:outline-none focus:border-blue-500"
+            className="border rounded-sm px-2 py-1 text-sm text-[var(--color-text-primary)] w-32 focus:outline-none focus:border-[var(--color-accent)]"
+            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
           />
           <button
             onClick={handleGitHubAnalyze}
             disabled={!githubRepo.trim() || isAnalyzing}
-            className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+            className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
           >
             Analyze
           </button>
@@ -256,7 +258,7 @@ export const TopBar: React.FC = () => {
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={() => setShowGitHub(!showGitHub)}
-          className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+          className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--color-bg-hover)] rounded-sm transition-colors"
           title="Connect GitHub repo"
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -267,7 +269,7 @@ export const TopBar: React.FC = () => {
         <button
           onClick={openFolder}
           disabled={isAnalyzing}
-          className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-50 rounded transition-colors"
+          className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50 rounded-sm transition-colors"
           title="Open folder"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +282,7 @@ export const TopBar: React.FC = () => {
           <button
             onClick={handleReanalyze}
             disabled={isAnalyzing}
-            className="px-3 py-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 rounded border border-gray-700 transition-colors"
+            className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-50 rounded-sm transition-colors"
           >
             {isAnalyzing ? (
               <span className="flex items-center gap-1.5">

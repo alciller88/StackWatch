@@ -62,10 +62,14 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   }
 
   return (
-    <div ref={ref} style={style} className="min-w-[200px] bg-gray-800 border border-gray-600 rounded-lg shadow-xl py-1 text-sm">
+    <div
+      ref={ref}
+      style={{ ...style, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}
+      className="min-w-[200px] py-1 font-mono text-[11px]"
+    >
       {items.map((entry, i) => {
         if (isDivider(entry)) {
-          return <div key={i} className="border-t border-gray-600 my-1" />
+          return <div key={i} style={{ borderTop: '1px solid var(--color-border)', margin: '4px 0' }} />
         }
         return (
           <button
@@ -76,11 +80,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
             }}
             className={`w-full text-left px-3 py-1.5 flex items-center gap-2 transition-colors ${
               entry.active
-                ? 'bg-blue-600/30 text-blue-300'
+                ? 'text-[var(--color-accent)]'
                 : entry.danger
-                  ? 'text-red-400 hover:bg-red-600/20'
-                  : 'text-gray-200 hover:bg-gray-700'
+                  ? 'text-[#c05050] hover:bg-[var(--color-bg-hover)]'
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
             }`}
+            style={entry.active ? { background: 'var(--color-bg-hover)' } : undefined}
           >
             {entry.icon && <span className="w-5 text-center">{entry.icon}</span>}
             <span>{entry.label}</span>

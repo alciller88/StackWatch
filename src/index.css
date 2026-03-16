@@ -1,17 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
 @import "tailwindcss";
 
 :root {
-  --color-bg-primary: #030712;
-  --color-bg-secondary: #111827;
-  --color-bg-tertiary: #1f2937;
-  --color-bg-hover: #374151;
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #9ca3af;
-  --color-text-muted: #6b7280;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-border: #1f2937;
-  --color-border-light: #374151;
+  --color-bg-primary:    #0a0c0f;
+  --color-bg-secondary:  #0d1017;
+  --color-bg-tertiary:   #111620;
+  --color-bg-hover:      #141a24;
+  --color-text-primary:  #c8cdd5;
+  --color-text-secondary:#4a5a6e;
+  --color-text-muted:    #2a3545;
+  --color-accent:        #e2b04a;
+  --color-accent-hover:  #f0c060;
+  --color-border:        #1e2430;
+  --color-border-light:  #1a2130;
 
   color-scheme: dark;
 }
@@ -25,8 +26,7 @@ body,
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+  font-family: 'IBM Plex Sans', 'IBM Plex Mono', system-ui, sans-serif;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
@@ -45,7 +45,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-bg-hover);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -59,4 +59,67 @@ body {
 
 .titlebar-no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* React Flow theme overrides */
+.react-flow__background {
+  background-color: var(--color-bg-primary) !important;
+}
+.react-flow__background pattern circle,
+.react-flow__background pattern rect {
+  fill: #1e2430 !important;
+}
+.react-flow__node {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px !important;
+}
+.react-flow__node-default,
+.react-flow__node-input,
+.react-flow__node-output {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 2px !important;
+  color: var(--color-text-primary) !important;
+  padding: 6px 10px !important;
+}
+.react-flow__node-default.selected,
+.react-flow__node-input.selected,
+.react-flow__node-output.selected {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 1px var(--color-accent) !important;
+}
+.react-flow__edge-path {
+  stroke-width: 1.5 !important;
+}
+.react-flow__handle {
+  background: var(--color-border-light) !important;
+  border: 1px solid var(--color-border) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 2px !important;
+}
+.react-flow__handle:hover {
+  background: var(--color-accent) !important;
+}
+.react-flow__minimap {
+  border-radius: 0 !important;
+}
+.react-flow__controls {
+  border-radius: 0 !important;
+  gap: 1px !important;
+}
+.react-flow__controls-button {
+  background: var(--color-bg-secondary) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+  fill: var(--color-text-secondary) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--color-bg-hover) !important;
+  color: var(--color-accent) !important;
+  fill: var(--color-accent) !important;
+}
+.react-flow__attribution {
+  display: none;
 }

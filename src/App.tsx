@@ -26,7 +26,7 @@ export default function App() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-950 text-gray-100">
+    <div className="h-full flex flex-col" style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
       <TopBar />
       <div className="flex-1 flex min-h-0">
         <Sidebar />
