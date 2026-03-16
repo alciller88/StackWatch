@@ -20,8 +20,17 @@ Full spec: `SPEC.md`
 
 > ⚠️ Update this section at the start of each session.
 
-- **Phase**: v0.3.1 — deep AI analysis
-- **Latest milestone**: deep AI analysis (2026-03-16)
+- **Phase**: v0.3.2 — stack source reference + link status + rescan confirmation
+- **Latest milestone**: source reference, linked/unlinked status, rescan confirmation (2026-03-16)
+  - **FEAT:** `stackwatch.config.json` now stores a `source` field (`StackSource`) tracking where the stack comes from (local path or GitHub repo)
+  - **FEAT:** TopBar shows link status badge — green "Linked" when source is reachable, yellow "Unlinked" with "Re-link" button when not, gray dot when no source set
+  - **FEAT:** "Re-link" button opens folder picker (local) to update `lastSeenPath`; for GitHub, checks repo reachability via HEAD request
+  - **FEAT:** Re-analyze now shows native confirmation dialog when manual services exist — user can choose "Keep manual services", "Overwrite everything", or "Cancel"
+  - **IPC:** three new channels: `check-link-status`, `relink-local`, `confirm-rescan`
+  - **TYPES:** new `StackSource`, `LinkStatus` types; `UserConfig.source` optional field
+  - 58 tests passing (heuristic: 13, deduplicator: 6, extractor: 26, pipeline: 4, flowInference: 9)
+- **Previous milestones**:
+  - v0.3.1: deep AI analysis (context, hidden detection, smart graph edges)
   - **FEAT:** when AI is configured, the pipeline runs deep analysis with three capabilities:
     - **Usage context**: for each detected service, AI reads the code and explains how it's used, its criticality, and detects warnings (hardcoded credentials, etc.)
     - **Hidden service detection**: AI reads priority files (lib/, services/, api/) and finds services consumed via wrappers or SDKs that heuristic analysis missed

@@ -4,7 +4,7 @@ import fs from 'fs/promises'
 import Store from 'electron-store'
 import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
-import type { UserConfig, AISettings, AIProvider } from './types'
+import type { UserConfig, AISettings, AIProvider, LinkStatus } from './types'
 
 const store = new (Store as any)()
 let mainWindow: BrowserWindow | null = null
@@ -229,4 +229,67 @@ ipcMain.handle('export-services-md', async (_event, content: string) => {
   if (!filePath) return false
   await fs.writeFile(filePath, content, 'utf-8')
   return true
+})
+
+// --- Link Status ---
+
+async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
+  if (!config.source) return 'unknown'
+
+  if (config.source.type === 'local') {
+    const localPath = config.source.lastSeenPath
+    if (!localPath) return 'unlinked'
+    try {
+      await fs.access(localPath)
+      return 'linked'
+    } catch {
+      return 'unlinked'
+    }
+  }
+
+  if (config.source.type === 'github') {
+    if (!config.source.githubRepo) return 'unlinked'
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${config.source.githubRepo}`,
+        { method: 'HEAD', signal: AbortSignal.timeout(5000) },
+      )
+      return res.ok ? 'linked' : 'unlinked'
+    } catch {
+      return 'unlinked'
+    }
+  }
+
+  return 'unknown'
+}
+
+ipcMain.handle('check-link-status', async (_event, config: UserConfig) => {
+  return checkLinkStatus(config)
+})
+
+ipcMain.handle('relink-local', async () => {
+  if (!mainWindow) return null
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Re-link to local repository',
+  })
+  return result.canceled ? null : result.filePaths[0]
+})
+
+// --- Rescan Confirmation ---
+
+ipcMain.handle('confirm-rescan', async (_event, manualCount: number) => {
+  if (!mainWindow) return 'cancel'
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    title: 'Re-analyze project',
+    message: `You have ${manualCount} manually added service${manualCount > 1 ? 's' : ''}.`,
+    detail: 'Do you want to keep your manual services after re-analysis?',
+    buttons: ['Keep manual services', 'Overwrite everything', 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+  })
+  if (response === 0) return 'keep'
+  if (response === 1) return 'overwrite'
+  return 'cancel'
 })

@@ -8,6 +8,7 @@ import type {
   AISettings,
   AIProvider,
   DeepAnalysisResult,
+  LinkStatus,
 } from '../types';
 
 type ActivePanel = 'services' | 'dependencies' | 'flow' | 'settings';
@@ -24,9 +25,13 @@ interface StoreState {
   error: string | null;
   aiSettings: AISettings | null;
   deepAnalysis: DeepAnalysisResult | null;
+  linkStatus: LinkStatus;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
+  reanalyze: () => Promise<void>;
+  checkLinkStatus: () => Promise<void>;
+  relinkLocal: () => Promise<void>;
   setActivePanel: (panel: ActivePanel) => void;
   loadConfig: () => Promise<void>;
   saveConfig: (config: UserConfig) => Promise<void>;
@@ -75,6 +80,7 @@ export const useStore = create<StoreState>((set, get) => ({
   error: null,
   aiSettings: null,
   deepAnalysis: null,
+  linkStatus: 'unknown',
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
@@ -101,6 +107,19 @@ export const useStore = create<StoreState>((set, get) => ({
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
       });
+
+      // Write source reference to config
+      const currentConfig = ensureConfig(config);
+      if (!currentConfig.source || currentConfig.source.type !== 'local' || currentConfig.source.lastSeenPath !== path) {
+        const updatedConfig = {
+          ...currentConfig,
+          source: { type: 'local' as const, lastSeenPath: path },
+        };
+        await window.stackwatch.saveConfig(path, updatedConfig);
+        set({ config: updatedConfig, linkStatus: 'linked' });
+      } else {
+        set({ linkStatus: 'linked' });
+      }
     } catch (err) {
       set({
         isAnalyzing: false,
@@ -126,7 +145,20 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: result.flowEdges,
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
+        linkStatus: 'linked',
       });
+
+      // Write source reference if repoPath is available for saving
+      const repoPath = get().repoPath;
+      if (repoPath && !repoPath.startsWith('github:')) {
+        const currentConfig = ensureConfig(config);
+        const updatedConfig = {
+          ...currentConfig,
+          source: { type: 'github' as const, githubRepo: repo, githubBranch: 'main' },
+        };
+        await window.stackwatch.saveConfig(repoPath, updatedConfig);
+        set({ config: updatedConfig });
+      }
     } catch (err) {
       set({
         isAnalyzing: false,
@@ -211,6 +243,64 @@ export const useStore = create<StoreState>((set, get) => ({
       return { ok: false, error: 'Not running in Electron' };
     }
     return window.stackwatch.testAIConnection(provider);
+  },
+
+  reanalyze: async () => {
+    const { repoPath, config } = get();
+    if (!repoPath || !window.stackwatch) return;
+
+    // Check for manual services and show confirmation
+    const manualServices = (config?.services ?? []).filter(s => s.source === 'manual');
+    if (manualServices.length > 0) {
+      const decision = await window.stackwatch.confirmRescan(manualServices.length);
+      if (decision === 'cancel') return;
+
+      if (decision === 'overwrite') {
+        // Clear manual services from config before re-analyzing
+        const updatedConfig = ensureConfig(config);
+        updatedConfig.services = [];
+        await get().saveConfig(updatedConfig);
+      }
+      // 'keep' — analyzeLocal will merge manual services back automatically
+    }
+
+    if (repoPath.startsWith('github:')) {
+      // GitHub re-analyze needs repo/token — handled by TopBar opening the GitHub dialog
+      return;
+    }
+
+    await get().analyzeLocal(repoPath);
+  },
+
+  checkLinkStatus: async () => {
+    const { config } = get();
+    if (!config || !window.stackwatch) {
+      set({ linkStatus: 'unknown' });
+      return;
+    }
+    const status = await window.stackwatch.checkLinkStatus(config);
+    set({ linkStatus: status });
+  },
+
+  relinkLocal: async () => {
+    if (!window.stackwatch) return;
+    const newPath = await window.stackwatch.relinkLocal();
+    if (!newPath) return;
+
+    const { config, repoPath } = get();
+    const currentConfig = ensureConfig(config);
+    const updatedConfig = {
+      ...currentConfig,
+      source: { type: 'local' as const, lastSeenPath: newPath },
+    };
+
+    // Save to old repoPath if available, then switch to new path
+    if (repoPath && !repoPath.startsWith('github:')) {
+      await window.stackwatch.saveConfig(repoPath, updatedConfig);
+    }
+
+    set({ config: updatedConfig, repoPath: newPath, linkStatus: 'linked' });
+    await get().analyzeLocal(newPath);
   },
 
   addManualService: async (service: Service) => {

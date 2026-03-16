@@ -36,6 +36,15 @@ const api: StackWatchAPI = {
 
   exportServicesMd: (content: string) =>
     ipcRenderer.invoke('export-services-md', content),
+
+  checkLinkStatus: (config) =>
+    ipcRenderer.invoke('check-link-status', config),
+
+  relinkLocal: () =>
+    ipcRenderer.invoke('relink-local'),
+
+  confirmRescan: (manualCount: number) =>
+    ipcRenderer.invoke('confirm-rescan', manualCount),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

@@ -91,8 +91,18 @@ export interface GraphConfig {
   excludedServices: string[]
 }
 
+export interface StackSource {
+  type: 'local' | 'github'
+  githubRepo?: string
+  githubBranch?: string
+  lastSeenPath?: string
+}
+
+export type LinkStatus = 'linked' | 'unlinked' | 'unknown'
+
 export interface UserConfig {
   version: string
+  source?: StackSource
   project: { name: string; description: string }
   services: Service[]
   accounts: Array<{
@@ -161,4 +171,7 @@ export interface StackWatchAPI {
   importConfig(repoPath: string): Promise<string | null>
   exportConfig(content: string): Promise<boolean>
   exportServicesMd(content: string): Promise<boolean>
+  checkLinkStatus(config: UserConfig): Promise<LinkStatus>
+  relinkLocal(): Promise<string | null>
+  confirmRescan(manualCount: number): Promise<'keep' | 'overwrite' | 'cancel'>
 }

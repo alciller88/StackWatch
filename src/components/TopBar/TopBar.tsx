@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import type { Service, UserConfig, ServiceCategory } from '../../types';
+import type { Service, UserConfig, ServiceCategory, LinkStatus } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
   const date = new Date().toISOString().split('T')[0];
@@ -46,9 +46,13 @@ export const TopBar: React.FC = () => {
     config,
     isAnalyzing,
     aiSettings,
+    linkStatus,
     openFolder,
     analyzeLocal,
     analyzeGitHub,
+    reanalyze,
+    checkLinkStatus,
+    relinkLocal,
     saveConfig,
     error,
     clearError,
@@ -70,12 +74,17 @@ export const TopBar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showExportMenu]);
 
+  // Check link status when config changes
+  useEffect(() => {
+    if (config) checkLinkStatus();
+  }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleReanalyze = () => {
     if (!repoPath) return;
     if (repoPath.startsWith('github:')) {
       setShowGitHub(true);
     } else {
-      analyzeLocal(repoPath);
+      reanalyze();
     }
   };
 
@@ -167,7 +176,7 @@ export const TopBar: React.FC = () => {
         </div>
       </div>
 
-      {/* Center zone — Repo path */}
+      {/* Center zone — Repo path + link status */}
       <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
         <span className="text-gray-500 text-sm shrink-0">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,6 +187,34 @@ export const TopBar: React.FC = () => {
         <span className="text-sm text-gray-400 truncate">
           {repoPath ?? 'No repository loaded'}
         </span>
+        {repoPath && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {linkStatus === 'linked' && (
+              <span className="flex items-center gap-1 text-[10px] text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                Linked
+              </span>
+            )}
+            {linkStatus === 'unlinked' && (
+              <>
+                <span className="flex items-center gap-1 text-[10px] text-yellow-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
+                  Unlinked
+                </span>
+                <button
+                  onClick={relinkLocal}
+                  disabled={isAnalyzing}
+                  className="text-[10px] text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+                >
+                  Re-link
+                </button>
+              </>
+            )}
+            {linkStatus === 'unknown' && (
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Error display */}
