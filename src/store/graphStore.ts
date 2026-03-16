@@ -172,8 +172,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       }
     }
 
-    // All services appear in the graph. Users can delete nodes manually per session.
-    // excludedServices is no longer used to filter on init — a fresh scan shows everything.
+    // All services appear in the graph — no filtering.
     let rfNodes = flowNodesToRFNodes(flowNodes, savedPositions, flowEdges)
 
     // Apply saved data overrides (edited labels, categories, etc.)
