@@ -20,16 +20,15 @@ Full spec: `SPEC.md`
 
 > ⚠️ Update this section at the start of each session.
 
-- **Phase**: v0.3.2 — stack source reference + link status + rescan confirmation
-- **Latest milestone**: source reference, linked/unlinked status, rescan confirmation (2026-03-16)
-  - **FEAT:** `stackwatch.config.json` now stores a `source` field (`StackSource`) tracking where the stack comes from (local path or GitHub repo)
-  - **FEAT:** TopBar shows link status badge — green "Linked" when source is reachable, yellow "Unlinked" with "Re-link" button when not, gray dot when no source set
-  - **FEAT:** "Re-link" button opens folder picker (local) to update `lastSeenPath`; for GitHub, checks repo reachability via HEAD request
-  - **FEAT:** Re-analyze now shows native confirmation dialog when manual services exist — user can choose "Keep manual services", "Overwrite everything", or "Cancel"
-  - **IPC:** three new channels: `check-link-status`, `relink-local`, `confirm-rescan`
-  - **TYPES:** new `StackSource`, `LinkStatus` types; `UserConfig.source` optional field
+- **Phase**: v0.3.3 — editable confidence field + re-analyze UX fix
+- **Latest milestone**: confidence UI + re-analyze fix (2026-03-16)
+  - **FEAT:** Service edit form now includes a confidence select (high/medium/low), persisted to config
+  - **FEAT:** ServiceCard border color reflects confidence: green (high), yellow (medium), orange dashed (low), gray (default/unset)
+  - **FIX:** Re-analyze button now shows loading spinner immediately when confirmation dialog is pending — previously showed no visual feedback
+  - **FIX:** `handleReanalyze` in TopBar now properly `await`s the `reanalyze()` call
   - 58 tests passing (heuristic: 13, deduplicator: 6, extractor: 26, pipeline: 4, flowInference: 9)
 - **Previous milestones**:
+  - v0.3.2: stack source reference + link status + rescan confirmation
   - v0.3.1: deep AI analysis (context, hidden detection, smart graph edges)
   - **FEAT:** when AI is configured, the pipeline runs deep analysis with three capabilities:
     - **Usage context**: for each detected service, AI reads the code and explains how it's used, its criticality, and detects warnings (hardcoded credentials, etc.)
@@ -53,7 +52,7 @@ Full spec: `SPEC.md`
   - Multi-ecosystem: Python, Rust, Go, Terraform
   - WSL2 auto-download of Electron binary
   - CommonJS fix for Electron main process
-- **Next step**: validate production build (`npm run build`), UI component tests
+- **Next step**: validate production build (`npm run build`), UI component tests, distributable builds
 
 ---
 
@@ -95,7 +94,7 @@ SPEC.md                              ← full specification (v0.3)
 CONTEXT.md                           ← this file
 electron/types.ts                    ← all types: Service, Evidence, AIProvider, ServiceContext, etc.
 electron/main.ts                     ← entry point + IPC handlers (analysis + AI settings)
-electron/preload.ts                  ← IPC bridge (12 channels)
+electron/preload.ts                  ← IPC bridge (15 channels)
 electron/analyzers/extractor.ts      ← evidence extraction from repo
 electron/analyzers/heuristic.ts      ← semantic classification
 electron/analyzers/deduplicator.ts   ← grouping and deduplication

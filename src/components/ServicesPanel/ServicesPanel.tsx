@@ -248,6 +248,7 @@ const ServiceForm: React.FC<{
   const [renewalDate, setRenewalDate] = useState(editingService?.renewalDate ?? '');
   const [accountEmail, setAccountEmail] = useState(editingService?.accountEmail ?? '');
   const [notes, setNotes] = useState(editingService?.notes ?? '');
+  const [confidence, setConfidence] = useState<NonNullable<Service['confidence']>>(editingService?.confidence ?? 'high');
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
@@ -258,6 +259,7 @@ const ServiceForm: React.FC<{
       category,
       plan,
       source: 'manual',
+      confidence,
       ...(url && { url }),
       ...(costAmount && {
         cost: { amount: parseFloat(costAmount), currency: costCurrency, period: costPeriod },
@@ -331,6 +333,18 @@ const ServiceForm: React.FC<{
             {planTypes.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Confidence</label>
+          <select
+            value={confidence}
+            onChange={e => setConfidence(e.target.value as NonNullable<Service['confidence']>)}
+            className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+          >
+            <option value="high">High — confirmed service</option>
+            <option value="medium">Medium — likely service, review recommended</option>
+            <option value="low">Low — uncertain, needs confirmation</option>
           </select>
         </div>
       </div>

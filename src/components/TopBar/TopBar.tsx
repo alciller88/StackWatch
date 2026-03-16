@@ -79,12 +79,12 @@ export const TopBar: React.FC = () => {
     if (config) checkLinkStatus();
   }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleReanalyze = () => {
+  const handleReanalyze = async () => {
     if (!repoPath) return;
     if (repoPath.startsWith('github:')) {
       setShowGitHub(true);
     } else {
-      reanalyze();
+      await reanalyze();
     }
   };
 

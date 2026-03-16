@@ -48,6 +48,13 @@ const criticalityColors: Record<string, string> = {
   optional: 'text-gray-500',
 };
 
+const confidenceBorder: Record<string, string> = {
+  high:    'border-green-800/50',
+  medium:  'border-yellow-800/50',
+  low:     'border-orange-800/50 border-dashed',
+  default: 'border-gray-800',
+};
+
 const criticalityIcons: Record<string, string> = {
   critical: '\u{1F534}',
   important: '\u{1F7E1}',
@@ -76,11 +83,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
   return (
     <div
       className={`bg-gray-900 border rounded-xl p-4 transition-colors ${
-        confidence === 'low'
-          ? 'border-orange-800/50 border-dashed'
-          : confidence === 'medium'
-          ? 'border-yellow-800/30'
-          : 'border-gray-800'
+        confidenceBorder[service.confidence ?? 'default']
       } ${isClickable ? 'cursor-pointer hover:border-blue-700/50' : 'hover:border-gray-700'}`}
       onClick={onEdit ? () => onEdit(service) : undefined}
     >

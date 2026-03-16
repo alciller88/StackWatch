@@ -249,11 +249,20 @@ export const useStore = create<StoreState>((set, get) => ({
     const { repoPath, config } = get();
     if (!repoPath || !window.stackwatch) return;
 
+    if (repoPath.startsWith('github:')) {
+      // GitHub re-analyze needs repo/token — handled by TopBar opening the GitHub dialog
+      return;
+    }
+
     // Check for manual services and show confirmation
     const manualServices = (config?.services ?? []).filter(s => s.source === 'manual');
     if (manualServices.length > 0) {
+      set({ isAnalyzing: true });
       const decision = await window.stackwatch.confirmRescan(manualServices.length);
-      if (decision === 'cancel') return;
+      if (decision === 'cancel') {
+        set({ isAnalyzing: false });
+        return;
+      }
 
       if (decision === 'overwrite') {
         // Clear manual services from config before re-analyzing
@@ -262,11 +271,6 @@ export const useStore = create<StoreState>((set, get) => ({
         await get().saveConfig(updatedConfig);
       }
       // 'keep' — analyzeLocal will merge manual services back automatically
-    }
-
-    if (repoPath.startsWith('github:')) {
-      // GitHub re-analyze needs repo/token — handled by TopBar opening the GitHub dialog
-      return;
     }
 
     await get().analyzeLocal(repoPath);
