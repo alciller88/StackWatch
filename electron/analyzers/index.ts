@@ -1,10 +1,9 @@
-import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult, ScanMode } from '../types'
+import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
-import { enhanceWithAI } from '../ai/provider'
-import { runDeepAnalysis, classifyEvidencesWithAI } from '../ai/deepAnalyzer'
+import { runDeepAnalysis, refineServicesWithAI } from '../ai/deepAnalyzer'
 
 export async function analyzeLocalRepo(
   folderPath: string,
@@ -32,17 +31,11 @@ async function runPipeline(
   excludedServices?: string[],
   repoPath?: string,
 ): Promise<AnalysisResult> {
-  const scanMode: ScanMode = aiSettings?.scanMode ?? 'heuristic'
-  const aiEnabled = aiSettings?.enabled && aiSettings.provider
-  const useHeuristics = scanMode !== 'ai-only' || !aiEnabled
-  const useAI = aiEnabled && scanMode !== 'heuristic'
+  const useAI = aiSettings?.enabled && aiSettings.provider && aiSettings.scanMode === 'hybrid'
 
-  // Step 1: Classify with heuristics (unless ai-only with working AI)
-  let services: Service[] = []
-  if (useHeuristics) {
-    const heuristicResults = classifyEvidences(evidences, projectName)
-    services = deduplicateServices(heuristicResults)
-  }
+  // Step 1: Heuristic classification (always runs)
+  const heuristicResults = classifyEvidences(evidences, projectName)
+  let services = deduplicateServices(heuristicResults)
 
   // Step 2: Filter excluded services (from graph deletions)
   if (excludedServices && excludedServices.length > 0) {
@@ -50,26 +43,15 @@ async function runPipeline(
     services = services.filter((s) => !excluded.has(s.id))
   }
 
-  // Step 3: AI analysis
+  // Step 3: AI enhancement (hybrid mode)
   let deepAnalysis: DeepAnalysisResult | undefined
   let aiError: string | undefined
   if (useAI) {
     try {
-      // In ai-only mode, let AI classify the raw evidences first
-      if (scanMode === 'ai-only') {
-        const aiServices = await classifyEvidencesWithAI(
-          evidences,
-          repoPath ?? null,
-          aiSettings!.provider,
-        )
-        services = aiServices
-        if (excludedServices && excludedServices.length > 0) {
-          const excluded = new Set(excludedServices)
-          services = services.filter((s) => !excluded.has(s.id))
-        }
-      }
+      // Step 3a: AI validates/refines heuristic results (remove false positives, fix categories, merge dupes)
+      services = await refineServicesWithAI(services, aiSettings!.provider)
 
-      // Deep analysis: context, hidden services, edge types
+      // Step 3b: Deep analysis (service context, hidden services, edge types)
       deepAnalysis = await runDeepAnalysis(
         services,
         evidences,
@@ -85,16 +67,7 @@ async function runPipeline(
       }
     } catch (err) {
       aiError = err instanceof Error ? err.message : String(err)
-      // ai-only mode with failed AI: fall back to heuristics so user gets results
-      if (scanMode === 'ai-only' && services.length === 0) {
-        const heuristicResults = classifyEvidences(evidences, projectName)
-        services = deduplicateServices(heuristicResults)
-        if (excludedServices && excludedServices.length > 0) {
-          const excluded = new Set(excludedServices)
-          services = services.filter((s) => !excluded.has(s.id))
-        }
-        aiError += ' — showing heuristic results as fallback'
-      }
+      // Silent fallback: heuristic results are already in `services`
     }
   }
 

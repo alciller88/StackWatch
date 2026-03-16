@@ -279,13 +279,7 @@ export const Settings: React.FC = () => {
                     {
                       value: 'hybrid' as ScanMode,
                       label: 'Heuristic + AI',
-                      desc: 'Heuristics first, then AI enhances and discovers hidden services.',
-                      alwaysAvailable: false,
-                    },
-                    {
-                      value: 'ai-only' as ScanMode,
-                      label: 'AI only',
-                      desc: 'Full AI-powered analysis. Falls back to heuristics if AI fails.',
+                      desc: 'AI validates findings, removes false positives, fixes categories, and discovers hidden services.',
                       alwaysAvailable: false,
                     },
                   ]).map((opt) => {

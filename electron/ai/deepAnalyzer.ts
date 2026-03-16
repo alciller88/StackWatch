@@ -17,7 +17,7 @@ const MAX_PROMPT_CHARS = 6000 // hard cap per prompt, ~1.5k tokens
 
 // ── AI call helper ──
 
-async function callAI(provider: AIProvider, prompt: string, maxTokens: number): Promise<string> {
+export async function callAI(provider: AIProvider, prompt: string, maxTokens: number): Promise<string> {
   // Hard safety cap: truncate prompt if it exceeds limit
   const safePrompt = prompt.length > MAX_PROMPT_CHARS
     ? prompt.slice(0, MAX_PROMPT_CHARS) + '\n[... truncated for size]'
@@ -47,7 +47,7 @@ async function callAI(provider: AIProvider, prompt: string, maxTokens: number): 
   return text.replace(/```json|```/g, '').trim()
 }
 
-function safeParseJSON<T>(text: string, fallback: T): T {
+export function safeParseJSON<T>(text: string, fallback: T): T {
   try {
     const parsed = JSON.parse(text)
     return parsed as T
@@ -268,192 +268,124 @@ Return ONLY a valid JSON array:
     }))
 }
 
-// ── Step D: Multi-step AI classification (for ai-only mode) ──
+// ── Step 0: AI validation & refinement of heuristic results ──
 //
-// Chains multiple focused AI calls so each one fits within token limits
-// and the AI gets deep context on every evidence type.
-//
-//   Step D1 — Env vars & CI secrets → services
-//   Step D2 — URLs & domains → services
-//   Step D3 — Packages & imports → services
-//   Step D4 — Source code scan (priority files) → services
-//   Step D5 — Consolidate: deduplicate, resolve conflicts, final list
+// Single compact AI call that reviews all heuristic findings.
+// Returns only the DIFF (changes needed), not the full list.
+// Uses numeric IDs for token efficiency.
 
-const AI_SVC_SCHEMA = `[{"name":"Service Name","category":"<cat>","confidence":"high|medium|low","reason":"brief evidence"}]
-Categories: domain,hosting,cicd,database,auth,payments,email,analytics,monitoring,cdn,storage,infra,ai,mobile,gaming,data,messaging,support,other`
+const VALID_CATEGORIES = new Set([
+  'domain','hosting','cicd','database','auth','payments','email','analytics',
+  'monitoring','cdn','storage','infra','ai','mobile','gaming','data',
+  'messaging','support','other',
+])
 
-const AI_SVC_RULES = `Rules:
-- Only REAL external services, APIs, or platforms
-- No dev tools (eslint, prettier, webpack, vite), no frameworks (React, Express, Next.js), no utility libs (lodash, zod, dayjs)
-- No generic infrastructure (Node.js, Docker, Linux) unless it's a managed service
-- Be specific: "Stripe" not "Payment provider", "PostgreSQL" not "Database"`
-
-async function aiClassifyBatch(
+export async function refineServicesWithAI(
+  services: Service[],
   provider: AIProvider,
-  evidenceType: string,
-  items: string[],
-): Promise<Partial<Service>[]> {
-  if (items.length === 0) return []
+): Promise<Service[]> {
+  if (services.length < 2) return services
 
-  // Cap the items list to ~3k chars to stay within prompt budget
-  let itemList = ''
-  for (const item of items) {
-    if (itemList.length + item.length > 3000) break
-    if (itemList) itemList += ', '
-    itemList += item
+  // Build compact numbered list (~70 chars per service)
+  let serviceList = ''
+  for (let i = 0; i < services.length; i++) {
+    const s = services[i]
+    const reason = (s.confidenceReasons?.[0] ?? s.inferredFrom ?? '').slice(0, 50)
+    const line = `${i + 1}|${s.name}|${s.category}|${s.confidence ?? 'medium'}|${reason}\n`
+    if (serviceList.length + line.length > 3500) break // leave room for instructions
+    serviceList += line
   }
 
-  const prompt = `Identify external services from these ${evidenceType} found in a software project.
+  const prompt = `Review these auto-detected services from a codebase. Return ONLY changes needed as JSON.
 
-${evidenceType}: ${itemList}
+Services (id|name|category|confidence|reason):
+${serviceList}
+Actions:
+- "remove": [id,...] — false positives (libraries, not external services)
+- "category": {"id":"newCat"} — fix wrong category
+- "confidence": {"id":"high|medium|low"} — adjust confidence
+- "merge": [[id,id,...]] — same service detected multiple times (keep first in group)
 
-Return ONLY a valid JSON array (empty [] if none are real services):
-${AI_SVC_SCHEMA}
+Categories: domain,hosting,cicd,database,auth,payments,email,analytics,monitoring,cdn,storage,infra,ai,mobile,gaming,data,messaging,support,other
 
-${AI_SVC_RULES}`
+Return ONLY valid JSON. Empty {} if no changes needed.
+{"remove":[],"category":{},"confidence":{},"merge":[]}`
 
-  const text = await callAI(provider, prompt, 1500)
-  const parsed = safeParseJSON<any[]>(text, [])
-  if (!Array.isArray(parsed)) return []
-  return parsed.filter(s => s.name && s.category)
-}
+  const text = await callAI(provider, prompt, 800)
+  const actions = safeParseJSON<any>(text, {})
 
-async function aiClassifySourceCode(
-  provider: AIProvider,
-  files: { path: string; content: string }[],
-): Promise<Partial<Service>[]> {
-  if (files.length === 0) return []
+  // Apply changes safely
+  let result = [...services]
 
-  const truncated = truncateFilesToBudget(files, MAX_PROMPT_CHARS - 1500)
-  const prompt = `Analyze this source code and identify ALL external services, APIs, and platforms being used. Look for:
-- API client calls (fetch, axios, SDK methods)
-- Service SDK initializations
-- Database connection strings
-- Third-party webhook handlers
-- Any service not obvious from package names alone
-
-Source code:
-${truncated.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
-
-Return ONLY a valid JSON array (empty [] if nothing found):
-${AI_SVC_SCHEMA}
-
-${AI_SVC_RULES}`
-
-  const text = await callAI(provider, prompt, 1500)
-  const parsed = safeParseJSON<any[]>(text, [])
-  if (!Array.isArray(parsed)) return []
-  return parsed.filter(s => s.name && s.category)
-}
-
-async function aiConsolidate(
-  provider: AIProvider,
-  candidates: Partial<Service>[],
-): Promise<Service[]> {
-  if (candidates.length === 0) return []
-
-  // Deduplicate by normalized name before sending to AI
-  const seen = new Map<string, Partial<Service>>()
-  for (const c of candidates) {
-    const key = String(c.name).toLowerCase().replace(/[^a-z0-9]/g, '')
-    const existing = seen.get(key)
-    if (!existing || confidenceRank(c.confidence) > confidenceRank(existing.confidence)) {
-      seen.set(key, c)
+  // 1. Merge (before removals so indices are still valid)
+  if (Array.isArray(actions.merge)) {
+    const mergedAway = new Set<number>()
+    for (const group of actions.merge) {
+      if (!Array.isArray(group) || group.length < 2) continue
+      const keepIdx = Number(group[0]) - 1
+      if (keepIdx < 0 || keepIdx >= result.length) continue
+      for (let i = 1; i < group.length; i++) {
+        const idx = Number(group[i]) - 1
+        if (idx >= 0 && idx < result.length && idx !== keepIdx) {
+          // Absorb confidence reasons from merged service
+          result[keepIdx] = {
+            ...result[keepIdx],
+            confidenceReasons: [
+              ...(result[keepIdx].confidenceReasons ?? []),
+              ...(result[idx].confidenceReasons ?? []),
+            ],
+          }
+          mergedAway.add(idx)
+        }
+      }
     }
-  }
-  const deduped = [...seen.values()]
-
-  // If small enough, skip AI consolidation call
-  if (deduped.length <= 15) {
-    return deduped.map(toService)
-  }
-
-  const prompt = `You are given a list of candidate external services detected from a codebase by multiple analysis passes. Some may be duplicates, some may be false positives.
-
-Candidates:
-${deduped.map(s => `- ${s.name} (${s.category}, ${s.confidence}): ${(s as any).reason ?? s.confidenceReasons?.[0] ?? ''}`).join('\n')}
-
-Consolidate this into a final deduplicated list. Remove false positives (dev tools, frameworks, utilities). Merge duplicates keeping the highest confidence.
-
-Return ONLY a valid JSON array:
-${AI_SVC_SCHEMA}`
-
-  const text = await callAI(provider, prompt, 1500)
-  const parsed = safeParseJSON<any[]>(text, [])
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    return deduped.map(toService)
-  }
-  return parsed.filter(s => s.name && s.category).map(toService)
-}
-
-function toService(s: any): Service {
-  return {
-    id: String(s.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-    name: String(s.name),
-    category: (s.category ?? 'other') as ServiceCategory,
-    plan: 'unknown' as const,
-    source: 'inferred' as const,
-    confidence: (s.confidence ?? 'medium') as 'high' | 'medium' | 'low',
-    needsReview: s.confidence === 'low',
-    confidenceReasons: s.reason ? [String(s.reason)] : ['AI classification'],
-    inferredFrom: 'AI classification',
-  }
-}
-
-function confidenceRank(c: string | undefined): number {
-  if (c === 'high') return 3
-  if (c === 'medium') return 2
-  return 1
-}
-
-export async function classifyEvidencesWithAI(
-  evidences: Evidence[],
-  repoPath: string | null,
-  provider: AIProvider,
-): Promise<Service[]> {
-  const unique = (arr: string[], max: number) => [...new Set(arr)].slice(0, max)
-
-  const envVars = unique(evidences.filter(e => e.type === 'env_var').map(e => e.value), 40)
-  const ciSecrets = unique(evidences.filter(e => e.type === 'ci_secret').map(e => e.value), 20)
-  const urls = unique(evidences.filter(e => e.type === 'url').map(e => e.value), 30)
-  const domains = unique(evidences.filter(e => e.type === 'domain').map(e => e.value), 15)
-  const packages = unique(evidences.filter(e => e.type === 'npm_package' || e.type === 'import').map(e => e.value), 40)
-  const configs = unique(evidences.filter(e => e.type === 'config_file').map(e => e.value), 20)
-
-  // Read source files for code-level analysis
-  const allFiles = [...new Set(evidences.map(e => e.file))]
-  const filesToRead = selectFilesForHiddenDetection(allFiles)
-  const fileContents: { path: string; content: string }[] = []
-  if (repoPath) {
-    for (const f of filesToRead) {
-      try {
-        fileContents.push({ path: f, content: await readFileContent(path.join(repoPath, f)) })
-      } catch { /* skip */ }
+    if (mergedAway.size > 0) {
+      result = result.filter((_, i) => !mergedAway.has(i))
     }
   }
 
-  // Run D1–D4 sequentially to avoid rate limits (429) on free-tier providers
-  const allCandidates: Partial<Service>[] = []
-
-  const fromEnv = await aiClassifyBatch(provider, 'environment variables and CI secrets', [...envVars, ...ciSecrets])
-  allCandidates.push(...fromEnv)
-
-  const fromUrls = await aiClassifyBatch(provider, 'external URLs and domains', [...urls, ...domains])
-  allCandidates.push(...fromUrls)
-
-  const fromPackages = await aiClassifyBatch(provider, 'packages and imports', packages)
-  allCandidates.push(...fromPackages)
-
-  const fromCode = await aiClassifySourceCode(provider, fileContents)
-  allCandidates.push(...fromCode)
-
-  if (configs.length > 0) {
-    const fromConfigs = await aiClassifyBatch(provider, 'config files', configs)
-    allCandidates.push(...fromConfigs)
+  // Rebuild index map after merge (original 1-based ID → new array position)
+  // For category/confidence/remove we need to map original IDs to current services
+  const idToService = new Map<number, Service>()
+  for (let i = 0; i < services.length; i++) {
+    const svc = result.find(r => r.id === services[i].id)
+    if (svc) idToService.set(i + 1, svc)
   }
 
-  // D5: Consolidate all candidates
-  return aiConsolidate(provider, allCandidates)
+  // 2. Category fixes
+  if (actions.category && typeof actions.category === 'object') {
+    for (const [idStr, cat] of Object.entries(actions.category)) {
+      const svc = idToService.get(Number(idStr))
+      if (svc && VALID_CATEGORIES.has(cat as string)) {
+        svc.category = cat as ServiceCategory
+      }
+    }
+  }
+
+  // 3. Confidence adjustments
+  if (actions.confidence && typeof actions.confidence === 'object') {
+    for (const [idStr, conf] of Object.entries(actions.confidence)) {
+      const svc = idToService.get(Number(idStr))
+      if (svc && (conf === 'high' || conf === 'medium' || conf === 'low')) {
+        svc.confidence = conf
+        svc.needsReview = conf === 'low'
+      }
+    }
+  }
+
+  // 4. Removals
+  if (Array.isArray(actions.remove)) {
+    const removeIds = new Set(
+      actions.remove
+        .map((id: any) => idToService.get(Number(id))?.id)
+        .filter(Boolean),
+    )
+    if (removeIds.size > 0) {
+      result = result.filter(s => !removeIds.has(s.id))
+    }
+  }
+
+  return result
 }
 
 // ── Orchestrator ──

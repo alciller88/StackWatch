@@ -133,15 +133,22 @@ Services with low confidence appear in a "Needs Review" section at the top of th
 
 ## AI analysis (optional)
 
-StackWatch works 100% offline without AI. Three scan modes are available in **Settings**:
+StackWatch works 100% offline without AI. Two scan modes are available in **Settings**:
 
 | Mode | Speed | Requires AI | Description |
 |------|-------|-------------|-------------|
 | **Heuristic only** | Fast | No | Pattern-based detection (~80% coverage). Default. |
-| **Heuristic + AI** | Medium | Yes | Heuristics first, AI enhances and finds hidden services (~95%) |
-| **AI only** | Slow | Yes | Full AI-powered classification from raw evidences. Falls back to heuristics if AI fails |
+| **Heuristic + AI** | Medium | Yes | Heuristics first, then AI validates, refines, and discovers hidden services (~95%) |
 
-When an AI provider is configured, a deep analysis pass enriches results with three capabilities:
+When Heuristic + AI is enabled, the AI pipeline runs in two phases:
+
+**Phase 1 — Validation & refinement** (single compact AI call):
+- Removes false positives (libraries mistaken for services)
+- Fixes wrong categories
+- Adjusts confidence levels
+- Merges duplicate detections of the same service
+
+**Phase 2 — Deep analysis** enriches results with three capabilities:
 
 | Capability | What it does |
 |---|---|
@@ -326,8 +333,9 @@ StackWatch/
 - [x] Confidence levels with color-coded borders + editable in form (v0.3.3)
 - [x] Unit tests — 58 tests across 5 suites
 - [x] Custom frameless titlebar + themed confirmation dialogs (v0.3.4)
-- [x] Standalone import (no repo required) + scan mode selector (heuristic/hybrid/ai-only)
+- [x] Standalone import (no repo required) + scan mode selector (heuristic/hybrid)
 - [x] Generic name filtering to reduce false positives (Admin, $Domain, etc.)
+- [x] AI validation & refinement of heuristic results (v0.3.5)
 - [ ] Production build validation
 - [ ] UI component tests
 - [ ] macOS / Windows / Linux distributable builds

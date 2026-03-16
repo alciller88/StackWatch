@@ -161,7 +161,7 @@ export interface AIProvider {
   description?: string;
 }
 
-export type ScanMode = 'heuristic' | 'hybrid' | 'ai-only';
+export type ScanMode = 'heuristic' | 'hybrid';
 
 export interface AISettings {
   enabled: boolean;
