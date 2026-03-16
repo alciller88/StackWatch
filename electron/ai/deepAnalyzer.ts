@@ -263,64 +263,174 @@ Return ONLY a valid JSON array:
     }))
 }
 
-// ── Step D: AI-based evidence classification (for ai-only mode) ──
+// ── Step D: Multi-step AI classification (for ai-only mode) ──
+//
+// Chains multiple focused AI calls so each one fits within token limits
+// and the AI gets deep context on every evidence type.
+//
+//   Step D1 — Env vars & CI secrets → services
+//   Step D2 — URLs & domains → services
+//   Step D3 — Packages & imports → services
+//   Step D4 — Source code scan (priority files) → services
+//   Step D5 — Consolidate: deduplicate, resolve conflicts, final list
+
+const AI_SVC_SCHEMA = `[{"name":"Service Name","category":"<cat>","confidence":"high|medium|low","reason":"brief evidence"}]
+Categories: domain,hosting,cicd,database,auth,payments,email,analytics,monitoring,cdn,storage,infra,ai,mobile,gaming,data,messaging,support,other`
+
+const AI_SVC_RULES = `Rules:
+- Only REAL external services, APIs, or platforms
+- No dev tools (eslint, prettier, webpack, vite), no frameworks (React, Express, Next.js), no utility libs (lodash, zod, dayjs)
+- No generic infrastructure (Node.js, Docker, Linux) unless it's a managed service
+- Be specific: "Stripe" not "Payment provider", "PostgreSQL" not "Database"`
+
+async function aiClassifyBatch(
+  provider: AIProvider,
+  evidenceType: string,
+  items: string[],
+): Promise<Partial<Service>[]> {
+  if (items.length === 0) return []
+
+  const prompt = `Identify external services from these ${evidenceType} found in a software project.
+
+${evidenceType}: ${items.join(', ')}
+
+Return ONLY a valid JSON array (empty [] if none are real services):
+${AI_SVC_SCHEMA}
+
+${AI_SVC_RULES}`
+
+  const text = await callAI(provider, prompt, 1500)
+  const parsed = safeParseJSON<any[]>(text, [])
+  if (!Array.isArray(parsed)) return []
+  return parsed.filter(s => s.name && s.category)
+}
+
+async function aiClassifySourceCode(
+  provider: AIProvider,
+  files: { path: string; content: string }[],
+): Promise<Partial<Service>[]> {
+  if (files.length === 0) return []
+
+  const truncated = truncateFilesToBudget(files, MAX_PROMPT_CHARS - 1500)
+  const prompt = `Analyze this source code and identify ALL external services, APIs, and platforms being used. Look for:
+- API client calls (fetch, axios, SDK methods)
+- Service SDK initializations
+- Database connection strings
+- Third-party webhook handlers
+- Any service not obvious from package names alone
+
+Source code:
+${truncated.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
+
+Return ONLY a valid JSON array (empty [] if nothing found):
+${AI_SVC_SCHEMA}
+
+${AI_SVC_RULES}`
+
+  const text = await callAI(provider, prompt, 1500)
+  const parsed = safeParseJSON<any[]>(text, [])
+  if (!Array.isArray(parsed)) return []
+  return parsed.filter(s => s.name && s.category)
+}
+
+async function aiConsolidate(
+  provider: AIProvider,
+  candidates: Partial<Service>[],
+): Promise<Service[]> {
+  if (candidates.length === 0) return []
+
+  // Deduplicate by normalized name before sending to AI
+  const seen = new Map<string, Partial<Service>>()
+  for (const c of candidates) {
+    const key = String(c.name).toLowerCase().replace(/[^a-z0-9]/g, '')
+    const existing = seen.get(key)
+    if (!existing || confidenceRank(c.confidence) > confidenceRank(existing.confidence)) {
+      seen.set(key, c)
+    }
+  }
+  const deduped = [...seen.values()]
+
+  // If small enough, skip AI consolidation call
+  if (deduped.length <= 15) {
+    return deduped.map(toService)
+  }
+
+  const prompt = `You are given a list of candidate external services detected from a codebase by multiple analysis passes. Some may be duplicates, some may be false positives.
+
+Candidates:
+${deduped.map(s => `- ${s.name} (${s.category}, ${s.confidence}): ${s.reason ?? ''}`).join('\n')}
+
+Consolidate this into a final deduplicated list. Remove false positives (dev tools, frameworks, utilities). Merge duplicates keeping the highest confidence.
+
+Return ONLY a valid JSON array:
+${AI_SVC_SCHEMA}`
+
+  const text = await callAI(provider, prompt, 1500)
+  const parsed = safeParseJSON<any[]>(text, [])
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return deduped.map(toService)
+  }
+  return parsed.filter(s => s.name && s.category).map(toService)
+}
+
+function toService(s: any): Service {
+  return {
+    id: String(s.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    name: String(s.name),
+    category: (s.category ?? 'other') as ServiceCategory,
+    plan: 'unknown' as const,
+    source: 'inferred' as const,
+    confidence: (s.confidence ?? 'medium') as 'high' | 'medium' | 'low',
+    needsReview: s.confidence === 'low',
+    confidenceReasons: s.reason ? [String(s.reason)] : ['AI classification'],
+    inferredFrom: 'AI classification',
+  }
+}
+
+function confidenceRank(c: string | undefined): number {
+  if (c === 'high') return 3
+  if (c === 'medium') return 2
+  return 1
+}
 
 export async function classifyEvidencesWithAI(
   evidences: Evidence[],
   repoPath: string | null,
   provider: AIProvider,
 ): Promise<Service[]> {
-  // Deduplicate and limit evidences
   const unique = (arr: string[], max: number) => [...new Set(arr)].slice(0, max)
-  const envVars = unique(evidences.filter(e => e.type === 'env_var').map(e => e.value), 30)
-  const urls = unique(evidences.filter(e => e.type === 'url').map(e => e.value), 20)
-  const packages = unique(evidences.filter(e => e.type === 'npm_package' || e.type === 'import').map(e => e.value), 30)
-  const configs = unique(evidences.filter(e => e.type === 'config_file').map(e => e.value), 15)
-  const domains = unique(evidences.filter(e => e.type === 'domain').map(e => e.value), 10)
-  const ciSecrets = unique(evidences.filter(e => e.type === 'ci_secret').map(e => e.value), 15)
 
-  // Build evidence section (compact, no source code — evidences are enough for classification)
-  const sections: string[] = []
-  if (envVars.length > 0) sections.push(`Environment variables: ${envVars.join(', ')}`)
-  if (urls.length > 0) sections.push(`External URLs: ${urls.join(', ')}`)
-  if (packages.length > 0) sections.push(`Packages/imports: ${packages.join(', ')}`)
-  if (configs.length > 0) sections.push(`Config files: ${configs.join(', ')}`)
-  if (domains.length > 0) sections.push(`Domains: ${domains.join(', ')}`)
-  if (ciSecrets.length > 0) sections.push(`CI secrets: ${ciSecrets.join(', ')}`)
+  const envVars = unique(evidences.filter(e => e.type === 'env_var').map(e => e.value), 40)
+  const ciSecrets = unique(evidences.filter(e => e.type === 'ci_secret').map(e => e.value), 20)
+  const urls = unique(evidences.filter(e => e.type === 'url').map(e => e.value), 30)
+  const domains = unique(evidences.filter(e => e.type === 'domain').map(e => e.value), 15)
+  const packages = unique(evidences.filter(e => e.type === 'npm_package' || e.type === 'import').map(e => e.value), 40)
+  const configs = unique(evidences.filter(e => e.type === 'config_file').map(e => e.value), 20)
 
-  const prompt = `You are analyzing a software project to identify ALL external services, APIs, and platforms it depends on.
+  // Read source files for code-level analysis
+  const allFiles = [...new Set(evidences.map(e => e.file))]
+  const filesToRead = selectFilesForHiddenDetection(allFiles)
+  const fileContents: { path: string; content: string }[] = []
+  if (repoPath) {
+    for (const f of filesToRead) {
+      try {
+        fileContents.push({ path: f, content: await readFileContent(path.join(repoPath, f)) })
+      } catch { /* skip */ }
+    }
+  }
 
-Evidence collected from the codebase:
-${sections.join('\n')}
+  // Run D1–D4 in parallel (each is a focused, small prompt)
+  const [fromEnv, fromUrls, fromPackages, fromCode, fromConfigs] = await Promise.all([
+    aiClassifyBatch(provider, 'environment variables and CI secrets', [...envVars, ...ciSecrets]),
+    aiClassifyBatch(provider, 'external URLs and domains', [...urls, ...domains]),
+    aiClassifyBatch(provider, 'packages and imports', packages),
+    aiClassifySourceCode(provider, fileContents),
+    configs.length > 0 ? aiClassifyBatch(provider, 'config files', configs) : Promise.resolve([]),
+  ])
 
-Identify every external service this project uses. For each, determine the actual service name (e.g., "Stripe", "PostgreSQL", "AWS S3"), its category, and confidence level.
-
-Return ONLY a valid JSON array (empty [] if nothing found):
-[{"name": "Service Name", "category": "<category>", "confidence": "high|medium|low", "reason": "evidence", "inferredFrom": "AI classification"}]
-
-Categories: domain, hosting, cicd, database, auth, payments, email, analytics, monitoring, cdn, storage, infra, ai, mobile, gaming, data, messaging, support, other
-
-Rules:
-- Only REAL external services — no dev tools, frameworks, or utility libraries
-- STRIPE_SECRET_KEY → high confidence Stripe; api.openai.com → high confidence OpenAI`
-
-  const text = await callAI(provider, prompt, 2000)
-  const parsed = safeParseJSON<any[]>(text, [])
-  if (!Array.isArray(parsed)) return []
-
-  return parsed
-    .filter(s => s.name && s.category)
-    .map(s => ({
-      id: String(s.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      name: String(s.name),
-      category: s.category as ServiceCategory,
-      plan: 'unknown' as const,
-      source: 'inferred' as const,
-      confidence: (s.confidence ?? 'medium') as 'high' | 'medium' | 'low',
-      needsReview: s.confidence === 'low',
-      confidenceReasons: [s.reason ?? 'AI classification'],
-      inferredFrom: s.inferredFrom ?? 'AI classification',
-    }))
+  // D5: Consolidate all candidates
+  const allCandidates = [...fromEnv, ...fromUrls, ...fromPackages, ...fromCode, ...fromConfigs]
+  return aiConsolidate(provider, allCandidates)
 }
 
 // ── Orchestrator ──
