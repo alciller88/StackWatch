@@ -54,6 +54,7 @@ export const TopBar: React.FC = () => {
     checkLinkStatus,
     relinkLocal,
     saveConfig,
+    importStandalone,
     error,
     clearError,
   } = useStore();
@@ -96,13 +97,19 @@ export const TopBar: React.FC = () => {
   };
 
   const handleImport = async () => {
-    if (!window.stackwatch || !repoPath || repoPath.startsWith('github:')) return;
-    try {
-      const content = await window.stackwatch.importConfig(repoPath);
-      if (!content) return;
-      await analyzeLocal(repoPath);
-    } catch {
-      // invalid JSON, cancelled, or file read error
+    if (!window.stackwatch) return;
+    if (repoPath && !repoPath.startsWith('github:')) {
+      // With repo loaded: import and write to repo, then re-analyze
+      try {
+        const content = await window.stackwatch.importConfig(repoPath);
+        if (!content) return;
+        await analyzeLocal(repoPath);
+      } catch {
+        // invalid JSON, cancelled, or file read error
+      }
+    } else {
+      // No repo (or GitHub repo): standalone import — load into state as unlinked
+      await importStandalone();
     }
   };
 
@@ -134,7 +141,7 @@ export const TopBar: React.FC = () => {
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={handleImport}
-          disabled={!repoPath || repoPath.startsWith('github:') || isAnalyzing}
+          disabled={isAnalyzing}
           className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
           title="Import stackwatch.config.json"
         >
@@ -169,7 +176,7 @@ export const TopBar: React.FC = () => {
                 onClick={handleExportMd}
                 className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
               >
-                Export as SERVICES.md
+                Export report (.md)
               </button>
             </div>
           )}

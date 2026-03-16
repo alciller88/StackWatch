@@ -76,11 +76,7 @@ body {
 .react-flow__node-default,
 .react-flow__node-input,
 .react-flow__node-output {
-  background: var(--color-bg-secondary) !important;
-  border: 1px solid var(--color-border) !important;
-  border-radius: 2px !important;
   color: var(--color-text-primary) !important;
-  padding: 6px 10px !important;
 }
 .react-flow__node-default.selected,
 .react-flow__node-input.selected,
@@ -89,7 +85,7 @@ body {
   box-shadow: 0 0 0 1px var(--color-accent) !important;
 }
 .react-flow__edge-path {
-  stroke-width: 1.5 !important;
+  stroke-width: 2 !important;
 }
 .react-flow__handle {
   background: var(--color-border-light) !important;

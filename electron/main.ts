@@ -207,6 +207,19 @@ ipcMain.handle('import-config', async (_event, repoPath: string) => {
   return content
 })
 
+ipcMain.handle('import-config-standalone', async () => {
+  if (!mainWindow) return null
+  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import StackWatch config',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    properties: ['openFile'],
+  })
+  if (!filePaths[0]) return null
+  const content = await fs.readFile(filePaths[0], 'utf-8')
+  const parsed = JSON.parse(content)
+  return parsed
+})
+
 ipcMain.handle('export-config', async (_event, content: string) => {
   if (!mainWindow) return false
   const { filePath } = await dialog.showSaveDialog(mainWindow, {

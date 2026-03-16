@@ -31,6 +31,9 @@ const api: StackWatchAPI = {
   importConfig: (repoPath: string) =>
     ipcRenderer.invoke('import-config', repoPath),
 
+  importConfigStandalone: () =>
+    ipcRenderer.invoke('import-config-standalone'),
+
   exportConfig: (content: string) =>
     ipcRenderer.invoke('export-config', content),
 

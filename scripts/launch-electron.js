@@ -12,7 +12,7 @@ function isWSL() {
 }
 
 let electronBin
-let spawnArgs = ['.']
+let spawnArgs = ['--disable-gpu-cache', '.']
 let spawnOptions = { stdio: 'inherit', env: { ...process.env } }
 
 if (isWSL()) {

@@ -44,6 +44,7 @@ interface StoreState {
   updateManualService: (service: Service) => Promise<void>;
   deleteManualService: (serviceId: string) => Promise<void>;
   updateServiceConfidence: (serviceId: string, confidence: 'high' | 'medium' | 'low') => Promise<void>;
+  importStandalone: () => Promise<void>;
 }
 
 function mergeServices(
@@ -350,6 +351,40 @@ export const useStore = create<StoreState>((set, get) => ({
     set((state) => ({
       services: state.services.filter(s => s.id !== serviceId),
     }));
+  },
+
+  importStandalone: async () => {
+    if (!window.stackwatch) return;
+    try {
+      const config = await window.stackwatch.importConfigStandalone();
+      if (!config) return;
+      const services = config.services ?? [];
+      // Build flow nodes/edges from graph config if present
+      const flowNodes: FlowNode[] = (config.graph?.nodes ?? []).map((n) => ({
+        id: n.id,
+        label: n.data.label,
+        type: n.data.nodeType ?? 'external',
+        serviceId: undefined,
+      }));
+      const flowEdges: FlowEdge[] = (config.graph?.edges ?? []).map((e) => ({
+        source: e.source,
+        target: e.target,
+        flowType: e.type,
+      }));
+      set({
+        config,
+        services,
+        flowNodes,
+        flowEdges,
+        dependencies: [],
+        repoPath: null,
+        linkStatus: 'unlinked',
+        deepAnalysis: null,
+        error: null,
+      });
+    } catch {
+      // cancelled or invalid JSON
+    }
   },
 
   updateServiceConfidence: async (serviceId: string, confidence: 'high' | 'medium' | 'low') => {
