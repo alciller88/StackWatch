@@ -14,12 +14,13 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
 
 export default function App() {
-  const { repoPath, activePanel, showTutorial } = useStore()
+  const { repoPath, activePanel, showTutorial, services, config } = useStore()
   const dialog = useDialogStore()
 
   const renderPanel = () => {
     if (activePanel === 'settings') return <Settings />
-    if (!repoPath) return <Dashboard />
+    const hasData = !!repoPath || services.length > 0 || !!config
+    if (!hasData) return <Dashboard />
     switch (activePanel) {
       case 'services':
         return <ServicesPanel />
