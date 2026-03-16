@@ -38,16 +38,19 @@ function createWindow() {
     },
   })
 
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' http://localhost:* https://api.github.com https://*.openai.com https://*.groq.com; img-src 'self' data: https://img.shields.io",
-        ],
-      },
+  // CSP headers — relaxed in dev for Vite HMR, strict in production
+  if (app.isPackaged) {
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://api.github.com https://*.openai.com https://*.groq.com; img-src 'self' data: https://img.shields.io",
+          ],
+        },
+      })
     })
-  })
+  }
 
   mainWindow.removeMenu()
   mainWindow.maximize()
