@@ -7,6 +7,7 @@ const EXCLUDED_DIRS = new Set([
   'node_modules', 'dist', '.next', 'build', '.git', 'coverage',
   '.nuxt', '.output', '__pycache__', '.venv', 'venv', 'target',
   '.svelte-kit', '.vercel', '.netlify', '.turbo', '.cache',
+  '__tests__', '__mocks__',
 ])
 
 const CODE_EXTENSIONS = new Set([
@@ -242,6 +243,8 @@ async function walkRepo(
       const nested = await walkRepo(root, fullPath, ig)
       results.push(...nested)
     } else if (entry.isFile()) {
+      // Skip test files — they contain example URLs/env vars that produce false positives
+      if (/\.(test|spec)\.[jt]sx?$/.test(entry.name)) continue
       results.push(fullPath)
     }
   }
