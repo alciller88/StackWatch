@@ -390,6 +390,42 @@ const config = { endpoint: 'https://my-service.amazonaws.com/prod' }
       expect(urls[0].value).toContain('amazonaws.com')
     })
 
+    it('captures URLs assigned to constants with API-related names', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'lib/twitterApiIo.ts': `
+const BASE_URL = 'https://api.twitterapi.io/twitter/tweet/advanced_search'
+const apiEndpoint = 'https://api.openai.com/v1/completions'
+`,
+        }),
+        mockListDir({ 'lib': ['twitterApiIo.ts'] }),
+      )
+
+      const urls = evidences.filter(e => e.type === 'url')
+      expect(urls.map(e => e.value)).toContain('https://api.twitterapi.io/twitter/tweet/advanced_search')
+      expect(urls.map(e => e.value)).toContain('https://api.openai.com/v1/completions')
+    })
+
+    it('captures process.env references with KEY, SECRET, TOKEN, BEARER suffixes', async () => {
+      const { evidences } = await extractEvidencesFromGitHub(
+        mockFetchFile({
+          'lib/api.ts': `
+const apiKey = process.env.TWITTERAPI_IO_KEY
+const bearer = process.env.X_API_BEARER
+const secret = process.env.STRIPE_SECRET
+const token = process.env.GITHUB_TOKEN
+`,
+        }),
+        mockListDir({ 'lib': ['api.ts'] }),
+      )
+
+      const envVars = evidences.filter(e => e.type === 'env_var')
+      expect(envVars.map(e => e.value)).toContain('TWITTERAPI_IO_KEY')
+      expect(envVars.map(e => e.value)).toContain('X_API_BEARER')
+      expect(envVars.map(e => e.value)).toContain('STRIPE_SECRET')
+      expect(envVars.map(e => e.value)).toContain('GITHUB_TOKEN')
+    })
+
     it('captures URLs in generic .get/.post calls', async () => {
       const { evidences } = await extractEvidencesFromGitHub(
         mockFetchFile({

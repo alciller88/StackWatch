@@ -72,10 +72,12 @@ const API_CALL_PATTERNS = [
   /\.patch\s*\(\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
   // XMLHttpRequest
   /\.open\s*\(\s*['"][A-Z]+['"]\s*,\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
+  // URLs assigned to constants/variables (e.g., const BASE_URL = 'https://api.service.com/...')
+  /(?:const|let|var|=)\s*\w*(?:URL|Url|url|ENDPOINT|endpoint|BASE|base|API|api|HOST|host)\w*\s*=\s*[`'"](https?:\/\/[^`'"]+)[`'"]/,
 ]
 
-/** Patterns for process.env references that look like service URLs */
-const ENV_URL_PATTERN = /process\.env\.[A-Z_]*(URL|HOST|ENDPOINT|DSN)[A-Z_]*/g
+/** Patterns for process.env references that look like service config (URLs, keys, tokens) */
+const ENV_URL_PATTERN = /process\.env\.[A-Z_]*(URL|HOST|ENDPOINT|DSN|KEY|SECRET|TOKEN|BEARER|API_KEY|CREDENTIALS)[A-Z_]*/g
 
 /** Lines matching these patterns contain content URLs, not API calls */
 const CONTENT_LINE_PATTERNS = [
