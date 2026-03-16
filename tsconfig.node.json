@@ -9,7 +9,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "outDir": "dist-electron",
-    "rootDir": "electron",
+    "rootDir": ".",
     "declaration": true,
     "composite": true
   },
