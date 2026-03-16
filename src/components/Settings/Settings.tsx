@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import type { AIProvider, AISettings } from '../../types';
+import type { AIProvider, AISettings, ScanMode } from '../../types';
 
 export const Settings: React.FC = () => {
   const { aiSettings, loadAISettings, saveAISettings, testAIConnection } = useStore();
@@ -14,6 +14,7 @@ export const Settings: React.FC = () => {
   const [baseUrl, setBaseUrl] = useState('https://api.groq.com/openai/v1');
   const [model, setModel] = useState('llama-3.1-8b-instant');
   const [apiKey, setApiKey] = useState('');
+  const [scanMode, setScanMode] = useState<ScanMode>('heuristic');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
   const [testError, setTestError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -32,6 +33,7 @@ export const Settings: React.FC = () => {
       setBaseUrl(aiSettings.provider.baseUrl);
       setModel(aiSettings.provider.model);
       setApiKey(aiSettings.provider.apiKey ?? '');
+      setScanMode(aiSettings.scanMode ?? 'heuristic');
     }
   }, [aiSettings]);
 
@@ -57,6 +59,7 @@ export const Settings: React.FC = () => {
         model,
         apiKey: apiKey || undefined,
       },
+      scanMode: enabled ? scanMode : 'heuristic',
     };
     await saveAISettings(settings);
     setSaved(true);
@@ -260,6 +263,60 @@ export const Settings: React.FC = () => {
                     )}
                   </>
                 )}
+              </div>
+
+              {/* Scan Mode */}
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Scan Mode</label>
+                <div className="space-y-2">
+                  {([
+                    {
+                      value: 'heuristic' as ScanMode,
+                      label: 'Heuristic only',
+                      desc: 'Fast pattern-based detection. No AI calls.',
+                      alwaysAvailable: true,
+                    },
+                    {
+                      value: 'hybrid' as ScanMode,
+                      label: 'Heuristic + AI',
+                      desc: 'Heuristics first, then AI enhances and discovers hidden services.',
+                      alwaysAvailable: false,
+                    },
+                    {
+                      value: 'ai-only' as ScanMode,
+                      label: 'AI only',
+                      desc: 'Full AI-powered analysis. Falls back to heuristics if AI fails.',
+                      alwaysAvailable: false,
+                    },
+                  ]).map((opt) => {
+                    const available = opt.alwaysAvailable || enabled;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => available && setScanMode(opt.value)}
+                        disabled={!available}
+                        className={`w-full text-left px-4 py-3 rounded-none border transition-colors ${
+                          scanMode === opt.value
+                            ? 'border-[var(--color-accent)]'
+                            : available
+                              ? 'border-[var(--color-border)] hover:border-[var(--color-border-light)]'
+                              : 'border-[var(--color-border)] opacity-40 cursor-not-allowed'
+                        }`}
+                        style={{ background: scanMode === opt.value ? 'var(--color-bg-secondary)' : 'var(--color-bg-primary)' }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[12px] font-medium text-[var(--color-text-primary)]">{opt.label}</span>
+                          {!opt.alwaysAvailable && !enabled && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)] font-mono tracking-widest">
+                              Requires AI
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-mono text-[10px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Privacy note */}

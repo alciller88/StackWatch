@@ -73,6 +73,7 @@ export interface AnalysisResult {
   flowNodes: FlowNode[];
   flowEdges: FlowEdge[];
   deepAnalysis?: DeepAnalysisResult;
+  aiError?: string;
 }
 
 export interface GraphNodeData {
@@ -160,9 +161,12 @@ export interface AIProvider {
   description?: string;
 }
 
+export type ScanMode = 'heuristic' | 'hybrid' | 'ai-only';
+
 export interface AISettings {
   enabled: boolean;
   provider: AIProvider;
+  scanMode?: ScanMode;
 }
 
 export interface ServiceContext {

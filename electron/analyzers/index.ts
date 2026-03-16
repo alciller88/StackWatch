@@ -1,4 +1,4 @@
-import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult } from '../types'
+import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult, ScanMode } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices } from './deduplicator'
@@ -32,38 +32,53 @@ async function runPipeline(
   excludedServices?: string[],
   repoPath?: string,
 ): Promise<AnalysisResult> {
-  // Step 1: Classify with heuristics (pass projectName to filter own project)
-  const heuristicResults = classifyEvidences(evidences, projectName)
+  const scanMode: ScanMode = aiSettings?.scanMode ?? 'heuristic'
+  const aiEnabled = aiSettings?.enabled && aiSettings.provider
+  const useHeuristics = scanMode !== 'ai-only' || !aiEnabled
+  const useAI = aiEnabled && scanMode !== 'heuristic'
 
-  // Step 2: Deduplicate
-  let services = deduplicateServices(heuristicResults)
+  // Step 1: Classify with heuristics (unless ai-only with working AI)
+  let services: Service[] = []
+  if (useHeuristics) {
+    const heuristicResults = classifyEvidences(evidences, projectName)
+    services = deduplicateServices(heuristicResults)
+  }
 
-  // Step 2.5: Filter excluded services (from graph deletions)
+  // Step 2: Filter excluded services (from graph deletions)
   if (excludedServices && excludedServices.length > 0) {
     const excluded = new Set(excludedServices)
     services = services.filter((s) => !excluded.has(s.id))
   }
 
-  // Step 3: Deep AI analysis (replaces old ambiguous-only enhancement)
+  // Step 3: AI analysis
   let deepAnalysis: DeepAnalysisResult | undefined
-  if (aiSettings?.enabled && aiSettings.provider) {
+  let aiError: string | undefined
+  if (useAI) {
     try {
       deepAnalysis = await runDeepAnalysis(
         services,
         evidences,
         repoPath ?? null,
-        aiSettings.provider,
+        aiSettings!.provider,
       )
 
       // Merge hidden services discovered by AI
       if (deepAnalysis.hiddenServices.length > 0) {
-        // Filter excluded from hidden too
         const excluded = new Set(excludedServices ?? [])
         const newHidden = deepAnalysis.hiddenServices.filter((s) => !excluded.has(s.id))
         services = mergeAIResults(services, newHidden)
       }
-    } catch {
-      // Silent fallback — return heuristic results without AI enrichment
+    } catch (err) {
+      aiError = err instanceof Error ? err.message : String(err)
+      // ai-only mode with failed AI: fall back to heuristics so user gets results
+      if (scanMode === 'ai-only' && services.length === 0) {
+        const heuristicResults = classifyEvidences(evidences, projectName)
+        services = deduplicateServices(heuristicResults)
+        if (excludedServices && excludedServices.length > 0) {
+          const excluded = new Set(excludedServices)
+          services = services.filter((s) => !excluded.has(s.id))
+        }
+      }
     }
   }
 
@@ -87,6 +102,7 @@ async function runPipeline(
     flowNodes: flow.nodes,
     flowEdges: flow.edges,
     deepAnalysis,
+    aiError,
   }
 }
 

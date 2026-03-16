@@ -116,6 +116,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: result.flowEdges,
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
+        error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
 
       // Write source reference to config

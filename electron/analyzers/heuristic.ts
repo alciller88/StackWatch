@@ -46,6 +46,22 @@ export function classifyEvidences(evidences: Evidence[], projectName?: string): 
   return results
 }
 
+// Names too generic to be a real external service
+const GENERIC_NAMES = new Set([
+  'admin', 'app', 'api', 'auth', 'backend', 'base', 'cache', 'client',
+  'config', 'core', 'data', 'database', 'db', 'default', 'dev', 'domain',
+  'email', 'env', 'frontend', 'gateway', 'global', 'host', 'http', 'https',
+  'internal', 'local', 'login', 'mail', 'main', 'master', 'name', 'node',
+  'notification', 'origin', 'primary', 'private', 'production', 'proxy',
+  'public', 'queue', 'root', 'server', 'service', 'session', 'site',
+  'staging', 'static', 'storage', 'store', 'system', 'test', 'token',
+  'url', 'user', 'web', 'webhook', 'worker',
+])
+
+function isGenericName(name: string): boolean {
+  return GENERIC_NAMES.has(name.toLowerCase().trim())
+}
+
 function classifyEnvVar(name: string): HeuristicResult | null {
   const upper = name.toUpperCase()
 
@@ -55,6 +71,7 @@ function classifyEnvVar(name: string): HeuristicResult | null {
 
   // Extract service candidate by removing generic prefixes and suffixes
   const serviceCandidate = upper
+    .replace(/^[^A-Z]+/, '') // strip leading non-alpha chars ($, digits, etc.)
     .replace(/^(NEXT_PUBLIC_|VITE_|REACT_APP_|EXPO_PUBLIC_|NUXT_PUBLIC_|GATSBY_)/, '')
     .replace(/_(SECRET|KEY|TOKEN|URL|HOST|PORT|USER|PASSWORD|API|ID|ENDPOINT|DSN|URI|BASE|REGION|BUCKET|PROJECT|APP|CLIENT|ACCESS|PRIVATE|PUBLIC|CONFIG|DOMAIN|ACCOUNT|ORG|WEBHOOK|CALLBACK|REDIRECT|VERSION).*$/, '')
     .toLowerCase()
@@ -62,6 +79,7 @@ function classifyEnvVar(name: string): HeuristicResult | null {
     .trim()
 
   if (!serviceCandidate || serviceCandidate.length < 2) return null
+  if (isGenericName(serviceCandidate)) return null
 
   const isCredential = /_KEY$|_SECRET$|_TOKEN$|_PASSWORD$|_DSN$|_API_KEY$/.test(upper)
   const isEndpoint = /_URL$|_HOST$|_ENDPOINT$|_URI$/.test(upper)
@@ -80,10 +98,11 @@ function classifyUrl(url: string): HeuristicResult | null {
 
   // Extract readable name: remove common subdomains and TLD
   const serviceName = domain
-    .replace(/^(api|app|cdn|static|assets|dashboard|console|portal|hooks|events|ws)\./i, '')
+    .replace(/^(api|app|cdn|static|assets|dashboard|console|portal|hooks|events|ws|admin|staging|dev|test|login|mail|smtp|ftp|www|docs|status|internal|preview|demo|sandbox|beta|auth|secure|my|account|panel|manage|cms|blog)\./i, '')
     .split('.')[0]
 
   if (!serviceName || serviceName.length < 2) return null
+  if (isGenericName(serviceName)) return null
 
   return {
     serviceName: toTitleCase(serviceName),
