@@ -308,8 +308,9 @@ StackWatch/
 | Heuristic classifier | 13 | Category mapping, confidence, name extraction |
 | Deduplicator | 6 | Grouping, merging, confidence upgrades |
 | Extractor | 26 | All file types, URL/env/import patterns |
-| Pipeline | 4 | End-to-end analysis flow |
+| Pipeline | 6 | End-to-end analysis flow, AI checkpoint/restore |
 | Flow inference | 9 | Node types, edge routing, layout |
+| AI Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
 
 ---
 
@@ -346,6 +347,10 @@ StackWatch/
 - [x] Empty states with actionable CTAs in all panels
 - [x] API key show/hide toggle in Settings
 - [x] Dashboard demo mode CTA for first-time users
+- [x] CSP headers + encrypted API key storage (v0.3.8)
+- [x] CI/CD workflow for multi-platform builds (GitHub Actions)
+- [x] Error boundary + Sentry scaffold for crash reporting
+- [x] 79 tests across 6 suites (added AI refiner + pipeline checkpoint tests)
 - [ ] Production build validation
 - [ ] UI component tests
 - [ ] macOS / Windows / Linux distributable builds

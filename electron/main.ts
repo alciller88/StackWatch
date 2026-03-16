@@ -6,7 +6,9 @@ import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import type { UserConfig, AISettings, AIProvider, LinkStatus } from './types'
 
-const store = new (Store as any)()
+const store = new (Store as any)({
+  encryptionKey: 'stackwatch-v1-local-encryption',
+})
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {

@@ -10,6 +10,7 @@ import { Settings } from './components/Settings/Settings'
 import { CostsPanel } from './components/CostsPanel/CostsPanel'
 import { TitleBar } from './components/TitleBar'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 export default function App() {
   const { repoPath, activePanel } = useStore()
@@ -33,24 +34,26 @@ export default function App() {
   }
 
   return (
-    <div className="h-full flex flex-col" style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
-      <TitleBar />
-      <TopBar />
-      <div className="flex-1 flex min-h-0">
-        <Sidebar />
-        <main className="flex-1 flex flex-col min-h-0 min-w-0">
-          {renderPanel()}
-        </main>
+    <ErrorBoundary>
+      <div className="h-full flex flex-col" style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
+        <TitleBar />
+        <TopBar />
+        <div className="flex-1 flex min-h-0">
+          <Sidebar />
+          <main className="flex-1 flex flex-col min-h-0 min-w-0">
+            {renderPanel()}
+          </main>
+        </div>
+        {dialog.current && (
+          <ConfirmDialog
+            title={dialog.current.title}
+            message={dialog.current.message}
+            detail={dialog.current.detail}
+            buttons={dialog.current.buttons}
+            onResult={dialog.close}
+          />
+        )}
       </div>
-      {dialog.current && (
-        <ConfirmDialog
-          title={dialog.current.title}
-          message={dialog.current.message}
-          detail={dialog.current.detail}
-          buttons={dialog.current.buttons}
-          onResult={dialog.close}
-        />
-      )}
-    </div>
+    </ErrorBoundary>
   )
 }

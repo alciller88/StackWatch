@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest'
 import { analyzeGitHubRepo } from '../index'
+import type { AISettings } from '../../types'
 
 function mockFetchFile(files: Record<string, string>) {
   return async (path: string): Promise<string | null> => {
@@ -106,5 +107,78 @@ describe('analyzeGitHubRepo pipeline', () => {
     const paymentEdge = result.flowEdges.find(e => e.flowType === 'payment')
     expect(paymentEdge).toBeDefined()
     expect(paymentEdge!.source).toBe('api')
+  })
+})
+
+describe('hybrid pipeline checkpoint behavior', () => {
+  let originalFetch: typeof globalThis.fetch
+
+  beforeAll(() => {
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.restoreAllMocks()
+  })
+
+  const hybridSettings: AISettings = {
+    enabled: true,
+    scanMode: 'hybrid',
+    provider: {
+      name: 'test',
+      baseUrl: 'http://localhost:1234/v1',
+      model: 'test-model',
+      apiKey: 'test-key',
+    },
+  }
+
+  it('falls back to heuristic results when AI fetch throws', async () => {
+    // Make fetch always throw to simulate network failure
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')))
+
+    const result = await analyzeGitHubRepo(
+      mockFetchFile({
+        'package.json': JSON.stringify({
+          dependencies: { 'stripe': '^12.0.0', 'redis': '^4.0.0' },
+        }),
+      }),
+      mockListDir({}),
+      hybridSettings,
+    )
+
+    // Services should be the heuristic results, not empty or partially modified
+    const serviceNames = result.services.map(s => s.name)
+    expect(serviceNames).toContain('Stripe')
+    expect(serviceNames).toContain('Redis')
+    // aiError should be set
+    expect(result.aiError).toBeDefined()
+    expect(result.aiError).toContain('Connection refused')
+  })
+
+  it('falls back to heuristic results when AI returns non-ok HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    }))
+
+    const result = await analyzeGitHubRepo(
+      mockFetchFile({
+        'package.json': JSON.stringify({
+          dependencies: { 'stripe': '^12.0.0', 'express': '^4.18.0' },
+        }),
+        '.env.example': 'REDIS_URL=redis://localhost:6379',
+      }),
+      mockListDir({}),
+      hybridSettings,
+    )
+
+    // Heuristic services should all be present (checkpoint restored)
+    const serviceNames = result.services.map(s => s.name)
+    expect(serviceNames).toContain('Stripe')
+    expect(serviceNames).toContain('Redis')
+    expect(result.aiError).toContain('AI HTTP 500')
+    // Deep analysis should not be present
+    expect(result.deepAnalysis).toBeUndefined()
   })
 })
