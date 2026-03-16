@@ -336,10 +336,17 @@ StackWatch/
 - [x] Standalone import (no repo required) + scan mode selector (heuristic/hybrid)
 - [x] Generic name filtering to reduce false positives (Admin, $Domain, etc.)
 - [x] AI validation & refinement of heuristic results (v0.3.5)
+- [x] Security hardening: IPC path validation, GitHub input validation, token sanitization (v0.3.6)
+- [x] AI pipeline resilience: checkpoint/restore, category validation, timeout handling, empty ID prevention
+- [x] Accessibility: ARIA dialog roles, focus trap, keyboard focus indicators, edge delete confirmation
+- [x] File traversal depth limit (15 levels max)
 - [ ] Production build validation
 - [ ] UI component tests
 - [ ] macOS / Windows / Linux distributable builds
 - [ ] Monorepo support
+- [ ] Cost tracking panel + renewal alerts
+- [ ] Analysis progress indicator by phase
+- [ ] CSP headers + keychain API key storage
 
 ---
 

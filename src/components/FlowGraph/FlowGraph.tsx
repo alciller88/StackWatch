@@ -271,7 +271,20 @@ export const FlowGraph: React.FC = () => {
         label: 'Delete edge',
         icon: '🗑️',
         danger: true,
-        onClick: () => graphStore.deleteEdge(edgeId),
+        onClick: async () => {
+          const result = await confirm({
+            title: 'Delete edge',
+            message: 'Delete this edge?',
+            detail: 'This will also remove it from stackwatch.config.json.',
+            buttons: [
+              { label: 'Cancel', value: 'cancel' },
+              { label: 'Delete', value: 'delete', danger: true },
+            ],
+          })
+          if (result === 'delete') {
+            graphStore.deleteEdge(edgeId)
+          }
+        },
       },
     ]
   }

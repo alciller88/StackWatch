@@ -21,12 +21,48 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onResult,
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+  const firstButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Save previously focused element and auto-focus first button on mount
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+    // Auto-focus the first button after render
+    requestAnimationFrame(() => {
+      firstButtonRef.current?.focus()
+    })
+    return () => {
+      // Restore focus on unmount
+      previousFocusRef.current?.focus()
+    }
+  }, [])
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         const cancel = buttons.find(b => b.value === 'cancel') ?? buttons[buttons.length - 1]
         onResult(cancel.value)
+        return
+      }
+      // Focus trap on Tab
+      if (e.key === 'Tab') {
+        const focusable = overlayRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+        if (!focusable || focusable.length === 0) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
       }
     }
     window.addEventListener('keydown', handleKey)
@@ -36,6 +72,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <div
       ref={overlayRef}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-message"
       className="fixed inset-0 z-[100] flex items-center justify-center"
       style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(2px)' }}
       onClick={(e) => {
@@ -58,6 +98,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           style={{ borderBottom: '1px solid var(--color-border)' }}
         >
           <h3
+            id="confirm-dialog-title"
             className="font-mono text-[10px] uppercase tracking-widest"
             style={{ color: 'var(--color-accent)' }}
           >
@@ -68,6 +109,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {/* Body */}
         <div className="px-5 py-4">
           <p
+            id="confirm-dialog-message"
             className="text-sm leading-relaxed"
             style={{ color: 'var(--color-text-primary)' }}
           >
@@ -88,9 +130,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           className="flex justify-end gap-2 px-5 py-3"
           style={{ borderTop: '1px solid var(--color-border)' }}
         >
-          {buttons.map((btn) => (
+          {buttons.map((btn, idx) => (
             <button
               key={btn.value}
+              ref={idx === 0 ? firstButtonRef : undefined}
               onClick={() => onResult(btn.value)}
               className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors"
               style={

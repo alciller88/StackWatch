@@ -28,22 +28,33 @@ export async function callAI(provider: AIProvider, prompt: string, maxTokens: nu
     headers['Authorization'] = `Bearer ${provider.apiKey}`
   }
 
-  const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: provider.model,
-      max_tokens: maxTokens,
-      temperature: 0.1,
-      messages: [{ role: 'user', content: safePrompt }],
-    }),
-    signal: AbortSignal.timeout(60000),
-  })
+  let response: Response
+  try {
+    response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: provider.model,
+        max_tokens: maxTokens,
+        temperature: 0.1,
+        messages: [{ role: 'user', content: safePrompt }],
+      }),
+      signal: AbortSignal.timeout(60000),
+    })
+  } catch (err: any) {
+    if (err?.name === 'AbortError' || err?.name === 'TimeoutError') {
+      throw new Error('AI request timed out after 60s')
+    }
+    throw err
+  }
 
   if (!response.ok) throw new Error(`AI HTTP ${response.status}`)
 
   const data = await response.json()
-  const text: string = data.choices?.[0]?.message?.content ?? ''
+  if (!Array.isArray(data.choices) || data.choices.length === 0) {
+    throw new Error('AI returned empty response')
+  }
+  const text: string = data.choices[0]?.message?.content ?? ''
   return text.replace(/```json|```/g, '').trim()
 }
 
@@ -216,17 +227,24 @@ Each item: {
 
   return parsed
     .filter((s) => s.name && s.category)
-    .map((s) => ({
-      id: String(s.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      name: String(s.name),
-      category: s.category as ServiceCategory,
-      plan: 'unknown' as const,
-      source: 'inferred' as const,
-      confidence: (s.confidence ?? 'medium') as 'high' | 'medium' | 'low',
-      needsReview: s.confidence === 'low',
-      confidenceReasons: [s.reason ?? 'Detected by AI deep analysis'],
-      inferredFrom: s.inferredFrom ?? 'AI deep analysis',
-    }))
+    .map((s) => {
+      const id = String(s.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      const normalizedConf = String(s.confidence ?? 'medium').toLowerCase().trim()
+      const confidence = (normalizedConf === 'high' || normalizedConf === 'medium' || normalizedConf === 'low')
+        ? normalizedConf as 'high' | 'medium' | 'low'
+        : 'medium' as const
+      return {
+        id: id || `ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: String(s.name),
+        category: (VALID_CATEGORIES.has(s.category) ? s.category : 'other') as ServiceCategory,
+        plan: 'unknown' as const,
+        source: 'inferred' as const,
+        confidence,
+        needsReview: confidence === 'low',
+        confidenceReasons: [s.reason ?? 'Detected by AI deep analysis'],
+        inferredFrom: s.inferredFrom ?? 'AI deep analysis',
+      }
+    })
 }
 
 // ── Step C: Graph edge type inference ──
@@ -259,8 +277,10 @@ Return ONLY a valid JSON array:
   const parsed = safeParseJSON<any[]>(text, [])
   if (!Array.isArray(parsed)) return []
 
+  const validServiceIds = new Set(services.map(s => s.id))
+
   return parsed
-    .filter((e) => e.serviceId && e.flowType)
+    .filter((e) => e.serviceId && e.flowType && validServiceIds.has(String(e.serviceId)))
     .map((e) => ({
       serviceId: String(e.serviceId),
       flowType: e.flowType as FlowEdge['flowType'],
@@ -346,9 +366,10 @@ Return ONLY valid JSON. Empty {} if no changes needed.
 
   // Rebuild index map after merge (original 1-based ID → new array position)
   // For category/confidence/remove we need to map original IDs to current services
+  const remainingIds = new Map(result.map(r => [r.id, r]))
   const idToService = new Map<number, Service>()
   for (let i = 0; i < services.length; i++) {
-    const svc = result.find(r => r.id === services[i].id)
+    const svc = remainingIds.get(services[i].id)
     if (svc) idToService.set(i + 1, svc)
   }
 
@@ -366,9 +387,10 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   if (actions.confidence && typeof actions.confidence === 'object') {
     for (const [idStr, conf] of Object.entries(actions.confidence)) {
       const svc = idToService.get(Number(idStr))
-      if (svc && (conf === 'high' || conf === 'medium' || conf === 'low')) {
-        svc.confidence = conf
-        svc.needsReview = conf === 'low'
+      const normalizedConf = String(conf).toLowerCase().trim()
+      if (svc && (normalizedConf === 'high' || normalizedConf === 'medium' || normalizedConf === 'low')) {
+        svc.confidence = normalizedConf
+        svc.needsReview = normalizedConf === 'low'
       }
     }
   }

@@ -39,7 +39,7 @@ export const TitleBar: React.FC = () => {
       <div className="titlebar-no-drag flex h-full">
         <button
           onClick={() => window.stackwatch?.windowMinimize()}
-          className="h-full px-3 flex items-center justify-center transition-colors"
+          className="h-full px-3 flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           style={{ color: 'var(--color-text-secondary)' }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'var(--color-bg-hover)'
@@ -49,7 +49,7 @@ export const TitleBar: React.FC = () => {
             e.currentTarget.style.background = 'transparent'
             e.currentTarget.style.color = 'var(--color-text-secondary)'
           }}
-          title="Minimize"
+          aria-label="Minimize"
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
             <path d="M1 5h8" stroke="currentColor" strokeWidth="1.2" />
@@ -61,7 +61,7 @@ export const TitleBar: React.FC = () => {
             window.stackwatch?.windowMaximize()
             setTimeout(updateMaximized, 50)
           }}
-          className="h-full px-3 flex items-center justify-center transition-colors"
+          className="h-full px-3 flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           style={{ color: 'var(--color-text-secondary)' }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'var(--color-bg-hover)'
@@ -71,7 +71,7 @@ export const TitleBar: React.FC = () => {
             e.currentTarget.style.background = 'transparent'
             e.currentTarget.style.color = 'var(--color-text-secondary)'
           }}
-          title={maximized ? 'Restore' : 'Maximize'}
+          aria-label={maximized ? 'Restore' : 'Maximize'}
         >
           {maximized ? (
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -86,7 +86,7 @@ export const TitleBar: React.FC = () => {
 
         <button
           onClick={() => window.stackwatch?.windowClose()}
-          className="h-full px-3 flex items-center justify-center transition-colors"
+          className="h-full px-3 flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           style={{ color: 'var(--color-text-secondary)' }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = '#c05050'
@@ -96,7 +96,7 @@ export const TitleBar: React.FC = () => {
             e.currentTarget.style.background = 'transparent'
             e.currentTarget.style.color = 'var(--color-text-secondary)'
           }}
-          title="Close"
+          aria-label="Close"
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
             <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.2" />

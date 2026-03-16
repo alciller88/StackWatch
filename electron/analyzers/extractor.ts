@@ -215,11 +215,16 @@ export async function extractEvidences(repoPath: string): Promise<ExtractionResu
   return { evidences, dependencies, projectName }
 }
 
+const MAX_WALK_DEPTH = 15
+
 async function walkRepo(
   root: string,
   dir: string,
   ig: ReturnType<typeof ignore>,
+  depth: number = 0,
 ): Promise<string[]> {
+  if (depth > MAX_WALK_DEPTH) return []
+
   const results: string[] = []
   let entries
   try {
@@ -240,7 +245,7 @@ async function walkRepo(
     if (ig.ignores(relPath)) continue
 
     if (entry.isDirectory()) {
-      const nested = await walkRepo(root, fullPath, ig)
+      const nested = await walkRepo(root, fullPath, ig, depth + 1)
       results.push(...nested)
     } else if (entry.isFile()) {
       // Skip test files — they contain example URLs/env vars that produce false positives

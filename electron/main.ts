@@ -61,15 +61,25 @@ ipcMain.on('window-maximize', () => {
 ipcMain.on('window-close', () => mainWindow?.close())
 ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false)
 
+// --- Path Validation ---
+
+function validateRepoPath(repoPath: string): string {
+  if (!repoPath) throw new Error('Repository path cannot be empty')
+  const resolved = path.resolve(repoPath)
+  if (resolved.includes('..')) throw new Error('Invalid repository path: must not contain ".."')
+  return resolved
+}
+
 // --- IPC Handlers ---
 
 ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
+  const safePath = validateRepoPath(folderPath)
   const aiSettings = getAISettings()
 
   // Load existing config to get excludedServices
   let excludedServices: string[] = []
   try {
-    const configPath = path.join(folderPath, 'stackwatch.config.json')
+    const configPath = path.join(safePath, 'stackwatch.config.json')
     const content = await fs.readFile(configPath, 'utf-8')
     const config = JSON.parse(content) as UserConfig
     excludedServices = config.graph?.excludedServices ?? []
@@ -77,12 +87,17 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
     // No config yet
   }
 
-  return analyzeLocalRepo(folderPath, aiSettings, excludedServices)
+  return analyzeLocalRepo(safePath, aiSettings, excludedServices)
 })
 
 ipcMain.handle(
   'analyze-github',
   async (_event, { repo, token }: { repo: string; token: string }) => {
+    // Validate repo format: owner/repo with safe characters only
+    if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repo)) {
+      throw new Error(`Invalid GitHub repo format: expected "owner/repo", got "${repo}"`)
+    }
+
     const { Octokit } = await import('@octokit/rest')
     const octokit = new Octokit({ auth: token })
     const [owner, repoName] = repo.split('/')
@@ -122,7 +137,16 @@ ipcMain.handle(
     }
 
     const aiSettings = getAISettings()
-    return analyzeGitHubRepo(fetchFile, listDir, aiSettings)
+    try {
+      return await analyzeGitHubRepo(fetchFile, listDir, aiSettings)
+    } catch (err: any) {
+      // Sanitize error message to avoid leaking the full token
+      let message = err?.message ?? String(err)
+      if (token && token.length > 4) {
+        message = message.replaceAll(token, token.slice(0, 4) + '****')
+      }
+      throw new Error(message)
+    }
   }
 )
 
@@ -137,7 +161,8 @@ ipcMain.handle('open-folder', async () => {
 
 ipcMain.handle('load-config', async (_event, repoPath: string) => {
   try {
-    const configPath = path.join(repoPath, 'stackwatch.config.json')
+    const safePath = validateRepoPath(repoPath)
+    const configPath = path.join(safePath, 'stackwatch.config.json')
     const content = await fs.readFile(configPath, 'utf-8')
     return JSON.parse(content) as UserConfig
   } catch {
@@ -151,7 +176,8 @@ ipcMain.handle(
     _event,
     { repoPath, config }: { repoPath: string; config: UserConfig }
   ) => {
-    const configPath = path.join(repoPath, 'stackwatch.config.json')
+    const safePath = validateRepoPath(repoPath)
+    const configPath = path.join(safePath, 'stackwatch.config.json')
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
   }
 )
@@ -185,7 +211,8 @@ ipcMain.handle('get-ai-presets', async () => {
 // --- Import / Export ---
 
 ipcMain.handle('check-config-exists', async (_event, repoPath: string) => {
-  const configPath = path.join(repoPath, 'stackwatch.config.json')
+  const safePath = validateRepoPath(repoPath)
+  const configPath = path.join(safePath, 'stackwatch.config.json')
   try {
     await fs.access(configPath)
     return true
@@ -196,6 +223,7 @@ ipcMain.handle('check-config-exists', async (_event, repoPath: string) => {
 
 ipcMain.handle('import-config', async (_event, repoPath: string) => {
   if (!mainWindow) return null
+  const safePath = validateRepoPath(repoPath)
 
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: 'Import StackWatch config',
@@ -206,10 +234,14 @@ ipcMain.handle('import-config', async (_event, repoPath: string) => {
   const content = await fs.readFile(filePaths[0], 'utf-8')
 
   // Validate JSON before returning
-  JSON.parse(content)
+  try {
+    JSON.parse(content)
+  } catch (err: any) {
+    throw new Error(`Invalid JSON file: ${err?.message ?? 'could not parse JSON'}`)
+  }
 
   // Write the imported config to the project
-  const configPath = path.join(repoPath, 'stackwatch.config.json')
+  const configPath = path.join(safePath, 'stackwatch.config.json')
   await fs.writeFile(configPath, content, 'utf-8')
   return content
 })
@@ -223,8 +255,11 @@ ipcMain.handle('import-config-standalone', async () => {
   })
   if (!filePaths[0]) return null
   const content = await fs.readFile(filePaths[0], 'utf-8')
-  const parsed = JSON.parse(content)
-  return parsed
+  try {
+    return JSON.parse(content)
+  } catch (err: any) {
+    throw new Error(`Invalid JSON file: ${err?.message ?? 'could not parse JSON'}`)
+  }
 })
 
 ipcMain.handle('export-config', async (_event, content: string) => {

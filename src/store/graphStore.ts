@@ -294,6 +294,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   onConnect: (connection) => {
+    if (connection.source === connection.target) return
     const newEdge = {
       ...connection,
       animated: true,

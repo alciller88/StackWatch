@@ -47,6 +47,7 @@ async function runPipeline(
   let deepAnalysis: DeepAnalysisResult | undefined
   let aiError: string | undefined
   if (useAI) {
+    const originalServices = [...services]
     try {
       // Step 3a: AI validates/refines heuristic results (remove false positives, fix categories, merge dupes)
       services = await refineServicesWithAI(services, aiSettings!.provider)
@@ -67,7 +68,8 @@ async function runPipeline(
       }
     } catch (err) {
       aiError = err instanceof Error ? err.message : String(err)
-      // Silent fallback: heuristic results are already in `services`
+      // Silent fallback: restore pre-AI services to avoid partially-modified data
+      services = originalServices
     }
   }
 
