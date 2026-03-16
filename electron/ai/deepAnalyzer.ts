@@ -10,9 +10,10 @@ import type {
   ServiceCategory,
 } from '../types'
 
-const MAX_FILES_PER_SERVICE = 5
-const MAX_FILES_HIDDEN_DETECTION = 10
-const MAX_LINES_PER_FILE = 500
+const MAX_FILES_PER_SERVICE = 3
+const MAX_FILES_HIDDEN_DETECTION = 5
+const MAX_LINES_PER_FILE = 200
+const MAX_PROMPT_CHARS = 12000 // ~3k tokens, safe for most providers
 
 // ── AI call helper ──
 
@@ -48,6 +49,26 @@ function safeParseJSON<T>(text: string, fallback: T): T {
   } catch {
     return fallback
   }
+}
+
+function truncateFilesToBudget(
+  files: { path: string; content: string }[],
+  maxChars: number,
+): { path: string; content: string }[] {
+  const result: { path: string; content: string }[] = []
+  let totalChars = 0
+  for (const f of files) {
+    if (totalChars + f.content.length > maxChars) {
+      const remaining = maxChars - totalChars
+      if (remaining > 200) {
+        result.push({ path: f.path, content: f.content.slice(0, remaining) + '\n[... truncated]' })
+      }
+      break
+    }
+    result.push(f)
+    totalChars += f.content.length
+  }
+  return result
 }
 
 // ── File reading ──
@@ -108,13 +129,15 @@ async function analyzeServiceContext(
   relevantFiles: { path: string; content: string }[],
   provider: AIProvider,
 ): Promise<ServiceContext> {
+  const truncatedFiles = truncateFilesToBudget(relevantFiles, MAX_PROMPT_CHARS - 1000)
+
   const prompt = `You are analyzing a software project.
 
 Service detected: ${service.name} (category: ${service.category})
 Inferred from: ${service.inferredFrom ?? 'code analysis'}
 
 Relevant code files where this service appears:
-${relevantFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
+${truncatedFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
 
 Analyze how this service is used and respond with ONLY valid JSON (no explanation):
 {
@@ -157,12 +180,15 @@ async function detectHiddenServices(
 ): Promise<Service[]> {
   const knownNames = existingServices.map((s) => s.name.toLowerCase())
 
+  // Truncate code to fit within prompt budget
+  const truncatedFiles = truncateFilesToBudget(codeFiles, MAX_PROMPT_CHARS - 1000)
+
   const prompt = `You are analyzing a software project to find external service dependencies that were NOT detected by static analysis.
 
 Already detected services: ${knownNames.join(', ') || '(none)'}
 
 Source code files:
-${codeFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
+${truncatedFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
 
 Find any external services, APIs, or platforms used in this code that are NOT in the already detected list. Look for:
 - Custom API clients or wrappers calling external URLs
@@ -244,59 +270,39 @@ export async function classifyEvidencesWithAI(
   repoPath: string | null,
   provider: AIProvider,
 ): Promise<Service[]> {
-  // Summarize evidences for the prompt
-  const envVars = evidences.filter(e => e.type === 'env_var').map(e => e.value)
-  const urls = evidences.filter(e => e.type === 'url').map(e => e.value)
-  const packages = evidences.filter(e => e.type === 'npm_package' || e.type === 'import').map(e => e.value)
-  const configs = evidences.filter(e => e.type === 'config_file').map(e => e.value)
-  const domains = evidences.filter(e => e.type === 'domain').map(e => e.value)
-  const ciSecrets = evidences.filter(e => e.type === 'ci_secret').map(e => e.value)
+  // Deduplicate and limit evidences
+  const unique = (arr: string[], max: number) => [...new Set(arr)].slice(0, max)
+  const envVars = unique(evidences.filter(e => e.type === 'env_var').map(e => e.value), 30)
+  const urls = unique(evidences.filter(e => e.type === 'url').map(e => e.value), 20)
+  const packages = unique(evidences.filter(e => e.type === 'npm_package' || e.type === 'import').map(e => e.value), 30)
+  const configs = unique(evidences.filter(e => e.type === 'config_file').map(e => e.value), 15)
+  const domains = unique(evidences.filter(e => e.type === 'domain').map(e => e.value), 10)
+  const ciSecrets = unique(evidences.filter(e => e.type === 'ci_secret').map(e => e.value), 15)
 
-  // Read a selection of source files for additional context
-  const allFiles = [...new Set(evidences.map(e => e.file))]
-  const filesToRead = selectFilesForHiddenDetection(allFiles)
-  const fileContents: { path: string; content: string }[] = []
-  for (const f of filesToRead) {
-    if (repoPath) {
-      try {
-        const fullPath = path.join(repoPath, f)
-        fileContents.push({ path: f, content: await readFileContent(fullPath) })
-      } catch { /* skip */ }
-    }
-  }
+  // Build evidence section (compact, no source code — evidences are enough for classification)
+  const sections: string[] = []
+  if (envVars.length > 0) sections.push(`Environment variables: ${envVars.join(', ')}`)
+  if (urls.length > 0) sections.push(`External URLs: ${urls.join(', ')}`)
+  if (packages.length > 0) sections.push(`Packages/imports: ${packages.join(', ')}`)
+  if (configs.length > 0) sections.push(`Config files: ${configs.join(', ')}`)
+  if (domains.length > 0) sections.push(`Domains: ${domains.join(', ')}`)
+  if (ciSecrets.length > 0) sections.push(`CI secrets: ${ciSecrets.join(', ')}`)
 
   const prompt = `You are analyzing a software project to identify ALL external services, APIs, and platforms it depends on.
 
 Evidence collected from the codebase:
-${envVars.length > 0 ? `\nEnvironment variables: ${[...new Set(envVars)].join(', ')}` : ''}
-${urls.length > 0 ? `\nExternal URLs: ${[...new Set(urls)].join(', ')}` : ''}
-${packages.length > 0 ? `\nPackages/imports: ${[...new Set(packages)].slice(0, 50).join(', ')}` : ''}
-${configs.length > 0 ? `\nConfig files: ${[...new Set(configs)].join(', ')}` : ''}
-${domains.length > 0 ? `\nDomains: ${[...new Set(domains)].join(', ')}` : ''}
-${ciSecrets.length > 0 ? `\nCI secrets: ${[...new Set(ciSecrets)].join(', ')}` : ''}
-${fileContents.length > 0 ? `\nSource code:\n${fileContents.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')}` : ''}
+${sections.join('\n')}
 
-Identify every external service this project uses. For each service, determine:
-- The actual service name (e.g., "Stripe", "PostgreSQL", "AWS S3" — not generic names like "Database")
-- Its category
-- Confidence level based on the strength of the evidence
+Identify every external service this project uses. For each, determine the actual service name (e.g., "Stripe", "PostgreSQL", "AWS S3"), its category, and confidence level.
 
 Return ONLY a valid JSON array (empty [] if nothing found):
-[{
-  "name": "Service Name",
-  "category": one of: "domain","hosting","cicd","database","auth","payments","email","analytics","monitoring","cdn","storage","infra","ai","mobile","gaming","data","messaging","support","other",
-  "confidence": "high" or "medium" or "low",
-  "reason": "what evidence points to this service",
-  "inferredFrom": "AI classification"
-}]
+[{"name": "Service Name", "category": "<category>", "confidence": "high|medium|low", "reason": "evidence", "inferredFrom": "AI classification"}]
+
+Categories: domain, hosting, cicd, database, auth, payments, email, analytics, monitoring, cdn, storage, infra, ai, mobile, gaming, data, messaging, support, other
 
 Rules:
-- Only include REAL external services, not internal code or generic infrastructure
-- Do not include development tools (eslint, prettier, webpack, vite, etc.)
-- Do not include frameworks (React, Vue, Express, etc.)
-- Do not include utility libraries (lodash, dayjs, zod, etc.)
-- If an env var like STRIPE_SECRET_KEY exists, that's high confidence for Stripe
-- If a URL like api.openai.com is called, that's high confidence for OpenAI`
+- Only REAL external services — no dev tools, frameworks, or utility libraries
+- STRIPE_SECRET_KEY → high confidence Stripe; api.openai.com → high confidence OpenAI`
 
   const text = await callAI(provider, prompt, 2000)
   const parsed = safeParseJSON<any[]>(text, [])
