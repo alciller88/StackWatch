@@ -135,48 +135,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               key={btn.value}
               ref={idx === 0 ? firstButtonRef : undefined}
               onClick={() => onResult(btn.value)}
-              className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors"
-              style={
+              className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors border ${
                 btn.danger
-                  ? {
-                      background: 'transparent',
-                      border: '1px solid #c05050',
-                      color: '#c05050',
-                    }
+                  ? 'border-[#c05050] text-[#c05050] hover:bg-[#c05050] hover:text-white'
                   : btn.primary
-                    ? {
-                        background: 'var(--color-accent)',
-                        border: '1px solid var(--color-accent)',
-                        color: 'var(--color-bg-primary)',
-                      }
-                    : {
-                        background: 'transparent',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-text-secondary)',
-                      }
-              }
-              onMouseEnter={(e) => {
-                if (btn.danger) {
-                  e.currentTarget.style.background = '#c05050'
-                  e.currentTarget.style.color = '#fff'
-                } else if (btn.primary) {
-                  e.currentTarget.style.background = 'var(--color-accent-hover)'
-                } else {
-                  e.currentTarget.style.borderColor = 'var(--color-accent)'
-                  e.currentTarget.style.color = 'var(--color-accent)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (btn.danger) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#c05050'
-                } else if (btn.primary) {
-                  e.currentTarget.style.background = 'var(--color-accent)'
-                } else {
-                  e.currentTarget.style.borderColor = 'var(--color-border)'
-                  e.currentTarget.style.color = 'var(--color-text-secondary)'
-                }
-              }}
+                    ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)]'
+                    : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
             >
               {btn.label}
             </button>

@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
     label: 'Services',
     section: 'views',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
     label: 'Dependencies',
     section: 'views',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
     label: 'Flow Graph',
     section: 'views',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -65,7 +65,7 @@ const navItems: NavItem[] = [
     label: 'Costs',
     section: 'views',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -80,7 +80,7 @@ const navItems: NavItem[] = [
     label: 'Settings',
     section: 'system',
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -150,6 +150,7 @@ export const Sidebar: React.FC = () => {
         >
           <svg
             className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`}
+            aria-hidden="true"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

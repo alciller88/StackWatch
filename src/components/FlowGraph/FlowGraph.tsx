@@ -62,7 +62,9 @@ export const FlowGraph: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
 
-  // Initialize graph store when analysis data changes
+  // Re-initialize graph only when analysis data changes.
+  // config, services, and initFromAnalysis are intentionally excluded:
+  // they change as a result of initialization, which would cause loops.
   useEffect(() => {
     if (flowNodes.length === 0) {
       initialized.current = false
@@ -70,7 +72,8 @@ export const FlowGraph: React.FC = () => {
     }
     initFromAnalysis(flowNodes, flowEdges, config?.graph, services)
     initialized.current = true
-  }, [flowNodes, flowEdges]) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowNodes, flowEdges])
 
   // Close menus on outside events
   const closeAll = useCallback(() => {

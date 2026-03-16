@@ -9,6 +9,7 @@ import { FlowGraph } from './components/FlowGraph/FlowGraph'
 import { Settings } from './components/Settings/Settings'
 import { CostsPanel } from './components/CostsPanel/CostsPanel'
 import { TitleBar } from './components/TitleBar'
+import { ToastContainer } from './components/Toast'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
@@ -56,6 +57,7 @@ export default function App() {
             onResult={dialog.close}
           />
         )}
+        <ToastContainer />
       </div>
     </ErrorBoundary>
   )

@@ -356,9 +356,10 @@ const ServiceForm: React.FC<{
       {/* Row 1: Name, Category, Plan, Confidence */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[160px]">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Name *</label>
+          <label htmlFor="sf-name" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Name *</label>
           <input
             type="text"
+            id="sf-name"
             value={name}
             onChange={(e) => { setName(e.target.value); setErrors(prev => { const next = {...prev}; delete next.name; return next; }); }}
             placeholder="Service name"
@@ -368,8 +369,9 @@ const ServiceForm: React.FC<{
           {errors.name && <p className="text-red-500 text-[10px] mt-1">{errors.name}</p>}
         </div>
         <div>
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Category *</label>
+          <label htmlFor="sf-category" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Category *</label>
           <select
+            id="sf-category"
             value={category}
             onChange={(e) => setCategory(e.target.value as ServiceCategory)}
             className={`${inputClass} border`}
@@ -381,8 +383,9 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div>
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Plan *</label>
+          <label htmlFor="sf-plan" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Plan *</label>
           <select
+            id="sf-plan"
             value={plan}
             onChange={(e) => setPlan(e.target.value as Service['plan'])}
             className={`${inputClass} border`}
@@ -394,8 +397,9 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div>
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Confidence</label>
+          <label htmlFor="sf-confidence" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Confidence</label>
           <select
+            id="sf-confidence"
             value={confidence}
             onChange={e => setConfidence(e.target.value as NonNullable<Service['confidence']>)}
             className={`${inputClass} border`}
@@ -411,9 +415,10 @@ const ServiceForm: React.FC<{
       {/* Row 2: URL, Cost, Renewal */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">URL</label>
+          <label htmlFor="sf-url" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">URL</label>
           <input
             type="text"
+            id="sf-url"
             value={url}
             onChange={(e) => { setUrl(e.target.value); setErrors(prev => { const next = {...prev}; delete next.url; return next; }); }}
             placeholder="https://..."
@@ -423,9 +428,10 @@ const ServiceForm: React.FC<{
           {errors.url && <p className="text-red-500 text-[10px] mt-1">{errors.url}</p>}
         </div>
         <div className="w-20">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Cost</label>
+          <label htmlFor="sf-cost" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Cost</label>
           <input
             type="number"
+            id="sf-cost"
             value={costAmount}
             onChange={(e) => { setCostAmount(e.target.value); setErrors(prev => { const next = {...prev}; delete next.cost; return next; }); }}
             placeholder="0"
@@ -459,9 +465,10 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div>
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Renewal</label>
+          <label htmlFor="sf-renewal" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Renewal</label>
           <input
             type="date"
+            id="sf-renewal"
             value={renewalDate}
             onChange={(e) => setRenewalDate(e.target.value)}
             className={`${inputClass} border`}
@@ -473,9 +480,10 @@ const ServiceForm: React.FC<{
       {/* Row 3: Email, Notes, Actions */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Account Email</label>
+          <label htmlFor="sf-email" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Account Email</label>
           <input
             type="email"
+            id="sf-email"
             value={accountEmail}
             onChange={(e) => { setAccountEmail(e.target.value); setErrors(prev => { const next = {...prev}; delete next.email; return next; }); }}
             placeholder="admin@example.com"
@@ -485,9 +493,10 @@ const ServiceForm: React.FC<{
           {errors.email && <p className="text-red-500 text-[10px] mt-1">{errors.email}</p>}
         </div>
         <div className="flex-1">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Notes</label>
+          <label htmlFor="sf-notes" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Notes</label>
           <input
             type="text"
+            id="sf-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional details..."
@@ -496,9 +505,10 @@ const ServiceForm: React.FC<{
           />
         </div>
         <div className="flex-1">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Owner</label>
+          <label htmlFor="sf-owner" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Owner</label>
           <input
             type="text"
+            id="sf-owner"
             value={owner}
             onChange={(e) => setOwner(e.target.value)}
             placeholder="Team or person responsible"
@@ -507,9 +517,10 @@ const ServiceForm: React.FC<{
           />
         </div>
         <div className="flex-1">
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Comment</label>
+          <label htmlFor="sf-comment" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Comment</label>
           <input
             type="text"
+            id="sf-comment"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Quick note about this service"

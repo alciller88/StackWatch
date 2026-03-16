@@ -72,7 +72,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (105 tests across 9 suites) |
+| `npm test` | Run unit tests (135 tests across 12 suites) |
 
 ---
 
@@ -331,7 +331,7 @@ StackWatch/
 - [x] Stack source reference + link status + rescan confirmation (v0.3.2)
 - [x] Import/export (JSON config + Markdown table)
 - [x] Confidence levels with color-coded borders + editable in form (v0.3.3)
-- [x] Unit tests — 105 tests across 9 suites
+- [x] Unit tests — 135 tests across 12 suites
 - [x] Custom frameless titlebar + themed confirmation dialogs (v0.3.4)
 - [x] Standalone import (no repo required) + scan mode selector (heuristic/hybrid)
 - [x] Generic name filtering to reduce false positives (Admin, $Domain, etc.)
@@ -349,7 +349,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 105 tests across 9 suites (added AI refiner, pipeline checkpoint, store, and utility tests)
+- [x] 135 tests across 12 suites (added AI refiner, pipeline checkpoint, store, and utility tests)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields

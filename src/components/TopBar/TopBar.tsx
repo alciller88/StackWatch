@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { useDialogStore } from '../../store/dialogStore';
 import { GitHubModal } from '../GitHubModal';
-import type { Service, UserConfig, ServiceCategory, LinkStatus } from '../../types';
+import type { Service, UserConfig, ServiceCategory } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
   const date = new Date().toISOString().split('T')[0];
@@ -88,7 +88,7 @@ export const TopBar: React.FC = () => {
   // Check link status when config changes
   useEffect(() => {
     if (config) checkLinkStatus();
-  }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config, checkLinkStatus]);
 
   const handleReanalyze = async () => {
     if (!repoPath) return;
@@ -155,7 +155,7 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <div className="h-12 border-b flex items-center px-4 gap-3 shrink-0" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+    <div className="h-12 border-b flex items-center px-3 gap-2 shrink-0" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
       {/* Left zone — Import / Export */}
       <div className="flex items-center gap-1.5 shrink-0">
         <button
@@ -257,7 +257,7 @@ export const TopBar: React.FC = () => {
       </div>
 
       {/* Center zone — Repo path + link status */}
-      <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
+      <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-center">
         <span className="text-[var(--color-text-muted)] text-sm shrink-0">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

@@ -90,10 +90,13 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
   return (
     <div
       ref={ref}
+      role="dialog"
+      aria-modal="false"
+      aria-label="Edit node"
       style={{
         position: 'absolute',
-        left: x,
-        top: y,
+        left: Math.min(x, (typeof window !== 'undefined' ? window.innerWidth : 1280) - 280),
+        top: Math.min(y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 500),
         zIndex: 50,
         width: 256,
         background: 'var(--color-bg-secondary)',
@@ -187,41 +190,29 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
       <div className="flex gap-2 mt-3">
         <button
           onClick={handleSave}
+          className="flex-1 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] transition-all cursor-pointer"
           style={{
-            flex: 1,
-            background: 'transparent',
-            border: '1px solid var(--color-accent)',
-            color: 'var(--color-accent)',
             fontFamily: 'IBM Plex Mono',
             fontSize: '10px',
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
             padding: '6px 0',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
+            background: 'transparent',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-bg-primary)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-accent)' }}
         >
           Save
         </button>
         <button
           onClick={onCancel}
+          className="flex-1 border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-all cursor-pointer"
           style={{
-            flex: 1,
-            background: 'transparent',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-secondary)',
             fontFamily: 'IBM Plex Mono',
             fontSize: '10px',
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
             padding: '6px 0',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
+            background: 'transparent',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-hover)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
         >
           Cancel
         </button>

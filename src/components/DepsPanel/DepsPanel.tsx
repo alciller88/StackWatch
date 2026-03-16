@@ -90,10 +90,8 @@ export const DepsPanel: React.FC = () => {
   const renderRow = (dep: Dependency) => (
     <tr
       key={`${dep.ecosystem}-${dep.name}`}
-      className="border-b cursor-pointer transition-colors"
+      className="border-b cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
       style={{ borderColor: 'rgba(30,36,48,0.3)' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(20,26,36,0.4)')}
-      onMouseLeave={e => (e.currentTarget.style.background = '')}
       onClick={() => openExternal(dep)}
       title={`Open ${dep.name} on ${dep.ecosystem}`}
     >
@@ -202,6 +200,7 @@ export const DepsPanel: React.FC = () => {
           )
         ) : (
           <table className="w-full">
+            <caption className="absolute w-px h-px p-0 -m-px overflow-hidden" style={{ clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Project dependencies</caption>
             <thead className="sticky top-0 z-10" style={{ background: 'var(--color-bg-secondary)' }}>
               <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
                 <th
