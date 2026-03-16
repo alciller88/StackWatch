@@ -37,11 +37,8 @@ async function runPipeline(
   const heuristicResults = classifyEvidences(evidences, projectName)
   let services = deduplicateServices(heuristicResults)
 
-  // Step 2: Filter excluded services (from graph deletions)
-  if (excludedServices && excludedServices.length > 0) {
-    const excluded = new Set(excludedServices)
-    services = services.filter((s) => !excluded.has(s.id))
-  }
+  // Note: excludedServices only affects the graph (filtered in graphStore.initFromAnalysis),
+  // NOT the services list — users should see all detected services in the Services panel.
 
   // Step 3: AI enhancement (hybrid mode)
   let deepAnalysis: DeepAnalysisResult | undefined
