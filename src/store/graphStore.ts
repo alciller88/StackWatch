@@ -46,7 +46,7 @@ function flowNodesToRFNodes(
   savedPositions: Map<string, { x: number; y: number }>,
   flowEdges: FlowEdge[],
 ): Node[] {
-  // If ALL nodes have saved positions, skip dagre
+  // If ALL nodes have saved positions, use them directly
   const allSaved = flowNodes.every((n) => savedPositions.has(n.id))
 
   let positionMap: Map<string, { x: number; y: number }>
@@ -54,7 +54,7 @@ function flowNodesToRFNodes(
   if (allSaved) {
     positionMap = savedPositions
   } else {
-    // Run dagre for nodes without saved positions
+    // Any new nodes → recalculate full layout with dagre to avoid overlaps
     const g = new dagre.graphlib.Graph()
     g.setDefaultEdgeLabel(() => ({}))
     g.setGraph({ rankdir: 'TB', ranksep: 80, nodesep: 40, marginx: 20, marginy: 20 })
@@ -69,16 +69,11 @@ function flowNodesToRFNodes(
 
     positionMap = new Map()
     for (const node of flowNodes) {
-      const saved = savedPositions.get(node.id)
-      if (saved) {
-        positionMap.set(node.id, saved)
-      } else {
-        const pos = g.node(node.id)
-        positionMap.set(node.id, {
-          x: (pos?.x ?? 0) - NODE_WIDTH / 2,
-          y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
-        })
-      }
+      const pos = g.node(node.id)
+      positionMap.set(node.id, {
+        x: (pos?.x ?? 0) - NODE_WIDTH / 2,
+        y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
+      })
     }
   }
 
