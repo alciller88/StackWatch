@@ -6,13 +6,13 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div
-      className="flex-1 flex items-center justify-center p-8 overflow-y-auto"
+      className="flex-1 flex items-start justify-center p-8 overflow-y-auto"
       style={{
         backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
         backgroundSize: '32px 32px',
       }}
     >
-      <div className="text-center max-w-2xl w-full py-8">
+      <div className="text-center max-w-2xl w-full my-auto py-8">
         {/* Icon with corner brackets */}
         <div className="relative mb-6 flex justify-center">
           <div style={{ width: 52, height: 52, border: '1px solid var(--color-border)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

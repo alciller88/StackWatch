@@ -31,6 +31,7 @@ function createWindow() {
   })
 
   mainWindow.removeMenu()
+  mainWindow.maximize()
 
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     mainWindow.loadURL('http://localhost:5173')
