@@ -196,6 +196,10 @@ export interface StackWatchAPI {
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>;
   relinkLocal(): Promise<string | null>;
   checkConfigExists(repoPath: string): Promise<boolean>;
+  windowMinimize(): void;
+  windowMaximize(): void;
+  windowClose(): void;
+  windowIsMaximized(): Promise<boolean>;
 }
 
 declare global {

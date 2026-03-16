@@ -48,6 +48,11 @@ const api: StackWatchAPI = {
 
   checkConfigExists: (repoPath: string) =>
     ipcRenderer.invoke('check-config-exists', repoPath),
+
+  windowMinimize: () => ipcRenderer.send('window-minimize'),
+  windowMaximize: () => ipcRenderer.send('window-maximize'),
+  windowClose: () => ipcRenderer.send('window-close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

@@ -7,6 +7,7 @@ import { ServicesPanel } from './components/ServicesPanel/ServicesPanel'
 import { DepsPanel } from './components/DepsPanel/DepsPanel'
 import { FlowGraph } from './components/FlowGraph/FlowGraph'
 import { Settings } from './components/Settings/Settings'
+import { TitleBar } from './components/TitleBar'
 import { ConfirmDialog } from './components/ConfirmDialog'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col" style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
+      <TitleBar />
       <TopBar />
       <div className="flex-1 flex min-h-0">
         <Sidebar />
