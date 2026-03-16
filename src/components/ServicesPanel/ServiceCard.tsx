@@ -155,16 +155,6 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
             )}
           </div>
 
-          {/* Source badge */}
-          <span
-            className={`font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium ${
-              service.source === 'inferred'
-                ? 'bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
-                : 'bg-[#1a2a3a] text-[#4a8ab0] border border-[#2a4a6a]'
-            }`}
-          >
-            {service.source === 'inferred' ? 'auto' : 'manual'}
-          </span>
         </div>
       </div>
 
