@@ -74,6 +74,31 @@ export interface AnalysisResult {
   flowEdges: FlowEdge[];
 }
 
+export interface GraphNodeData {
+  label: string;
+  category?: ServiceCategory;
+  nodeType?: FlowNode['type'];
+  plan?: Service['plan'];
+  url?: string;
+  note?: string;
+  source?: 'inferred' | 'manual';
+}
+
+export interface GraphConfig {
+  nodes: {
+    id: string;
+    position: { x: number; y: number };
+    data: GraphNodeData;
+  }[];
+  edges: {
+    id: string;
+    source: string;
+    target: string;
+    type: FlowEdge['flowType'];
+  }[];
+  excludedServices: string[];
+}
+
 export interface UserConfig {
   version: string;
   project: {
@@ -87,6 +112,7 @@ export interface UserConfig {
     purpose: string;
     accountEmail: string;
   }[];
+  graph?: GraphConfig;
 }
 
 export interface Evidence {

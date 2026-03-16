@@ -20,19 +20,21 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.2.4 — filtrado del proyecto propio + fix import
-- **Último hito**: fix own project name filtering + import config (2026-03-16)
-  - **FIX:** el nombre del propio proyecto ya NO aparece como servicio en el grafo — filtro aplicado en tres capas (defensa en profundidad):
-    - `heuristic.ts`: `classifyEvidences()` recibe `projectName` y descarta resultados cuyo `serviceName` normalizado coincida con el nombre del proyecto
-    - `flowInference.ts`: `inferFlowGraph()` filtra servicios cuyo nombre normalizado coincida con el proyecto antes de construir los nodos
-    - `index.ts`: pasa `projectName` al clasificador heurístico
-  - **FIX:** import de config no funcionaba — tres problemas corregidos:
-    - `analyzeLocal` en el store no recargaba el config de disco si ya existía en memoria → ahora siempre recarga
-    - `window.confirm` reemplazado por `dialog.showMessageBox` nativo de Electron (más fiable en WSL2/Linux)
-    - `import-config` IPC handler ahora valida JSON, escribe el archivo y confirma sobreescritura en el main process
-  - **REFACTOR:** `importConfig()` ahora recibe `repoPath` y gestiona todo el flujo (confirmación + lectura + escritura) en el main process
+- **Fase**: v0.3.0 — grafo de flujo interactivo
+- **Último hito**: interactive flow graph (2026-03-16)
+  - **FEAT:** grafo de flujo ahora es un editor interactivo completo:
+    - Clic derecho sobre nodo → menú contextual (Edit, Open URL, Delete)
+    - Clic derecho en lienzo → crear nodo service o custom, reset layout
+    - Clic derecho en arista → cambiar tipo (Data/Auth/Payment/Webhook) o eliminar
+    - Doble clic en nodo → panel inline de edición (nombre, tipo, categoría, plan, URL, notas)
+    - Arrastrar desde handle → crear conexión entre nodos
+    - Drag & drop de nodos con snap to grid (16px)
+  - **ARCH:** nuevo store Zustand separado `graphStore.ts` para estado del grafo interactivo
+  - **PERSIST:** sección `graph` en `stackwatch.config.json` con nodos, aristas y excludedServices
+  - **MERGE:** al re-analizar, nodos editados mantienen cambios, excluidos no reaparecen, manuales nunca se eliminan
   - 56 tests passing (heuristic: 13, deduplicator: 6, extractor: 24, pipeline: 4, flowInference: 9)
 - **Hitos anteriores**:
+  - v0.2.4: fix own project name filtering + import config
   - v0.2.3: extractor filtra solo llamadas de red reales, IGNORED_DOMAINS ampliado, excepción api.*, process.env URL detection
   - v0.2.2: purga de bugs, eliminación de duplicación, tests del extractor
   - v0.2.1: proveedores IA recomendados + formulario de servicios manuales
@@ -57,6 +59,9 @@ Spec completa: `SPEC.md`
 | `electron-store` para persistencia | SQLite | Suficiente para v1, sin dependencia nativa |
 | React Flow para el grafo | D3.js | Mejor DX con React, nodos React nativos |
 | Zustand para estado global | Redux / Context | Menos boilerplate, suficiente para la escala |
+| graphStore separado del store principal | Un solo store | El grafo interactivo tiene estado propio (nodes, edges, excluded) con ciclo de vida diferente |
+| Posiciones de nodo en config.graph | electron-store | Las posiciones deben versionarse con el repo, no ser globales al sistema |
+| Panel inline sobre modal/drawer | Modal | No interrumpe el flujo visual del grafo |
 
 ---
 
@@ -85,10 +90,13 @@ electron/analyzers/deduplicator.ts   ← agrupación y deduplicación
 electron/analyzers/index.ts          ← orquestador del pipeline completo
 electron/analyzers/flowInference.ts  ← inferencia de grafo de flujo
 electron/ai/provider.ts              ← cliente IA OpenAI-compatible
-src/store/useStore.ts                ← estado global Zustand
+src/store/useStore.ts                ← estado global Zustand (servicios, deps, config)
+src/store/graphStore.ts              ← estado del grafo interactivo (nodes, edges, excluded)
 src/components/Settings/Settings.tsx ← configuración de IA
 src/components/ServicesPanel/        ← panel con badges de confianza
-src/components/FlowGraph/            ← grafo con indicadores de confianza
+src/components/FlowGraph/            ← grafo interactivo con context menus
+src/components/FlowGraph/ContextMenu.tsx  ← menú contextual genérico
+src/components/FlowGraph/NodeEditPanel.tsx ← panel inline de edición de nodos
 ```
 
 ---

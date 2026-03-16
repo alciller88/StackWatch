@@ -8,9 +8,10 @@ import { enhanceWithAI } from '../ai/provider'
 export async function analyzeLocalRepo(
   folderPath: string,
   aiSettings?: AISettings,
+  excludedServices?: string[],
 ): Promise<AnalysisResult> {
   const { evidences, dependencies, projectName } = await extractEvidences(folderPath)
-  return runPipeline(evidences, dependencies, aiSettings, projectName)
+  return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices)
 }
 
 export async function analyzeGitHubRepo(
@@ -27,12 +28,19 @@ async function runPipeline(
   dependencies: Dependency[],
   aiSettings: AISettings | undefined,
   projectName: string,
+  excludedServices?: string[],
 ): Promise<AnalysisResult> {
   // Step 1: Classify with heuristics (pass projectName to filter own project)
   const heuristicResults = classifyEvidences(evidences, projectName)
 
   // Step 2: Deduplicate
   let services = deduplicateServices(heuristicResults)
+
+  // Step 2.5: Filter excluded services (from graph deletions)
+  if (excludedServices && excludedServices.length > 0) {
+    const excluded = new Set(excludedServices)
+    services = services.filter((s) => !excluded.has(s.id))
+  }
 
   // Step 3: Optional AI enhancement for ambiguous cases
   if (aiSettings?.enabled && aiSettings.provider) {

@@ -53,7 +53,19 @@ app.on('activate', () => {
 
 ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
   const aiSettings = getAISettings()
-  return analyzeLocalRepo(folderPath, aiSettings)
+
+  // Load existing config to get excludedServices
+  let excludedServices: string[] = []
+  try {
+    const configPath = path.join(folderPath, 'stackwatch.config.json')
+    const content = await fs.readFile(configPath, 'utf-8')
+    const config = JSON.parse(content) as UserConfig
+    excludedServices = config.graph?.excludedServices ?? []
+  } catch {
+    // No config yet
+  }
+
+  return analyzeLocalRepo(folderPath, aiSettings, excludedServices)
 })
 
 ipcMain.handle(
