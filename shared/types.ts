@@ -1,23 +1,10 @@
-export type ServiceCategory =
-  | 'domain'
-  | 'hosting'
-  | 'cicd'
-  | 'database'
-  | 'auth'
-  | 'payments'
-  | 'email'
-  | 'analytics'
-  | 'monitoring'
-  | 'cdn'
-  | 'storage'
-  | 'infra'
-  | 'ai'
-  | 'mobile'
-  | 'gaming'
-  | 'data'
-  | 'messaging'
-  | 'support'
-  | 'other';
+export const SERVICE_CATEGORIES = [
+  'domain', 'hosting', 'cicd', 'database', 'auth', 'payments',
+  'email', 'analytics', 'monitoring', 'cdn', 'storage', 'infra',
+  'ai', 'mobile', 'gaming', 'data', 'messaging', 'support', 'other',
+] as const;
+
+export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
 
 export interface Service {
   id: string;
@@ -200,6 +187,7 @@ export interface StackWatchAPI {
   exportServicesMd(content: string): Promise<boolean>;
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>;
   relinkLocal(): Promise<string | null>;
+  openExternalUrl(url: string): Promise<boolean>;
   windowMinimize(): void;
   windowMaximize(): void;
   windowClose(): void;

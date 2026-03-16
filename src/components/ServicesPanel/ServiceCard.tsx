@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Service, ServiceContext } from '../../types';
 import { useStore } from '../../store/useStore';
+import { daysUntil } from '../../utils/dates';
 
 const categoryIcons: Record<Service['category'], string> = {
   domain: '\uD83C\uDF10',
@@ -36,12 +37,6 @@ const confidenceBadge: Record<string, { bg: string; text: string; label: string 
   medium: { bg: 'bg-[#2a2010]', text: 'text-[#c8a040]', label: 'review' },
   low: { bg: 'bg-[#2a1e0a]', text: 'text-[var(--color-accent)]', label: 'incomplete' },
 };
-
-function daysUntil(dateStr: string): number {
-  const target = new Date(dateStr);
-  const now = new Date();
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
 
 const criticalityColors: Record<string, string> = {
   critical: 'text-[#c05050]',

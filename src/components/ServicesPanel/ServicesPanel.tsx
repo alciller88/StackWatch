@@ -2,13 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useDialogStore } from '../../store/dialogStore';
 import { ServiceCard } from './ServiceCard';
+import { SERVICE_CATEGORIES } from '../../types';
 import type { Service, ServiceCategory, ServiceContext } from '../../types';
 
-const categories: ServiceCategory[] = [
-  'domain', 'hosting', 'cicd', 'database', 'auth', 'payments',
-  'email', 'analytics', 'monitoring', 'cdn', 'storage', 'infra',
-  'ai', 'mobile', 'gaming', 'data', 'messaging', 'support', 'other',
-];
+const categories = SERVICE_CATEGORIES;
 
 const planTypes: Service['plan'][] = ['free', 'paid', 'trial', 'unknown'];
 

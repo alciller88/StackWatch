@@ -71,6 +71,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   return (
     <div
       ref={ref}
+      role="menu"
       style={{ ...style, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}
       className="min-w-[200px] py-1 font-mono text-[11px]"
     >
@@ -81,6 +82,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
         return (
           <button
             key={i}
+            role="menuitem"
             onClick={() => {
               entry.onClick()
               onClose()

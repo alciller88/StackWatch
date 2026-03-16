@@ -15,6 +15,7 @@ import { getNodeColor, getEdgeColor, getConfidenceBackground } from '../componen
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
+let persistTimer: ReturnType<typeof setTimeout> | null = null
 
 // ── helpers ──
 
@@ -452,6 +453,10 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
 
   persistToConfig: async () => {
     if (!window.stackwatch) return
+    if (persistTimer) clearTimeout(persistTimer)
+    await new Promise<void>(resolve => {
+      persistTimer = setTimeout(resolve, 500)
+    })
     const { nodes, edges, excludedServices } = get()
 
     const graphConfig: GraphConfig = {

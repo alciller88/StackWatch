@@ -43,6 +43,9 @@ const api: StackWatchAPI = {
   relinkLocal: () =>
     ipcRenderer.invoke('relink-local'),
 
+  openExternalUrl: (url: string) =>
+    ipcRenderer.invoke('open-external-url', url),
+
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),
   windowClose: () => ipcRenderer.send('window-close'),

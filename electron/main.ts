@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell, session } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import Store from 'electron-store'
@@ -6,10 +6,18 @@ import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import type { UserConfig, AISettings, AIProvider, LinkStatus } from './types'
 
-const store = new (Store as any)({
-  encryptionKey: 'stackwatch-v1-local-encryption',
-})
+let store: any
 let mainWindow: BrowserWindow | null = null
+
+function getEncryptionKey(): string {
+  if (safeStorage.isEncryptionAvailable()) {
+    // Derive a machine-unique key using safeStorage
+    const encrypted = safeStorage.encryptString('stackwatch-v1')
+    return encrypted.toString('base64').slice(0, 32)
+  }
+  // Fallback: use the userData path as a machine-specific seed
+  return `sw-${Buffer.from(app.getPath('userData')).toString('base64').slice(0, 24)}`
+}
 
 function createWindow() {
   Menu.setApplicationMenu(null)
@@ -30,6 +38,17 @@ function createWindow() {
     },
   })
 
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' http://localhost:* https://api.github.com https://*.openai.com https://*.groq.com; img-src 'self' data: https://img.shields.io",
+        ],
+      },
+    })
+  })
+
   mainWindow.removeMenu()
   mainWindow.maximize()
 
@@ -44,7 +63,12 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  store = new (Store as any)({
+    encryptionKey: getEncryptionKey(),
+  })
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
@@ -63,6 +87,22 @@ ipcMain.on('window-maximize', () => {
 })
 ipcMain.on('window-close', () => mainWindow?.close())
 ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false)
+
+// --- Safe External URL ---
+
+ipcMain.handle('open-external-url', async (_event, url: string) => {
+  // Only allow http and https protocols
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      await shell.openExternal(url)
+      return true
+    }
+    return false
+  } catch {
+    return false
+  }
+})
 
 // --- Path Validation ---
 

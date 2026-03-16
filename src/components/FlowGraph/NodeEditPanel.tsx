@@ -1,14 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { FlowNode } from '../../types'
-import type { ServiceCategory } from '../../types'
+import { SERVICE_CATEGORIES } from '../../types'
+import type { FlowNode, ServiceCategory } from '../../types'
 
 const NODE_TYPES: FlowNode['type'][] = ['user', 'cdn', 'frontend', 'api', 'database', 'external']
 
-const CATEGORIES: ServiceCategory[] = [
-  'domain', 'hosting', 'cicd', 'database', 'auth', 'payments', 'email',
-  'analytics', 'monitoring', 'cdn', 'storage', 'infra', 'ai', 'mobile',
-  'gaming', 'data', 'messaging', 'support', 'other',
-]
+const CATEGORIES = SERVICE_CATEGORIES;
 
 const PLANS = ['free', 'paid', 'trial', 'unknown'] as const
 const CONFIDENCES = ['high', 'medium', 'low'] as const

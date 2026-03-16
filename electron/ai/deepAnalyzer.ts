@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
+import { SERVICE_CATEGORIES } from '../../shared/types'
 import type {
   Service,
   Evidence,
@@ -294,11 +295,7 @@ Return ONLY a valid JSON array:
 // Returns only the DIFF (changes needed), not the full list.
 // Uses numeric IDs for token efficiency.
 
-const VALID_CATEGORIES = new Set([
-  'domain','hosting','cicd','database','auth','payments','email','analytics',
-  'monitoring','cdn','storage','infra','ai','mobile','gaming','data',
-  'messaging','support','other',
-])
+const VALID_CATEGORIES = new Set(SERVICE_CATEGORIES)
 
 export async function refineServicesWithAI(
   services: Service[],

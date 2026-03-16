@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import type { Service } from '../../types';
+import { daysUntil } from '../../utils/dates';
 
 function getMonthlyCost(service: Service): number {
   if (!service.cost) return 0;
@@ -18,14 +19,6 @@ function getYearlyCost(service: Service): number {
 
 function formatCurrency(amount: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-}
-
-function daysUntil(dateStr: string): number {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
-  target.setHours(0, 0, 0, 0);
-  return Math.floor((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export const CostsPanel: React.FC = () => {

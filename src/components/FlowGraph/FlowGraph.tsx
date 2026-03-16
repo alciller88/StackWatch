@@ -35,8 +35,26 @@ interface EditPanelState {
 }
 
 export const FlowGraph: React.FC = () => {
-  const { flowNodes, flowEdges, services, config, openFolder } = useStore()
-  const graphStore = useGraphStore()
+  const flowNodes = useStore(s => s.flowNodes)
+  const flowEdges = useStore(s => s.flowEdges)
+  const services = useStore(s => s.services)
+  const config = useStore(s => s.config)
+  const openFolder = useStore(s => s.openFolder)
+  const nodes = useGraphStore(s => s.nodes)
+  const edges = useGraphStore(s => s.edges)
+  const onNodesChange = useGraphStore(s => s.onNodesChange)
+  const onEdgesChange = useGraphStore(s => s.onEdgesChange)
+  const onConnect = useGraphStore(s => s.onConnect)
+  const initFromAnalysis = useGraphStore(s => s.initFromAnalysis)
+  const saveNodePosition = useGraphStore(s => s.saveNodePosition)
+  const addNode = useGraphStore(s => s.addNode)
+  const updateNode = useGraphStore(s => s.updateNode)
+  const deleteNode = useGraphStore(s => s.deleteNode)
+  const excludeService = useGraphStore(s => s.excludeService)
+  const deleteEdge = useGraphStore(s => s.deleteEdge)
+  const updateEdgeType = useGraphStore(s => s.updateEdgeType)
+  const resetLayout = useGraphStore(s => s.resetLayout)
+  const persistToConfig = useGraphStore(s => s.persistToConfig)
   const { confirm } = useDialogStore()
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [editPanel, setEditPanel] = useState<EditPanelState | null>(null)
@@ -50,7 +68,7 @@ export const FlowGraph: React.FC = () => {
       initialized.current = false
       return
     }
-    graphStore.initFromAnalysis(flowNodes, flowEdges, config?.graph, services)
+    initFromAnalysis(flowNodes, flowEdges, config?.graph, services)
     initialized.current = true
   }, [flowNodes, flowEdges]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -128,15 +146,15 @@ export const FlowGraph: React.FC = () => {
 
   const handleNodeDragStop = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      graphStore.saveNodePosition(node.id, node.position)
+      saveNodePosition(node.id, node.position)
     },
-    [graphStore],
+    [saveNodePosition],
   )
 
   // ── Build context menu items ──
 
   const buildNodeMenuItems = (nodeId: string): MenuEntry[] => {
-    const node = graphStore.nodes.find((n) => n.id === nodeId)
+    const node = nodes.find((n) => n.id === nodeId)
     if (!node) return []
 
     return [
@@ -161,7 +179,7 @@ export const FlowGraph: React.FC = () => {
         onClick: () => {
           const url = node.data.url
           if (url) {
-            window.open(url, '_blank')
+            window.stackwatch.openExternalUrl(url)
           } else {
             const bounds = containerRef.current?.getBoundingClientRect()
             if (!bounds) return
@@ -194,9 +212,9 @@ export const FlowGraph: React.FC = () => {
           })
           if (result === 'delete') {
             if (node.data.source === 'inferred' && node.data.serviceId) {
-              graphStore.excludeService(node.data.serviceId)
+              excludeService(node.data.serviceId)
             }
-            graphStore.deleteNode(nodeId)
+            deleteNode(nodeId)
           }
         },
       },
@@ -246,7 +264,7 @@ export const FlowGraph: React.FC = () => {
               { label: 'Reset', value: 'reset', primary: true },
             ],
           })
-          if (result === 'reset') graphStore.resetLayout()
+          if (result === 'reset') resetLayout()
         },
       },
     ]
@@ -264,7 +282,7 @@ export const FlowGraph: React.FC = () => {
       ...types.map((t) => ({
         label: t.label,
         active: currentType === t.type,
-        onClick: () => graphStore.updateEdgeType(edgeId, t.type as any),
+        onClick: () => updateEdgeType(edgeId, t.type as any),
       })),
       { divider: true },
       {
@@ -282,7 +300,7 @@ export const FlowGraph: React.FC = () => {
             ],
           })
           if (result === 'delete') {
-            graphStore.deleteEdge(edgeId)
+            deleteEdge(edgeId)
           }
         },
       },
@@ -302,7 +320,7 @@ export const FlowGraph: React.FC = () => {
   }) => {
     if (editPanel?.nodeId) {
       // Update existing node
-      graphStore.updateNode(editPanel.nodeId, {
+      updateNode(editPanel.nodeId, {
         label: data.label,
         nodeType: data.nodeType,
         category: data.category,
@@ -315,7 +333,7 @@ export const FlowGraph: React.FC = () => {
       // Create new node
       const id = data.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const position = editPanel?.createPosition ?? { x: 200, y: 200 }
-      graphStore.addNode(id, position, {
+      addNode(id, position, {
         label: data.label,
         nodeType: data.nodeType,
         category: data.category,
@@ -331,7 +349,7 @@ export const FlowGraph: React.FC = () => {
 
   const getEditInitialData = () => {
     if (editPanel?.nodeId) {
-      const node = graphStore.nodes.find((n) => n.id === editPanel.nodeId)
+      const node = nodes.find((n) => n.id === editPanel.nodeId)
       if (node) {
         return {
           label: node.data.label ?? '',
@@ -347,7 +365,7 @@ export const FlowGraph: React.FC = () => {
     // Defaults for new node
     return {
       label: '',
-      nodeType: (editPanel?.isCustom ? 'external' : 'external') as FlowNode['type'],
+      nodeType: 'external' as FlowNode['type'],
       category: editPanel?.isCustom ? ('other' as ServiceCategory) : undefined,
       plan: 'unknown',
       confidence: 'high' as const,
@@ -358,7 +376,7 @@ export const FlowGraph: React.FC = () => {
 
   // ── Render ──
 
-  if (flowNodes.length === 0 && graphStore.nodes.length === 0) {
+  if (flowNodes.length === 0 && nodes.length === 0) {
     return (
       <div
         style={{
@@ -394,7 +412,7 @@ export const FlowGraph: React.FC = () => {
   }
 
   // Apply confidence styling + icons to nodes for rendering
-  const styledNodes = graphStore.nodes.map((n) => {
+  const styledNodes = nodes.map((n) => {
     const confidence = n.data.confidence ?? 'high'
     const isLowConfidence = confidence === 'low'
 
@@ -455,10 +473,10 @@ export const FlowGraph: React.FC = () => {
 
       <ReactFlow
         nodes={styledNodes}
-        edges={graphStore.edges}
-        onNodesChange={graphStore.onNodesChange}
-        onEdgesChange={graphStore.onEdgesChange}
-        onConnect={graphStore.onConnect}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneContextMenu={handlePaneContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}

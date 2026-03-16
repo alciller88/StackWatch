@@ -27,6 +27,34 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Focus trap
+  useEffect(() => {
+    const form = repoInputRef.current?.closest('form');
+    if (!form) return;
+    const focusable = form.querySelectorAll<HTMLElement>(
+      'input, button, a[href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const trapFocus = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', trapFocus);
+    return () => document.removeEventListener('keydown', trapFocus);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (repoValid) {

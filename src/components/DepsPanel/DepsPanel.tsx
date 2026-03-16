@@ -74,7 +74,7 @@ export const DepsPanel: React.FC = () => {
   const openExternal = (dep: Dependency) => {
     const urlFn = ecosystemUrls[dep.ecosystem];
     if (urlFn) {
-      window.open(urlFn(dep.name), '_blank');
+      window.stackwatch.openExternalUrl(urlFn(dep.name));
     }
   };
 

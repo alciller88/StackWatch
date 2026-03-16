@@ -9,7 +9,7 @@ StackWatch scans your codebase and automatically maps every service, API, databa
 
 **Zero config. Works offline. 10 seconds to your first scan.**
 
-<!-- TODO: add GIF/screenshots -->
+> Screenshots coming soon — run the app locally to see StackWatch in action!
 
 ---
 
@@ -72,7 +72,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (58 tests across 5 suites) |
+| `npm test` | Run unit tests (105 tests across 9 suites) |
 
 ---
 
@@ -269,7 +269,7 @@ StackWatch/
 │   │   ├── deduplicator.ts  # Service grouping and deduplication
 │   │   ├── flowInference.ts # Flow graph auto-generation (dagre layout)
 │   │   ├── index.ts         # Pipeline orchestrator (extract → classify → dedup → AI → flow)
-│   │   └── __tests__/       # 58 tests (heuristic, deduplicator, extractor, pipeline, flowInference)
+│   │   └── __tests__/       # 60 tests (heuristic, deduplicator, extractor, pipeline, flowInference)
 │   └── ai/
 │       ├── provider.ts      # OpenAI-compatible AI client + 6 provider presets
 │       └── deepAnalyzer.ts  # Deep analysis: context, hidden detection, edge inference
@@ -307,6 +307,9 @@ StackWatch/
 | Pipeline | 6 | End-to-end analysis flow, AI checkpoint/restore |
 | Flow inference | 9 | Node types, edge routing, layout |
 | AI Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
+| Store (useStore) | 9 | mergeServices, ensureConfig, ensureFlowNodes, store actions |
+| AI Deep Analyzer (runDeep) | 14 | Deep analysis phases, usage context, hidden services |
+| daysUntil utility | 3 | Today, future dates, past dates |
 
 ---
 
@@ -328,7 +331,7 @@ StackWatch/
 - [x] Stack source reference + link status + rescan confirmation (v0.3.2)
 - [x] Import/export (JSON config + Markdown table)
 - [x] Confidence levels with color-coded borders + editable in form (v0.3.3)
-- [x] Unit tests — 58 tests across 5 suites
+- [x] Unit tests — 105 tests across 9 suites
 - [x] Custom frameless titlebar + themed confirmation dialogs (v0.3.4)
 - [x] Standalone import (no repo required) + scan mode selector (heuristic/hybrid)
 - [x] Generic name filtering to reduce false positives (Admin, $Domain, etc.)
@@ -346,7 +349,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 79 tests across 6 suites (added AI refiner + pipeline checkpoint tests)
+- [x] 105 tests across 9 suites (added AI refiner, pipeline checkpoint, store, and utility tests)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
