@@ -1,4 +1,5 @@
 import { useStore } from './store/useStore'
+import { useDialogStore } from './store/dialogStore'
 import { TopBar } from './components/TopBar/TopBar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { Dashboard } from './components/Dashboard/Dashboard'
@@ -6,9 +7,11 @@ import { ServicesPanel } from './components/ServicesPanel/ServicesPanel'
 import { DepsPanel } from './components/DepsPanel/DepsPanel'
 import { FlowGraph } from './components/FlowGraph/FlowGraph'
 import { Settings } from './components/Settings/Settings'
+import { ConfirmDialog } from './components/ConfirmDialog'
 
 export default function App() {
   const { repoPath, activePanel } = useStore()
+  const dialog = useDialogStore()
 
   const renderPanel = () => {
     if (activePanel === 'settings') return <Settings />
@@ -34,6 +37,15 @@ export default function App() {
           {renderPanel()}
         </main>
       </div>
+      {dialog.current && (
+        <ConfirmDialog
+          title={dialog.current.title}
+          message={dialog.current.message}
+          detail={dialog.current.detail}
+          buttons={dialog.current.buttons}
+          onResult={dialog.close}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
+import { useDialogStore } from '../../store/dialogStore';
 import type { Service, UserConfig, ServiceCategory, LinkStatus } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
@@ -59,6 +60,7 @@ export const TopBar: React.FC = () => {
     clearError,
   } = useStore();
 
+  const { confirm } = useDialogStore();
   const [showGitHub, setShowGitHub] = useState(false);
   const [githubRepo, setGithubRepo] = useState('');
   const [githubToken, setGithubToken] = useState('');
@@ -99,8 +101,21 @@ export const TopBar: React.FC = () => {
   const handleImport = async () => {
     if (!window.stackwatch) return;
     if (repoPath && !repoPath.startsWith('github:')) {
-      // With repo loaded: import and write to repo, then re-analyze
+      // With repo loaded: check for existing config and confirm overwrite
       try {
+        const exists = await window.stackwatch.checkConfigExists(repoPath);
+        if (exists) {
+          const result = await confirm({
+            title: 'Import config',
+            message: 'A stackwatch.config.json already exists in this project.',
+            detail: 'Importing will overwrite the current configuration.',
+            buttons: [
+              { label: 'Cancel', value: 'cancel' },
+              { label: 'Overwrite', value: 'overwrite', danger: true },
+            ],
+          });
+          if (result !== 'overwrite') return;
+        }
         const content = await window.stackwatch.importConfig(repoPath);
         if (!content) return;
         await analyzeLocal(repoPath);

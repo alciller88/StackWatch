@@ -7,3 +7,4 @@ out/
 *.log
 *.tsbuildinfo
 .claude/
+stackwatch.config.json

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useDialogStore } from './dialogStore';
 import type {
   Service,
   Dependency,
@@ -266,20 +267,24 @@ export const useStore = create<StoreState>((set, get) => ({
     // Check for manual services and show confirmation
     const manualServices = (config?.services ?? []).filter(s => s.source === 'manual');
     if (manualServices.length > 0) {
-      set({ isAnalyzing: true });
-      const decision = await window.stackwatch.confirmRescan(manualServices.length);
-      if (decision === 'cancel') {
-        set({ isAnalyzing: false });
-        return;
-      }
+      const count = manualServices.length;
+      const decision = await useDialogStore.getState().confirm({
+        title: 'Re-analyze project',
+        message: `You have ${count} manually added service${count > 1 ? 's' : ''}.`,
+        detail: 'Do you want to keep your manual services after re-analysis?',
+        buttons: [
+          { label: 'Keep', value: 'keep', primary: true },
+          { label: 'Overwrite all', value: 'overwrite', danger: true },
+          { label: 'Cancel', value: 'cancel' },
+        ],
+      });
+      if (decision === 'cancel') return;
 
       if (decision === 'overwrite') {
-        // Clear manual services from config before re-analyzing
         const updatedConfig = ensureConfig(config);
         updatedConfig.services = [];
         await get().saveConfig(updatedConfig);
       }
-      // 'keep' — analyzeLocal will merge manual services back automatically
     }
 
     await get().analyzeLocal(repoPath);

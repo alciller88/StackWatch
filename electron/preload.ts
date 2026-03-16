@@ -46,8 +46,8 @@ const api: StackWatchAPI = {
   relinkLocal: () =>
     ipcRenderer.invoke('relink-local'),
 
-  confirmRescan: (manualCount: number) =>
-    ipcRenderer.invoke('confirm-rescan', manualCount),
+  checkConfigExists: (repoPath: string) =>
+    ipcRenderer.invoke('check-config-exists', repoPath),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

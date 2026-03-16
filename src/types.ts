@@ -195,7 +195,7 @@ export interface StackWatchAPI {
   exportServicesMd(content: string): Promise<boolean>;
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>;
   relinkLocal(): Promise<string | null>;
-  confirmRescan(manualCount: number): Promise<'keep' | 'overwrite' | 'cancel'>;
+  checkConfigExists(repoPath: string): Promise<boolean>;
 }
 
 declare global {

@@ -11,6 +11,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useStore } from '../../store/useStore'
 import { useGraphStore } from '../../store/graphStore'
+import { useDialogStore } from '../../store/dialogStore'
 import { getNodeColor, getNodeIcon } from './flowUtils'
 import { ContextMenu, type MenuEntry } from './ContextMenu'
 import { NodeEditPanel } from './NodeEditPanel'
@@ -36,6 +37,7 @@ interface EditPanelState {
 export const FlowGraph: React.FC = () => {
   const { flowNodes, flowEdges, services, config } = useStore()
   const graphStore = useGraphStore()
+  const { confirm } = useDialogStore()
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [editPanel, setEditPanel] = useState<EditPanelState | null>(null)
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
@@ -179,10 +181,18 @@ export const FlowGraph: React.FC = () => {
         label: 'Delete node',
         icon: '🗑️',
         danger: true,
-        onClick: () => {
+        onClick: async () => {
           const name = node.data.label ?? nodeId
-          if (confirm(`Delete ${name}? This will also remove it from stackwatch.config.json.`)) {
-            // If it was inferred, add to excluded list
+          const result = await confirm({
+            title: 'Delete node',
+            message: `Delete ${name}?`,
+            detail: 'This will also remove it from stackwatch.config.json.',
+            buttons: [
+              { label: 'Cancel', value: 'cancel' },
+              { label: 'Delete', value: 'delete', danger: true },
+            ],
+          })
+          if (result === 'delete') {
             if (node.data.source === 'inferred' && node.data.serviceId) {
               graphStore.excludeService(node.data.serviceId)
             }
@@ -226,10 +236,17 @@ export const FlowGraph: React.FC = () => {
       {
         label: 'Reset to auto layout',
         icon: '↺',
-        onClick: () => {
-          if (confirm('Reset node positions to automatic layout? Custom positions will be lost.')) {
-            graphStore.resetLayout()
-          }
+        onClick: async () => {
+          const result = await confirm({
+            title: 'Reset layout',
+            message: 'Reset node positions to automatic layout?',
+            detail: 'Custom positions will be lost.',
+            buttons: [
+              { label: 'Cancel', value: 'cancel' },
+              { label: 'Reset', value: 'reset', primary: true },
+            ],
+          })
+          if (result === 'reset') graphStore.resetLayout()
         },
       },
     ]

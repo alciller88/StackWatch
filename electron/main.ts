@@ -172,24 +172,18 @@ ipcMain.handle('get-ai-presets', async () => {
 
 // --- Import / Export ---
 
-ipcMain.handle('import-config', async (_event, repoPath: string) => {
-  if (!mainWindow) return null
-
-  // Check for existing config and confirm overwrite via native dialog
+ipcMain.handle('check-config-exists', async (_event, repoPath: string) => {
   const configPath = path.join(repoPath, 'stackwatch.config.json')
   try {
     await fs.access(configPath)
-    const { response } = await dialog.showMessageBox(mainWindow, {
-      type: 'question',
-      buttons: ['Cancel', 'Overwrite'],
-      defaultId: 1,
-      title: 'Import config',
-      message: 'A stackwatch.config.json already exists in this project. Overwrite it?',
-    })
-    if (response === 0) return null
+    return true
   } catch {
-    // No existing config — proceed without confirmation
+    return false
   }
+})
+
+ipcMain.handle('import-config', async (_event, repoPath: string) => {
+  if (!mainWindow) return null
 
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: 'Import StackWatch config',
@@ -203,6 +197,7 @@ ipcMain.handle('import-config', async (_event, repoPath: string) => {
   JSON.parse(content)
 
   // Write the imported config to the project
+  const configPath = path.join(repoPath, 'stackwatch.config.json')
   await fs.writeFile(configPath, content, 'utf-8')
   return content
 })
@@ -289,20 +284,3 @@ ipcMain.handle('relink-local', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
-// --- Rescan Confirmation ---
-
-ipcMain.handle('confirm-rescan', async (_event, manualCount: number) => {
-  if (!mainWindow) return 'cancel'
-  const { response } = await dialog.showMessageBox(mainWindow, {
-    type: 'question',
-    title: 'Re-analyze project',
-    message: `You have ${manualCount} manually added service${manualCount > 1 ? 's' : ''}.`,
-    detail: 'Do you want to keep your manual services after re-analysis?',
-    buttons: ['Keep manual services', 'Overwrite everything', 'Cancel'],
-    defaultId: 0,
-    cancelId: 2,
-  })
-  if (response === 0) return 'keep'
-  if (response === 1) return 'overwrite'
-  return 'cancel'
-})
