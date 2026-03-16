@@ -1,25 +1,15 @@
 # StackWatch
 
-**Know your stack, own your stack.**
+> Stop guessing what your project depends on.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-StackWatch is a desktop app (Electron + React) that scans your repository and maps every service, dependency, and external account your project depends on — automatically inferred from your codebase, enriched with optional AI analysis, and complemented with manual entries for what can't be detected.
+StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project uses — with costs, renewal dates, and an interactive architecture graph.
 
----
+**Zero config. Works offline. 10 seconds to your first scan.**
 
-## The problem
-
-Modern software projects run on dozens of external services: domains, hosting, CI/CD, analytics, payments, APIs... spread across multiple accounts and providers. There's no single place to see the full picture.
-
-## What StackWatch does
-
-- **Scans your repo** — reads package.json, .env, docker-compose, CI configs, Terraform, and source code across 8+ languages to detect services automatically
-- **Optional AI analysis** — deep analysis enriches results with usage context, criticality levels, hidden service detection, and smart graph edge inference
-- **Maps your stack** — visualises services, dependencies and app flow in a unified four-panel dashboard
-- **Tracks what matters** — plan (free/paid), renewal dates, costs, account emails, confidence levels
-- **Stays in your repo** — all manual data lives in `stackwatch.config.json`, versioned alongside your code
+<!-- TODO: add GIF/screenshots -->
 
 ---
 

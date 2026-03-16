@@ -70,7 +70,7 @@ function normalizeServiceKey(name: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function confidenceRank(c: 'high' | 'medium' | 'low'): number {
+export function confidenceRank(c: 'high' | 'medium' | 'low'): number {
   if (c === 'high') return 3
   if (c === 'medium') return 2
   return 1

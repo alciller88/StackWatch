@@ -53,11 +53,18 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
     }
   }, [handleClickOutside, handleKeyDown])
 
-  // Clamp position so the menu doesn't overflow the container
+  // Clamp position so the menu doesn't overflow the viewport
+  const menuWidth = 200;
+  const menuItemCount = items.filter(entry => !('divider' in entry)).length;
+  const dividerCount = items.length - menuItemCount;
+  const menuHeight = menuItemCount * 32 + dividerCount * 9 + 8;
+  const clampedX = Math.min(x, window.innerWidth - menuWidth - 10);
+  const clampedY = Math.min(y, window.innerHeight - menuHeight - 10);
+
   const style: React.CSSProperties = {
     position: 'absolute',
-    left: x,
-    top: y,
+    left: clampedX,
+    top: clampedY,
     zIndex: 50,
   }
 

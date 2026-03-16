@@ -45,6 +45,7 @@ export const TopBar: React.FC = () => {
   const {
     repoPath,
     services,
+    dependencies,
     config,
     isAnalyzing,
     analysisPhase,
@@ -65,17 +66,24 @@ export const TopBar: React.FC = () => {
   const { confirm } = useDialogStore();
   const [showGitHub, setShowGitHub] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareCopied, setShareCopied] = useState<string | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
         setShowExportMenu(false);
       }
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+        setShowShareMenu(false);
+        setShareCopied(null);
+      }
     };
-    if (showExportMenu) document.addEventListener('mousedown', handleClick);
+    if (showExportMenu || showShareMenu) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [showExportMenu]);
+  }, [showExportMenu, showShareMenu]);
 
   // Check link status when config changes
   useEffect(() => {
@@ -119,6 +127,33 @@ export const TopBar: React.FC = () => {
     await window.stackwatch.exportServicesMd(md);
   };
 
+  const handleShareCopy = (key: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setShareCopied(key);
+    setTimeout(() => setShareCopied(null), 2000);
+  };
+
+  const getBadgeMarkdown = (): string => {
+    const count = services.length;
+    return `![Analyzed with StackWatch](https://img.shields.io/badge/StackWatch-${count}%20services-gold)`;
+  };
+
+  const getBadgeHtml = (): string => {
+    const count = services.length;
+    return `<a href="https://github.com/alciller88/StackWatch"><img src="https://img.shields.io/badge/StackWatch-${count}%20services-gold" alt="Analyzed with StackWatch" /></a>`;
+  };
+
+  const getStackSummary = (): string => {
+    const serviceCount = services.length;
+    const depCount = dependencies.length;
+    const monthlyCost = services.reduce((sum, s) => {
+      if (!s.cost) return sum;
+      const monthly = s.cost.period === 'yearly' ? s.cost.amount / 12 : s.cost.amount;
+      return sum + monthly;
+    }, 0);
+    return `\u{1F50D} My project uses ${serviceCount} services, ${depCount} dependencies, ~$${Math.round(monthlyCost)}/mo\nAnalyzed with StackWatch`;
+  };
+
   return (
     <div className="h-12 border-b flex items-center px-4 gap-3 shrink-0" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
       {/* Left zone — Import / Export */}
@@ -149,22 +184,76 @@ export const TopBar: React.FC = () => {
           </button>
 
           {showExportMenu && (
-            <div className="absolute top-full left-0 mt-1 border rounded-none shadow-lg z-50 min-w-[180px]" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+            <div
+              className="absolute top-full left-0 mt-1 border rounded-none shadow-lg z-50 min-w-[180px]"
+              style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+              role="menu"
+              onKeyDown={(e) => { if (e.key === 'Escape') setShowExportMenu(false); }}
+            >
               <button
                 onClick={handleExportConfig}
                 className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                role="menuitem"
               >
                 Backup config (.json)
               </button>
               <button
                 onClick={handleExportMd}
                 className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
+                role="menuitem"
               >
                 Report (.md)
               </button>
             </div>
           )}
         </div>
+
+        {services.length > 0 && (
+          <div className="relative" ref={shareMenuRef}>
+            <button
+              onClick={() => setShowShareMenu(!showShareMenu)}
+              disabled={isAnalyzing}
+              className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
+              title="Share — copy badge or stack summary"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13" />
+              </svg>
+              Share
+            </button>
+
+            {showShareMenu && (
+              <div
+                className="absolute top-full left-0 mt-1 border rounded-none shadow-lg z-50 min-w-[220px]"
+                style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+                role="menu"
+                onKeyDown={(e) => { if (e.key === 'Escape') { setShowShareMenu(false); setShareCopied(null); } }}
+              >
+                <button
+                  onClick={() => handleShareCopy('md', getBadgeMarkdown())}
+                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                  role="menuitem"
+                >
+                  {shareCopied === 'md' ? 'Copied!' : 'Copy Badge (Markdown)'}
+                </button>
+                <button
+                  onClick={() => handleShareCopy('html', getBadgeHtml())}
+                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
+                  role="menuitem"
+                >
+                  {shareCopied === 'html' ? 'Copied!' : 'Copy Badge (HTML)'}
+                </button>
+                <button
+                  onClick={() => handleShareCopy('summary', getStackSummary())}
+                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
+                  role="menuitem"
+                >
+                  {shareCopied === 'summary' ? 'Copied!' : 'Copy Stack Summary'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Center zone — Repo path + link status */}

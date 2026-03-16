@@ -11,6 +11,7 @@ import type {
   DeepAnalysisResult,
   LinkStatus,
 } from '../types';
+import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
 
 type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
 
@@ -49,10 +50,11 @@ interface StoreState {
   deleteManualService: (serviceId: string) => Promise<void>;
   updateServiceConfidence: (serviceId: string, confidence: 'high' | 'medium' | 'low') => Promise<void>;
   importStandalone: () => Promise<void>;
+  loadDemo: () => void;
   dismissTutorial: () => void;
 }
 
-function mergeServices(
+export function mergeServices(
   inferred: Service[],
   manual: Service[],
   confidenceOverrides?: Record<string, 'high' | 'medium' | 'low'>
@@ -73,7 +75,34 @@ function mergeServices(
   return Array.from(merged.values());
 }
 
-function ensureConfig(config: UserConfig | null): UserConfig {
+export function ensureFlowNodes(
+  services: Service[],
+  existingNodes: FlowNode[],
+): { nodes: FlowNode[]; edges: FlowEdge[] } {
+  const existingServiceIds = new Set(
+    existingNodes.map((n) => n.serviceId).filter(Boolean)
+  );
+  const nodes: FlowNode[] = [];
+  const edges: FlowEdge[] = [];
+  for (const svc of services) {
+    if (!existingServiceIds.has(svc.id)) {
+      nodes.push({
+        id: `svc-${svc.id}`,
+        label: svc.name,
+        type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
+        serviceId: svc.id,
+      });
+      edges.push({
+        source: 'user',
+        target: `svc-${svc.id}`,
+        flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
+      });
+    }
+  }
+  return { nodes, edges };
+}
+
+export function ensureConfig(config: UserConfig | null): UserConfig {
   return config ?? {
     version: '1',
     project: { name: '', description: '' },
@@ -120,26 +149,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const allServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
 
       // Ensure every service has a flow node (manual services aren't in pipeline output)
-      const pipelineNodeServiceIds = new Set(
-        result.flowNodes.map((n: FlowNode) => n.serviceId).filter(Boolean)
-      );
-      const extraNodes: FlowNode[] = [];
-      const extraEdges: FlowEdge[] = [];
-      for (const svc of allServices) {
-        if (!pipelineNodeServiceIds.has(svc.id)) {
-          extraNodes.push({
-            id: `svc-${svc.id}`,
-            label: svc.name,
-            type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
-            serviceId: svc.id,
-          });
-          extraEdges.push({
-            source: 'user',
-            target: `svc-${svc.id}`,
-            flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
-          });
-        }
-      }
+      const { nodes: extraNodes, edges: extraEdges } = ensureFlowNodes(allServices, result.flowNodes);
 
       set({
         services: allServices,
@@ -152,6 +162,8 @@ export const useStore = create<StoreState>((set, get) => ({
         activePanel: 'flow',
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
+
+      localStorage.setItem('stackwatch-last-repo', path);
 
       // Show onboarding tutorial on first scan
       if (!get().hasSeenTutorial) {
@@ -192,26 +204,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const manualServices = config?.services ?? [];
       const allGhServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
 
-      const ghPipelineNodeIds = new Set(
-        result.flowNodes.map((n: FlowNode) => n.serviceId).filter(Boolean)
-      );
-      const ghExtraNodes: FlowNode[] = [];
-      const ghExtraEdges: FlowEdge[] = [];
-      for (const svc of allGhServices) {
-        if (!ghPipelineNodeIds.has(svc.id)) {
-          ghExtraNodes.push({
-            id: `svc-${svc.id}`,
-            label: svc.name,
-            type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
-            serviceId: svc.id,
-          });
-          ghExtraEdges.push({
-            source: 'user',
-            target: `svc-${svc.id}`,
-            flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
-          });
-        }
-      }
+      const { nodes: ghExtraNodes, edges: ghExtraEdges } = ensureFlowNodes(allGhServices, result.flowNodes);
 
       set({
         services: allGhServices,
@@ -456,22 +449,9 @@ export const useStore = create<StoreState>((set, get) => ({
       }));
 
       // Ensure every service has a flow node (config may predate this fix)
-      const importedNodeServiceIds = new Set(flowNodes.map(n => n.serviceId).filter(Boolean));
-      for (const svc of services) {
-        if (!importedNodeServiceIds.has(svc.id)) {
-          flowNodes.push({
-            id: `svc-${svc.id}`,
-            label: svc.name,
-            type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
-            serviceId: svc.id,
-          });
-          flowEdges.push({
-            source: 'user',
-            target: `svc-${svc.id}`,
-            flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
-          });
-        }
-      }
+      const { nodes: importExtraNodes, edges: importExtraEdges } = ensureFlowNodes(services, flowNodes);
+      flowNodes.push(...importExtraNodes);
+      flowEdges.push(...importExtraEdges);
 
       // Ensure 'user' node exists
       if (!flowNodes.find(n => n.id === 'user')) {
@@ -490,8 +470,10 @@ export const useStore = create<StoreState>((set, get) => ({
         deepAnalysis: null,
         error: null,
       });
-    } catch {
-      // cancelled or invalid JSON
+    } catch (err) {
+      if (err instanceof SyntaxError || (err instanceof Error && err.message)) {
+        set({ error: `Import failed: ${err instanceof Error ? err.message : 'Invalid file format'}` });
+      }
     }
   },
 
@@ -510,6 +492,21 @@ export const useStore = create<StoreState>((set, get) => ({
         s.id === serviceId ? { ...s, confidence } : s
       ),
     }));
+  },
+
+  loadDemo: () => {
+    set({
+      services: demoServices,
+      dependencies: demoDependencies,
+      flowNodes: demoFlowNodes,
+      flowEdges: demoFlowEdges,
+      repoPath: null,
+      config: null,
+      deepAnalysis: null,
+      linkStatus: 'unknown',
+      activePanel: 'flow',
+      error: null,
+    });
   },
 
   dismissTutorial: () => {

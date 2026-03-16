@@ -2,7 +2,8 @@ import React from 'react';
 import { useStore } from '../../store/useStore';
 
 export const Dashboard: React.FC = () => {
-  const { openFolder, isAnalyzing } = useStore();
+  const { openFolder, loadDemo, isAnalyzing, analyzeLocal, services } = useStore();
+  const lastRepo = localStorage.getItem('stackwatch-last-repo');
 
   return (
     <div
@@ -13,16 +14,31 @@ export const Dashboard: React.FC = () => {
       }}
     >
       <div className="text-center max-w-2xl w-full my-auto py-8">
+        {/* Last project banner */}
+        {lastRepo && services.length === 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 mb-6 border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+            <span className="font-mono text-[11px] text-[var(--color-text-muted)] truncate flex-1 text-left">
+              Last project: {lastRepo}
+            </span>
+            <button
+              onClick={() => analyzeLocal(lastRepo)}
+              disabled={isAnalyzing}
+              className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+            >
+              Reopen
+            </button>
+          </div>
+        )}
+
         {/* Icon with corner brackets */}
         <div className="relative mb-6 flex justify-center">
-          <div style={{ width: 52, height: 52, border: '1px solid var(--color-border)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ position:'absolute', top:-3, left:-3, width:8, height:8, borderTop:'1px solid var(--color-accent)', borderLeft:'1px solid var(--color-accent)' }} />
-            <span style={{ position:'absolute', top:-3, right:-3, width:8, height:8, borderTop:'1px solid var(--color-accent)', borderRight:'1px solid var(--color-accent)' }} />
-            <span style={{ position:'absolute', bottom:-3, left:-3, width:8, height:8, borderBottom:'1px solid var(--color-accent)', borderLeft:'1px solid var(--color-accent)' }} />
-            <span style={{ position:'absolute', bottom:-3, right:-3, width:8, height:8, borderBottom:'1px solid var(--color-accent)', borderRight:'1px solid var(--color-accent)' }} />
+          <div className="relative flex items-center justify-center w-[52px] h-[52px] border border-[var(--color-border)]">
+            <span className="absolute -top-[3px] -left-[3px] w-2 h-2 border-t border-l border-[var(--color-accent)]" />
+            <span className="absolute -top-[3px] -right-[3px] w-2 h-2 border-t border-r border-[var(--color-accent)]" />
+            <span className="absolute -bottom-[3px] -left-[3px] w-2 h-2 border-b border-l border-[var(--color-accent)]" />
+            <span className="absolute -bottom-[3px] -right-[3px] w-2 h-2 border-b border-r border-[var(--color-accent)]" />
             <svg
-              className="w-6 h-6"
-              style={{ color: 'var(--color-accent)' }}
+              className="w-6 h-6 text-[var(--color-accent)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -39,7 +55,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Title */}
         <h1 className="font-mono text-base font-medium tracking-wide uppercase text-[var(--color-text-primary)] mb-2">
-          Welcome to <span style={{ color: 'var(--color-accent)' }}>Stack</span>Watch
+          Welcome to <span className="text-[var(--color-accent)]">Stack</span>Watch
         </h1>
 
         {/* Description */}
@@ -103,16 +119,15 @@ export const Dashboard: React.FC = () => {
           </button>
 
           <button
-            onClick={openFolder}
-            disabled={isAnalyzing}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
-            aria-label="Try demo by scanning a local project"
+            onClick={loadDemo}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
+            aria-label="Explore demo with sample data"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Try Demo
+            Explore Demo
           </button>
         </div>
 
@@ -123,10 +138,9 @@ export const Dashboard: React.FC = () => {
         {/* Quick Start */}
         <div className="mb-10">
           <div
-            className="text-left px-6 py-5"
-            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+            className="text-left px-6 py-5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
           >
-            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--color-accent)' }}>
+            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-[var(--color-accent)]">
               Quick Start
             </h2>
             <div className="space-y-3">
@@ -137,8 +151,7 @@ export const Dashboard: React.FC = () => {
               ].map((step) => (
                 <div key={step.num} className="flex items-start gap-3">
                   <span
-                    className="font-mono text-[10px] font-medium shrink-0 w-6 h-6 flex items-center justify-center"
-                    style={{ color: 'var(--color-accent)', border: '1px solid var(--color-border)' }}
+                    className="font-mono text-[10px] font-medium shrink-0 w-6 h-6 flex items-center justify-center text-[var(--color-accent)] border border-[var(--color-border)]"
                   >
                     {step.num}
                   </span>
@@ -153,10 +166,10 @@ export const Dashboard: React.FC = () => {
 
         {/* Features Grid */}
         <div className="mb-10">
-          <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-left" style={{ color: 'var(--color-accent)' }}>
+          <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-left text-[var(--color-accent)]">
             Features
           </h2>
-          <div className="grid grid-cols-3 gap-px text-left" style={{ background: 'var(--color-border)' }}>
+          <div className="grid grid-cols-3 gap-px text-left bg-[var(--color-border)]">
             {[
               {
                 num: '01',
@@ -225,9 +238,9 @@ export const Dashboard: React.FC = () => {
                 ),
               },
             ].map((feat) => (
-              <div key={feat.num} className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
+              <div key={feat.num} className="p-4 bg-[var(--color-bg-secondary)]">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span style={{ color: 'var(--color-text-muted)' }}>{feat.icon}</span>
+                  <span className="text-[var(--color-text-muted)]">{feat.icon}</span>
                   <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">
                     {feat.num} · {feat.label}
                   </span>
@@ -242,10 +255,9 @@ export const Dashboard: React.FC = () => {
         {/* Keyboard Shortcuts */}
         <div className="text-left">
           <div
-            className="px-6 py-5"
-            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+            className="px-6 py-5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
           >
-            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4" style={{ color: 'var(--color-accent)' }}>
+            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-[var(--color-accent)]">
               Keyboard Shortcuts
             </h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2">
@@ -257,12 +269,7 @@ export const Dashboard: React.FC = () => {
               ].map((shortcut) => (
                 <div key={shortcut.key} className="flex items-center gap-3">
                   <kbd
-                    className="font-mono text-[9px] px-1.5 py-0.5 shrink-0"
-                    style={{
-                      color: 'var(--color-accent)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-primary)',
-                    }}
+                    className="font-mono text-[9px] px-1.5 py-0.5 shrink-0 text-[var(--color-accent)] border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
                   >
                     {shortcut.key}
                   </kbd>

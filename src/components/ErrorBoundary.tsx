@@ -47,22 +47,24 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     }
 
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>Something went wrong</h1>
-          <p style={styles.subtitle}>
+      <div className="flex items-center justify-center h-full w-full bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-mono p-8">
+        <div className="max-w-[480px] w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-8 text-center">
+          <h1 className="text-xl font-semibold text-[var(--color-accent)] mb-3">
+            Something went wrong
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-5 leading-relaxed">
             An unexpected error occurred. You can try reloading the application.
           </p>
 
           {this.state.error && (
-            <pre style={styles.details}>
+            <pre className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] border border-[var(--color-border-light)] rounded px-4 py-3 text-left overflow-x-auto whitespace-pre-wrap break-words mb-5">
               {this.state.error.name}: {this.state.error.message}
             </pre>
           )}
 
           <button
             onClick={this.handleReload}
-            style={styles.button}
+            className="text-sm font-inherit font-medium text-[var(--color-bg-primary)] bg-[var(--color-accent)] border-none rounded px-6 py-2 cursor-pointer"
             aria-label="Reload application"
           >
             Reload
@@ -71,66 +73,4 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       </div>
     )
   }
-}
-
-/* ------------------------------------------------------------------ */
-/*  Inline styles using CSS custom properties from the app theme      */
-/* ------------------------------------------------------------------ */
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    width: '100%',
-    background: 'var(--color-bg-primary)',
-    color: 'var(--color-text-primary)',
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-    padding: '2rem',
-  },
-  card: {
-    maxWidth: '480px',
-    width: '100%',
-    background: 'var(--color-bg-secondary)',
-    border: '1px solid var(--color-border)',
-    borderRadius: '8px',
-    padding: '2rem',
-    textAlign: 'center' as const,
-  },
-  title: {
-    fontSize: '1.25rem',
-    fontWeight: 600,
-    color: 'var(--color-accent)',
-    margin: '0 0 0.75rem',
-  },
-  subtitle: {
-    fontSize: '0.85rem',
-    color: 'var(--color-text-secondary)',
-    margin: '0 0 1.25rem',
-    lineHeight: 1.5,
-  },
-  details: {
-    fontSize: '0.75rem',
-    color: 'var(--color-text-secondary)',
-    background: 'var(--color-bg-tertiary)',
-    border: '1px solid var(--color-border-light)',
-    borderRadius: '4px',
-    padding: '0.75rem 1rem',
-    textAlign: 'left' as const,
-    overflowX: 'auto' as const,
-    whiteSpace: 'pre-wrap' as const,
-    wordBreak: 'break-word' as const,
-    margin: '0 0 1.25rem',
-  },
-  button: {
-    fontSize: '0.85rem',
-    fontFamily: 'inherit',
-    fontWeight: 500,
-    color: 'var(--color-bg-primary)',
-    background: 'var(--color-accent)',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '0.5rem 1.5rem',
-    cursor: 'pointer',
-  },
 }

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { APP_VERSION } from '../../constants';
+import { calculateHealthScore } from '../../utils/healthScore';
 
 type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
 
@@ -102,8 +104,13 @@ const sectionLabel = (text: string, collapsed: boolean) =>
   ) : null;
 
 export const Sidebar: React.FC = () => {
-  const { activePanel, setActivePanel } = useStore();
+  const { activePanel, setActivePanel, services, flowNodes, flowEdges } = useStore();
   const [collapsed, setCollapsed] = useState(false);
+
+  const breakdown = useMemo(
+    () => calculateHealthScore(services, flowNodes, flowEdges),
+    [services, flowNodes, flowEdges],
+  );
 
   const viewItems = navItems.filter(i => i.section === 'views');
   const systemItems = navItems.filter(i => i.section === 'system');
@@ -143,6 +150,32 @@ export const Sidebar: React.FC = () => {
         </button>
       </div>
 
+      {/* Stack Health Score */}
+      {services.length > 0 && (
+        <div
+          className="flex flex-col items-center py-3 border-b"
+          style={{ borderColor: 'var(--color-border)' }}
+          title={`Cost: ${breakdown.servicesWithCost}% | Owner: ${breakdown.servicesWithOwner}% | Reviewed: ${breakdown.servicesReviewed}% | Graph: ${breakdown.graphCompleteness}%`}
+        >
+          <span
+            className={`font-mono font-bold ${collapsed ? 'text-sm' : 'text-lg'} ${
+              breakdown.score >= 80
+                ? 'text-green-400'
+                : breakdown.score >= 50
+                  ? 'text-[var(--color-accent)]'
+                  : 'text-red-400'
+            }`}
+          >
+            {breakdown.score}
+          </span>
+          {!collapsed && (
+            <span className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>
+              Stack Score
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 py-2 px-2 space-y-0.5">
         {sectionLabel('VIEWS', collapsed)}
@@ -159,6 +192,7 @@ export const Sidebar: React.FC = () => {
               }`}
               style={isActive ? { borderLeft: '2px solid var(--color-accent)', background: 'var(--color-bg-hover)' } : { borderLeft: '2px solid transparent' }}
               title={collapsed ? item.label : undefined}
+              aria-current={isActive ? 'page' : undefined}
             >
               <span className="shrink-0">{item.icon}</span>
               {!collapsed && <span>{item.label}</span>}
@@ -180,6 +214,7 @@ export const Sidebar: React.FC = () => {
               }`}
               style={isActive ? { borderLeft: '2px solid var(--color-accent)', background: 'var(--color-bg-hover)' } : { borderLeft: '2px solid transparent' }}
               title={collapsed ? item.label : undefined}
+              aria-current={isActive ? 'page' : undefined}
             >
               <span className="shrink-0">{item.icon}</span>
               {!collapsed && <span>{item.label}</span>}
@@ -191,7 +226,7 @@ export const Sidebar: React.FC = () => {
       {/* Footer */}
       <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
         {!collapsed && (
-          <span className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>v0.2.1</span>
+          <span className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>v{APP_VERSION}</span>
         )}
       </div>
     </div>

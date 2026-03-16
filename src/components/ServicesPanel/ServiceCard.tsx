@@ -99,9 +99,12 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
     <div
       className={`border rounded-none p-4 transition-colors overflow-hidden ${
         confidenceBorder[service.confidence ?? 'default']
-      } ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'}`}
+      } ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'} focus:ring-1 focus:ring-[var(--color-accent)] focus:outline-none`}
       style={{ background: 'var(--color-bg-secondary)' }}
       onClick={onEdit ? () => onEdit(service) : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={isClickable && onEdit ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(service); } } : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">

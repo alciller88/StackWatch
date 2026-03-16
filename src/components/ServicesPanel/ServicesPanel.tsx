@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useDialogStore } from '../../store/dialogStore';
 import { ServiceCard } from './ServiceCard';
 import type { Service, ServiceCategory, ServiceContext } from '../../types';
 
@@ -272,9 +273,27 @@ const ServiceForm: React.FC<{
   const [confidence, setConfidence] = useState<NonNullable<Service['confidence']>>(editingService?.confidence ?? 'high');
   const [owner, setOwner] = useState(editingService?.owner ?? '');
   const [comment, setComment] = useState(editingService?.comment ?? '');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function validateForm(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = 'Name is required';
+    if (costAmount && parseFloat(costAmount) < 0) errs.cost = 'Cost cannot be negative';
+    if (url && url.trim()) {
+      try { new URL(url); } catch { errs.url = 'Invalid URL format'; }
+    }
+    if (accountEmail && accountEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountEmail)) {
+      errs.email = 'Invalid email format';
+    }
+    return errs;
+  }
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
     const service: Service = {
       id: editingService?.id ?? name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
@@ -304,6 +323,16 @@ const ServiceForm: React.FC<{
 
   const handleDelete = async () => {
     if (!editingService) return;
+    const confirmed = await useDialogStore.getState().confirm({
+      title: 'Delete service',
+      message: `Delete "${name}"?`,
+      detail: 'This action cannot be undone.',
+      buttons: [
+        { label: 'Delete', value: 'delete', danger: true },
+        { label: 'Cancel', value: 'cancel' },
+      ],
+    });
+    if (confirmed !== 'delete') return;
     await deleteManualService(editingService.id);
     onClose();
   };
@@ -334,11 +363,12 @@ const ServiceForm: React.FC<{
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => { setName(e.target.value); setErrors(prev => { const next = {...prev}; delete next.name; return next; }); }}
             placeholder="Service name"
-            className={`${inputClass} border`}
-            style={inputStyle}
+            className={`${inputClass} border ${errors.name ? 'border-red-500' : ''}`}
+            style={errors.name ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
+          {errors.name && <p className="text-red-500 text-[10px] mt-1">{errors.name}</p>}
         </div>
         <div>
           <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Category *</label>
@@ -388,24 +418,26 @@ const ServiceForm: React.FC<{
           <input
             type="text"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => { setUrl(e.target.value); setErrors(prev => { const next = {...prev}; delete next.url; return next; }); }}
             placeholder="https://..."
-            className={`${inputClass} border`}
-            style={inputStyle}
+            className={`${inputClass} border ${errors.url ? 'border-red-500' : ''}`}
+            style={errors.url ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
+          {errors.url && <p className="text-red-500 text-[10px] mt-1">{errors.url}</p>}
         </div>
         <div className="w-20">
           <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Cost</label>
           <input
             type="number"
             value={costAmount}
-            onChange={(e) => setCostAmount(e.target.value)}
+            onChange={(e) => { setCostAmount(e.target.value); setErrors(prev => { const next = {...prev}; delete next.cost; return next; }); }}
             placeholder="0"
             min="0"
             step="0.01"
-            className={`${inputClass} border`}
-            style={inputStyle}
+            className={`${inputClass} border ${errors.cost ? 'border-red-500' : ''}`}
+            style={errors.cost ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
+          {errors.cost && <p className="text-red-500 text-[10px] mt-1">{errors.cost}</p>}
         </div>
         <div className="w-16">
           <select
@@ -448,11 +480,12 @@ const ServiceForm: React.FC<{
           <input
             type="email"
             value={accountEmail}
-            onChange={(e) => setAccountEmail(e.target.value)}
+            onChange={(e) => { setAccountEmail(e.target.value); setErrors(prev => { const next = {...prev}; delete next.email; return next; }); }}
             placeholder="admin@example.com"
-            className={`${inputClass} border`}
-            style={inputStyle}
+            className={`${inputClass} border ${errors.email ? 'border-red-500' : ''}`}
+            style={errors.email ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
+          {errors.email && <p className="text-red-500 text-[10px] mt-1">{errors.email}</p>}
         </div>
         <div className="flex-1">
           <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Notes</label>
@@ -489,8 +522,7 @@ const ServiceForm: React.FC<{
         </div>
         <button
           onClick={handleSubmit}
-          disabled={!name.trim()}
-          className="px-4 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-50 rounded-none transition-colors"
+          className="px-4 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
         >
           {isEditing ? 'Update' : 'Add'}
         </button>

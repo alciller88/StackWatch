@@ -1,7 +1,7 @@
 import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
-import { deduplicateServices } from './deduplicator'
+import { deduplicateServices, confidenceRank } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
 import { runDeepAnalysis, refineServicesWithAI } from '../ai/deepAnalyzer'
 
@@ -135,8 +135,3 @@ function mergeAIResults(services: Service[], aiResults: Partial<Service>[]): Ser
   return Array.from(serviceMap.values())
 }
 
-function confidenceRank(c: string | undefined): number {
-  if (c === 'high') return 3
-  if (c === 'medium') return 2
-  return 1
-}

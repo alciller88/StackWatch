@@ -126,27 +126,20 @@ export const OnboardingTutorial: React.FC = () => {
       aria-modal="true"
       aria-labelledby="onboarding-title"
       aria-describedby="onboarding-desc"
-      className="fixed inset-0 z-[100] flex items-center justify-center"
-      style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(2px)' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-[2px]"
       onClick={(e) => {
         if (e.target === overlayRef.current) dismissTutorial()
       }}
     >
       <div
-        className="w-full max-w-md shadow-2xl"
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--color-border)',
-        }}
+        className="w-full max-w-md shadow-2xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
       >
         {/* Step indicator */}
         <div
-          className="px-5 py-3 flex items-center justify-between"
-          style={{ borderBottom: '1px solid var(--color-border)' }}
+          className="px-5 py-3 flex items-center justify-between border-b border-[var(--color-border)]"
         >
           <span
-            className="font-mono text-[10px] uppercase tracking-widest"
-            style={{ color: 'var(--color-accent)' }}
+            className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-accent)]"
           >
             Getting Started
           </span>
@@ -168,8 +161,7 @@ export const OnboardingTutorial: React.FC = () => {
         <div className="px-5 py-6">
           <div className="flex items-start gap-4">
             <div
-              className="shrink-0 w-10 h-10 flex items-center justify-center"
-              style={{ color: 'var(--color-accent)', border: '1px solid var(--color-border)' }}
+              className="shrink-0 w-10 h-10 flex items-center justify-center text-[var(--color-accent)] border border-[var(--color-border)]"
             >
               {current.icon}
             </div>
@@ -195,25 +187,11 @@ export const OnboardingTutorial: React.FC = () => {
 
         {/* Buttons */}
         <div
-          className="flex items-center justify-between px-5 py-3"
-          style={{ borderTop: '1px solid var(--color-border)' }}
+          className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]"
         >
           <button
             onClick={dismissTutorial}
-            className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors"
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text-muted)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-text-secondary)'
-              e.currentTarget.style.color = 'var(--color-text-secondary)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-border)'
-              e.currentTarget.style.color = 'var(--color-text-muted)'
-            }}
+            className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)]"
           >
             Skip
           </button>
@@ -221,20 +199,7 @@ export const OnboardingTutorial: React.FC = () => {
             {!isFirst && (
               <button
                 onClick={() => setStep(step - 1)}
-                className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors"
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-secondary)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-accent)'
-                  e.currentTarget.style.color = 'var(--color-accent)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-border)'
-                  e.currentTarget.style.color = 'var(--color-text-secondary)'
-                }}
+                className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
               >
                 Back
               </button>
@@ -248,18 +213,7 @@ export const OnboardingTutorial: React.FC = () => {
                   setStep(step + 1)
                 }
               }}
-              className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors"
-              style={{
-                background: 'var(--color-accent)',
-                border: '1px solid var(--color-accent)',
-                color: 'var(--color-bg-primary)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent-hover)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-accent)'
-              }}
+              className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors bg-[var(--color-accent)] border border-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)]"
             >
               {isLast ? 'Done' : 'Next'}
             </button>

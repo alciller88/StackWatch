@@ -20,27 +20,27 @@ Full spec: `SPEC.md`
 
 > ⚠️ Update this section at the start of each session.
 
-- **Phase**: v0.3.3 — editable confidence field + re-analyze UX fix
-- **Latest milestone**: confidence UI + re-analyze fix (2026-03-16)
-  - **FEAT:** Service edit form now includes a confidence select (high/medium/low), persisted to config
-  - **FEAT:** ServiceCard border color reflects confidence: green (high), yellow (medium), orange dashed (low), gray (default/unset)
-  - **FIX:** Re-analyze button now shows loading spinner immediately when confirmation dialog is pending — previously showed no visual feedback
-  - **FIX:** `handleReanalyze` in TopBar now properly `await`s the `reanalyze()` call
-  - 58 tests passing (heuristic: 13, deduplicator: 6, extractor: 26, pipeline: 4, flowInference: 9)
+- **Phase**: v0.4.0 — features, tests, and launch preparation
+- **Latest milestone**: v0.4.0 (2026-03-16)
+  - **FEAT:** Stack Health Score (0-100) displayed in sidebar with color coding and tooltip breakdown
+  - **FEAT:** Session restore — Dashboard shows last opened project with "Reopen" button
+  - **FEAT:** "Explore Demo" loads realistic demo data without requiring a real repo
+  - **FEAT:** Share dropdown in TopBar (badge markdown/HTML, stack summary clipboard copy)
+  - **FIX:** ServiceForm validation (name required, cost >= 0, URL/email format)
+  - **FIX:** Delete service now requires confirmation dialog
+  - **FIX:** ServiceCards accessible via keyboard (role=button, tabIndex, Enter/Space)
+  - **A11Y:** aria-current on sidebar, role=switch on AI toggle, menu roles on export, htmlFor on form labels
+  - **REFACTOR:** Migrated inline styles to Tailwind in ErrorBoundary, Dashboard, OnboardingTutorial
+  - **REFACTOR:** Context menu viewport clamping prevents overflow
+  - **TEST:** Added store tests (mergeServices, ensureFlowNodes, loadDemo, CRUD operations)
+  - **TEST:** Added deepAnalyzer tests (runDeepAnalysis, hidden services, edge types, service context)
+  - **CONFIG:** ESLint + Prettier configured (not yet applied to codebase)
+  - 79 tests passing (6 suites: extractor 26, deepAnalyzer 19, heuristic 13, flowInference 9, deduplicator 6, pipeline 6)
 - **Previous milestones**:
+  - v0.3.10: unified types into shared/types.ts, extracted duplicated helpers, removed dead code, centralized version constant, flow legend color fix, import error handling, WCAG AA contrast fix
+  - v0.3.3: editable confidence field + re-analyze UX fix
   - v0.3.2: stack source reference + link status + rescan confirmation
   - v0.3.1: deep AI analysis (context, hidden detection, smart graph edges)
-  - **FEAT:** when AI is configured, the pipeline runs deep analysis with three capabilities:
-    - **Usage context**: for each detected service, AI reads the code and explains how it's used, its criticality, and detects warnings (hardcoded credentials, etc.)
-    - **Hidden service detection**: AI reads priority files (lib/, services/, api/) and finds services consumed via wrappers or SDKs that heuristic analysis missed
-    - **Graph edge inference**: AI determines the correct connection type (data/auth/payment/webhook) based on usage context
-  - **ARCH:** new `electron/ai/deepAnalyzer.ts` with `runDeepAnalysis()` orchestrating all three capabilities in parallel
-  - **UI:** ServiceCard shows usage context (quote), criticality (critical/important/optional with colors), and AI warnings
-  - **UX:** TopBar shows "AI analysis..." during analysis when AI is active; without AI, behavior is identical to before
-  - **TYPES:** new types `ServiceContext`, `DeepAnalysisResult` in both layers; `AnalysisResult.deepAnalysis` optional
-  - **CONTROL:** max 5 files/service, 500 lines/file, 10 files for hidden detection, batches of 3 concurrent calls
-  - 58 tests passing (heuristic: 13, deduplicator: 6, extractor: 26, pipeline: 4, flowInference: 9)
-- **Previous milestones**:
   - v0.3.0: interactive flow graph (context menus, node editing, custom connections, graphStore)
   - v0.2.5: fix API detection in constants and env vars with KEY/SECRET/TOKEN suffixes
   - v0.2.4: fix own project name filtering + import config
@@ -73,6 +73,8 @@ Full spec: `SPEC.md`
 | Inline panel over modal/drawer | Modal | Doesn't interrupt the visual flow of the graph |
 | Deep AI analysis enriches instead of replacing | AI replaces heuristics | Heuristics are fast and work offline; AI is complementary |
 | Three AI capabilities in parallel | Sequential | Minimizes total latency, each step is independent |
+| Stack Health Score in sidebar | Full panel | Score is a quick-glance metric, not a destination panel |
+| Session restore via localStorage | electron-store | No IPC needed for simple last-path storage |
 
 ---
 
@@ -92,6 +94,8 @@ Full spec: `SPEC.md`
 ```
 SPEC.md                              ← full specification (v0.3)
 CONTEXT.md                           ← this file
+shared/types.ts                      ← canonical type definitions (shared between electron and src)
+src/constants.ts                     ← app version and other constants
 electron/types.ts                    ← all types: Service, Evidence, AIProvider, ServiceContext, etc.
 electron/main.ts                     ← entry point + IPC handlers (analysis + AI settings)
 electron/preload.ts                  ← IPC bridge (15 channels)

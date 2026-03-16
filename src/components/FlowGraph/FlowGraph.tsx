@@ -12,7 +12,7 @@ import 'reactflow/dist/style.css'
 import { useStore } from '../../store/useStore'
 import { useGraphStore } from '../../store/graphStore'
 import { useDialogStore } from '../../store/dialogStore'
-import { getNodeColor, getNodeIcon } from './flowUtils'
+import { getNodeColor, getNodeIcon, getEdgeColor } from './flowUtils'
 import { ContextMenu, type MenuEntry } from './ContextMenu'
 import { NodeEditPanel } from './NodeEditPanel'
 import type { FlowNode, ServiceCategory } from '../../types'
@@ -435,10 +435,10 @@ export const FlowGraph: React.FC = () => {
       >
         <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>Edge Types</div>
         {[
-          { color: '#4a8ab0', label: 'Data' },
-          { color: '#3d8c5e', label: 'Auth' },
-          { color: '#e2b04a', label: 'Payment' },
-          { color: '#c05050', label: 'Webhook' },
+          { color: getEdgeColor('data'), label: 'Data' },
+          { color: getEdgeColor('auth'), label: 'Auth' },
+          { color: getEdgeColor('payment'), label: 'Payment' },
+          { color: getEdgeColor('webhook'), label: 'Webhook' },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-2">
             <span className="w-4 h-0.5 inline-block" style={{ background: item.color }} />

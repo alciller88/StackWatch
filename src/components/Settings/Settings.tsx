@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import type { AIProvider, AISettings, ScanMode } from '../../types';
+import { APP_VERSION } from '../../constants';
 
 export const Settings: React.FC = () => {
   const { aiSettings, loadAISettings, saveAISettings, testAIConnection } = useStore();
@@ -108,6 +109,8 @@ export const Settings: React.FC = () => {
               onClick={() => setEnabled(!enabled)}
               className="relative w-11 h-6 rounded-full transition-colors"
               style={{ background: enabled ? 'var(--color-accent)' : 'var(--color-bg-hover)' }}
+              role="switch"
+              aria-checked={enabled}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -449,7 +452,7 @@ export const Settings: React.FC = () => {
         {/* About section */}
         <div className="border rounded-sm p-5 space-y-3" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
           <h3 className="font-mono uppercase tracking-widest text-[10px] text-[var(--color-text-muted)]">About</h3>
-          <p className="font-mono text-[13px] text-[var(--color-accent)]">StackWatch v0.2.1</p>
+          <p className="font-mono text-[13px] text-[var(--color-accent)]">StackWatch v{APP_VERSION}</p>
           <p className="font-mono text-[11px] text-[var(--color-text-muted)]">Know your stack, own your stack.</p>
           <div className="space-y-1">
             <a
