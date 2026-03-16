@@ -437,18 +437,47 @@ export const useStore = create<StoreState>((set, get) => ({
       const config = await window.stackwatch.importConfigStandalone();
       if (!config) return;
       const services = config.services ?? [];
-      // Build flow nodes/edges from graph config if present
-      const flowNodes: FlowNode[] = (config.graph?.nodes ?? []).map((n) => ({
-        id: n.id,
-        label: n.data.label,
-        type: n.data.nodeType ?? 'external',
-        serviceId: undefined,
-      }));
+
+      // Build flow nodes from graph config (with serviceId linkage)
+      const flowNodes: FlowNode[] = (config.graph?.nodes ?? []).map((n) => {
+        // Match graph node to a service by ID pattern (svc-{serviceId})
+        const svcId = n.id.startsWith('svc-') ? n.id.slice(4) : undefined;
+        return {
+          id: n.id,
+          label: n.data.label,
+          type: n.data.nodeType ?? 'external',
+          serviceId: svcId,
+        };
+      });
       const flowEdges: FlowEdge[] = (config.graph?.edges ?? []).map((e) => ({
         source: e.source,
         target: e.target,
         flowType: e.type,
       }));
+
+      // Ensure every service has a flow node (config may predate this fix)
+      const importedNodeServiceIds = new Set(flowNodes.map(n => n.serviceId).filter(Boolean));
+      for (const svc of services) {
+        if (!importedNodeServiceIds.has(svc.id)) {
+          flowNodes.push({
+            id: `svc-${svc.id}`,
+            label: svc.name,
+            type: svc.category === 'cdn' ? 'cdn' : svc.category === 'database' ? 'database' : 'external',
+            serviceId: svc.id,
+          });
+          flowEdges.push({
+            source: 'user',
+            target: `svc-${svc.id}`,
+            flowType: svc.category === 'payments' ? 'payment' : svc.category === 'auth' ? 'auth' : 'data',
+          });
+        }
+      }
+
+      // Ensure 'user' node exists
+      if (!flowNodes.find(n => n.id === 'user')) {
+        flowNodes.unshift({ id: 'user', label: 'User', type: 'user' });
+      }
+
       set({
         config,
         services,
