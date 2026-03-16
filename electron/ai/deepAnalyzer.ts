@@ -371,7 +371,7 @@ async function aiConsolidate(
   const prompt = `You are given a list of candidate external services detected from a codebase by multiple analysis passes. Some may be duplicates, some may be false positives.
 
 Candidates:
-${deduped.map(s => `- ${s.name} (${s.category}, ${s.confidence}): ${s.reason ?? ''}`).join('\n')}
+${deduped.map(s => `- ${s.name} (${s.category}, ${s.confidence}): ${(s as any).reason ?? s.confidenceReasons?.[0] ?? ''}`).join('\n')}
 
 Consolidate this into a final deduplicated list. Remove false positives (dev tools, frameworks, utilities). Merge duplicates keeping the highest confidence.
 
