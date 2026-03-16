@@ -12,7 +12,7 @@ const categories: ServiceCategory[] = [
 const planTypes: Service['plan'][] = ['free', 'paid', 'trial', 'unknown'];
 
 export const ServicesPanel: React.FC = () => {
-  const { services, deepAnalysis } = useStore();
+  const { services, deepAnalysis, repoPath } = useStore();
 
   // Build context map from deep analysis
   const contextMap = useMemo(() => {
@@ -209,11 +209,31 @@ export const ServicesPanel: React.FC = () => {
 
         {/* Grid */}
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
-            {services.length === 0
-              ? 'No services detected. Analyze a repository to get started.'
-              : 'No services match your filters.'}
-          </div>
+          services.length === 0 && repoPath ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
+              <svg className="w-12 h-12 text-[var(--color-text-muted)] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <div>
+                <p className="font-mono text-sm text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">No services detected</p>
+                <p className="font-mono text-[11px] text-[var(--color-text-muted)] max-w-md leading-relaxed">
+                  This could mean the project uses only local dependencies, or services are configured in ways StackWatch doesn't recognize yet.
+                </p>
+              </div>
+              <button
+                onClick={() => { setEditingService(null); setShowAddForm(true); }}
+                className="mt-2 px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
+              >
+                + Add service manually
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
+              {services.length === 0
+                ? 'No services detected. Analyze a repository to get started.'
+                : 'No services match your filters.'}
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((service) => (

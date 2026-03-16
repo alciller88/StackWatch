@@ -7,6 +7,7 @@ import { ServicesPanel } from './components/ServicesPanel/ServicesPanel'
 import { DepsPanel } from './components/DepsPanel/DepsPanel'
 import { FlowGraph } from './components/FlowGraph/FlowGraph'
 import { Settings } from './components/Settings/Settings'
+import { CostsPanel } from './components/CostsPanel/CostsPanel'
 import { TitleBar } from './components/TitleBar'
 import { ConfirmDialog } from './components/ConfirmDialog'
 
@@ -24,6 +25,8 @@ export default function App() {
         return <DepsPanel />
       case 'flow':
         return <FlowGraph />
+      case 'costs':
+        return <CostsPanel />
       default:
         return <Dashboard />
     }

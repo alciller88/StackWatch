@@ -12,7 +12,7 @@ import type {
   LinkStatus,
 } from '../types';
 
-type ActivePanel = 'services' | 'dependencies' | 'flow' | 'settings';
+type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
 
 interface StoreState {
   services: Service[];
@@ -27,6 +27,7 @@ interface StoreState {
   aiSettings: AISettings | null;
   deepAnalysis: DeepAnalysisResult | null;
   linkStatus: LinkStatus;
+  analysisPhase: string | null;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
@@ -91,15 +92,17 @@ export const useStore = create<StoreState>((set, get) => ({
   aiSettings: null,
   deepAnalysis: null,
   linkStatus: 'unknown',
+  analysisPhase: null,
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
       set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
       return;
     }
-    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null });
+    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...' });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
+      set({ analysisPhase: 'Loading configuration...' });
       // Always reload config from disk to pick up imports and manual edits
       let config: UserConfig | null = null;
       try {
@@ -116,6 +119,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: result.flowEdges,
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
+        analysisPhase: null,
         activePanel: 'flow',
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
@@ -135,6 +139,7 @@ export const useStore = create<StoreState>((set, get) => ({
     } catch (err) {
       set({
         isAnalyzing: false,
+        analysisPhase: null,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -145,9 +150,10 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
       return;
     }
-    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null });
+    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...' });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
+      set({ analysisPhase: 'Loading configuration...' });
       const config = get().config;
       const manualServices = config?.services ?? [];
       set({
@@ -157,6 +163,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: result.flowEdges,
         deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
+        analysisPhase: null,
         activePanel: 'flow',
         linkStatus: 'linked',
       });
@@ -175,6 +182,7 @@ export const useStore = create<StoreState>((set, get) => ({
     } catch (err) {
       set({
         isAnalyzing: false,
+        analysisPhase: null,
         error: err instanceof Error ? err.message : String(err),
       });
     }

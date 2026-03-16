@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { useDialogStore } from '../../store/dialogStore';
+import { GitHubModal } from '../GitHubModal';
 import type { Service, UserConfig, ServiceCategory, LinkStatus } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
@@ -46,6 +47,7 @@ export const TopBar: React.FC = () => {
     services,
     config,
     isAnalyzing,
+    analysisPhase,
     aiSettings,
     linkStatus,
     openFolder,
@@ -62,8 +64,6 @@ export const TopBar: React.FC = () => {
 
   const { confirm } = useDialogStore();
   const [showGitHub, setShowGitHub] = useState(false);
-  const [githubRepo, setGithubRepo] = useState('');
-  const [githubToken, setGithubToken] = useState('');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -88,13 +88,6 @@ export const TopBar: React.FC = () => {
       setShowGitHub(true);
     } else {
       await reanalyze();
-    }
-  };
-
-  const handleGitHubAnalyze = () => {
-    if (githubRepo.trim()) {
-      analyzeGitHub(githubRepo.trim(), githubToken.trim());
-      setShowGitHub(false);
     }
   };
 
@@ -247,33 +240,15 @@ export const TopBar: React.FC = () => {
         </div>
       )}
 
-      {/* GitHub toggle */}
+      {/* GitHub modal */}
       {showGitHub && (
-        <div className="flex items-center gap-2 shrink-0">
-          <input
-            type="text"
-            placeholder="owner/repo"
-            value={githubRepo}
-            onChange={(e) => setGithubRepo(e.target.value)}
-            className="border rounded-sm px-2 py-1 text-sm text-[var(--color-text-primary)] w-36 focus:outline-none focus:border-[var(--color-accent)]"
-            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
-          />
-          <input
-            type="password"
-            placeholder="token (optional)"
-            value={githubToken}
-            onChange={(e) => setGithubToken(e.target.value)}
-            className="border rounded-sm px-2 py-1 text-sm text-[var(--color-text-primary)] w-32 focus:outline-none focus:border-[var(--color-accent)]"
-            style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
-          />
-          <button
-            onClick={handleGitHubAnalyze}
-            disabled={!githubRepo.trim() || isAnalyzing}
-            className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-50 disabled:cursor-not-allowed rounded-none transition-colors"
-          >
-            Analyze
-          </button>
-        </div>
+        <GitHubModal
+          onAnalyze={(repo, token) => {
+            analyzeGitHub(repo, token);
+            setShowGitHub(false);
+          }}
+          onClose={() => setShowGitHub(false)}
+        />
       )}
 
       {/* Right zone — GitHub, Open Folder, Re-analyze */}
@@ -312,7 +287,7 @@ export const TopBar: React.FC = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                {aiSettings?.enabled ? 'AI analysis...' : 'Analyzing...'}
+                {analysisPhase ?? 'Analyzing...'}
               </span>
             ) : (
               'Re-analyze'

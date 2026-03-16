@@ -340,6 +340,12 @@ StackWatch/
 - [x] AI pipeline resilience: checkpoint/restore, category validation, timeout handling, empty ID prevention
 - [x] Accessibility: ARIA dialog roles, focus trap, keyboard focus indicators, edge delete confirmation
 - [x] File traversal depth limit (15 levels max)
+- [x] Costs panel with category aggregation + renewal alerts (v0.3.7)
+- [x] Analysis progress phases in top bar
+- [x] GitHub modal with real-time repo format validation
+- [x] Empty states with actionable CTAs in all panels
+- [x] API key show/hide toggle in Settings
+- [x] Dashboard demo mode CTA for first-time users
 - [ ] Production build validation
 - [ ] UI component tests
 - [ ] macOS / Windows / Linux distributable builds

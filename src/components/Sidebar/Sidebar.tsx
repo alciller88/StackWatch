@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 
-type ActivePanel = 'services' | 'dependencies' | 'flow' | 'settings';
+type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
 
 interface NavItem {
   id: ActivePanel;
@@ -52,6 +52,21 @@ const navItems: NavItem[] = [
           strokeLinejoin="round"
           strokeWidth={1.5}
           d="M13 10V3L4 14h7v7l9-11h-7z"
+        />
+      </svg>
+    ),
+  },
+  {
+    id: 'costs',
+    label: 'Costs',
+    section: 'views',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 8v2m0-10c1.657 0 3 .895 3 2m-6 4c0 1.105 1.343 2 3 2"
         />
       </svg>
     ),

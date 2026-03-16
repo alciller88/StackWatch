@@ -35,7 +35,7 @@ interface EditPanelState {
 }
 
 export const FlowGraph: React.FC = () => {
-  const { flowNodes, flowEdges, services, config } = useStore()
+  const { flowNodes, flowEdges, services, config, openFolder } = useStore()
   const graphStore = useGraphStore()
   const { confirm } = useDialogStore()
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -362,7 +362,8 @@ export const FlowGraph: React.FC = () => {
     return (
       <div
         style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '12px',
           fontFamily: 'IBM Plex Mono', fontSize: '11px', letterSpacing: '0.1em',
           color: 'var(--color-text-muted)', background: 'var(--color-bg-primary)',
           backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
@@ -370,7 +371,24 @@ export const FlowGraph: React.FC = () => {
           textTransform: 'uppercase',
         }}
       >
-        NO FLOW DATA — ANALYZE A REPOSITORY TO GENERATE THE GRAPH
+        <span>NO FLOW DATA — ANALYZE A REPOSITORY TO GENERATE THE GRAPH</span>
+        <span style={{ fontSize: '10px', letterSpacing: '0.05em', textTransform: 'none', maxWidth: '420px', textAlign: 'center', lineHeight: '1.6' }}>
+          Open a local folder or connect a GitHub repo to visualize your service architecture
+        </span>
+        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+          <button
+            onClick={() => openFolder()}
+            style={{
+              background: 'transparent', border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
+              fontFamily: 'IBM Plex Mono', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase',
+              padding: '6px 16px', cursor: 'pointer',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-bg-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-accent)'; }}
+          >
+            Open folder
+          </button>
+        </div>
       </div>
     )
   }

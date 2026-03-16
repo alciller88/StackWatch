@@ -24,7 +24,7 @@ const ecosystemUrls: Record<Dependency['ecosystem'], (name: string) => string> =
 };
 
 export const DepsPanel: React.FC = () => {
-  const { dependencies } = useStore();
+  const { dependencies, repoPath } = useStore();
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<Dependency['type'] | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -181,11 +181,25 @@ export const DepsPanel: React.FC = () => {
       {/* Table */}
       <div className="flex-1 overflow-auto">
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
-            {dependencies.length === 0
-              ? 'No dependencies found. Analyze a repository to get started.'
-              : 'No dependencies match your filters.'}
-          </div>
+          dependencies.length === 0 && repoPath ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
+              <svg className="w-12 h-12 text-[var(--color-text-muted)] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <div>
+                <p className="font-mono text-sm text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">No dependencies found</p>
+                <p className="font-mono text-[11px] text-[var(--color-text-muted)] max-w-md leading-relaxed">
+                  Make sure the project has a package.json, requirements.txt, Cargo.toml, go.mod, or similar dependency file.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
+              {dependencies.length === 0
+                ? 'No dependencies found. Analyze a repository to get started.'
+                : 'No dependencies match your filters.'}
+            </div>
+          )
         ) : (
           <table className="w-full">
             <thead className="sticky top-0 z-10" style={{ background: 'var(--color-bg-secondary)' }}>
