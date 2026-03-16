@@ -385,7 +385,7 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   if (actions.category && typeof actions.category === 'object') {
     for (const [idStr, cat] of Object.entries(actions.category)) {
       const svc = idToService.get(Number(idStr))
-      if (svc && VALID_CATEGORIES.has(cat as string)) {
+      if (svc && VALID_CATEGORIES.has(cat as ServiceCategory)) {
         svc.category = cat as ServiceCategory
       }
     }
