@@ -434,7 +434,7 @@ export const useStore = create<StoreState>((set, get) => ({
   importStandalone: async () => {
     if (!window.stackwatch) return;
     try {
-      const config = await window.stackwatch.importConfigStandalone();
+      const config = await window.stackwatch.importConfig();
       if (!config) return;
       const services = config.services ?? [];
 

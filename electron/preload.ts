@@ -28,10 +28,7 @@ const api: StackWatchAPI = {
   getAIPresets: () =>
     ipcRenderer.invoke('get-ai-presets'),
 
-  importConfig: (repoPath: string) =>
-    ipcRenderer.invoke('import-config', repoPath),
-
-  importConfigStandalone: () =>
+  importConfig: () =>
     ipcRenderer.invoke('import-config-standalone'),
 
   exportConfig: (content: string) =>
@@ -45,9 +42,6 @@ const api: StackWatchAPI = {
 
   relinkLocal: () =>
     ipcRenderer.invoke('relink-local'),
-
-  checkConfigExists: (repoPath: string) =>
-    ipcRenderer.invoke('check-config-exists', repoPath),
 
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximize: () => ipcRenderer.send('window-maximize'),

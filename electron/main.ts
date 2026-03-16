@@ -213,42 +213,6 @@ ipcMain.handle('get-ai-presets', async () => {
 
 // --- Import / Export ---
 
-ipcMain.handle('check-config-exists', async (_event, repoPath: string) => {
-  const safePath = validateRepoPath(repoPath)
-  const configPath = path.join(safePath, 'stackwatch.config.json')
-  try {
-    await fs.access(configPath)
-    return true
-  } catch {
-    return false
-  }
-})
-
-ipcMain.handle('import-config', async (_event, repoPath: string) => {
-  if (!mainWindow) return null
-  const safePath = validateRepoPath(repoPath)
-
-  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: 'Import StackWatch config',
-    filters: [{ name: 'JSON', extensions: ['json'] }],
-    properties: ['openFile'],
-  })
-  if (!filePaths[0]) return null
-  const content = await fs.readFile(filePaths[0], 'utf-8')
-
-  // Validate JSON before returning
-  try {
-    JSON.parse(content)
-  } catch (err: any) {
-    throw new Error(`Invalid JSON file: ${err?.message ?? 'could not parse JSON'}`)
-  }
-
-  // Write the imported config to the project
-  const configPath = path.join(safePath, 'stackwatch.config.json')
-  await fs.writeFile(configPath, content, 'utf-8')
-  return content
-})
-
 ipcMain.handle('import-config-standalone', async () => {
   if (!mainWindow) return null
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
@@ -267,10 +231,16 @@ ipcMain.handle('import-config-standalone', async () => {
 
 ipcMain.handle('export-config', async (_event, content: string) => {
   if (!mainWindow) return false
+  const date = new Date().toISOString().split('T')[0]
+  let projectName = 'stackwatch'
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed?.project?.name) projectName = parsed.project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  } catch { /* use default */ }
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Export StackWatch config',
-    defaultPath: 'stackwatch.config.json',
-    filters: [{ name: 'JSON', extensions: ['json'] }],
+    title: 'Save StackWatch backup',
+    defaultPath: `${projectName}-${date}.stackwatch.json`,
+    filters: [{ name: 'StackWatch Config', extensions: ['json'] }],
   })
   if (!filePath) return false
   await fs.writeFile(filePath, content, 'utf-8')

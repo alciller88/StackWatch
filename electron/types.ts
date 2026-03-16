@@ -174,13 +174,11 @@ export interface StackWatchAPI {
   setAISettings(settings: AISettings): Promise<void>
   testAIConnection(provider: AIProvider): Promise<{ ok: boolean; error?: string }>
   getAIPresets(): Promise<AIProvider[]>
-  importConfig(repoPath: string): Promise<string | null>
-  importConfigStandalone(): Promise<UserConfig | null>
+  importConfig(): Promise<UserConfig | null>
   exportConfig(content: string): Promise<boolean>
   exportServicesMd(content: string): Promise<boolean>
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>
   relinkLocal(): Promise<string | null>
-  checkConfigExists(repoPath: string): Promise<boolean>
   windowMinimize(): void
   windowMaximize(): void
   windowClose(): void

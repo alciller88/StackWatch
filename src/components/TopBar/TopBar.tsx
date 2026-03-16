@@ -92,33 +92,9 @@ export const TopBar: React.FC = () => {
   };
 
   const handleImport = async () => {
-    if (!window.stackwatch) return;
-    if (repoPath && !repoPath.startsWith('github:')) {
-      // With repo loaded: check for existing config and confirm overwrite
-      try {
-        const exists = await window.stackwatch.checkConfigExists(repoPath);
-        if (exists) {
-          const result = await confirm({
-            title: 'Import config',
-            message: 'A stackwatch.config.json already exists in this project.',
-            detail: 'Importing will overwrite the current configuration.',
-            buttons: [
-              { label: 'Cancel', value: 'cancel' },
-              { label: 'Overwrite', value: 'overwrite', danger: true },
-            ],
-          });
-          if (result !== 'overwrite') return;
-        }
-        const content = await window.stackwatch.importConfig(repoPath);
-        if (!content) return;
-        await analyzeLocal(repoPath);
-      } catch {
-        // invalid JSON, cancelled, or file read error
-      }
-    } else {
-      // No repo (or GitHub repo): standalone import — load into state as unlinked
-      await importStandalone();
-    }
+    // Import always loads a JSON file into memory — no disk writes, no overwrites.
+    // User picks any .json file, state is restored from it.
+    await importStandalone();
   };
 
   const handleExportConfig = async () => {
