@@ -72,6 +72,7 @@ export interface AnalysisResult {
   dependencies: Dependency[];
   flowNodes: FlowNode[];
   flowEdges: FlowEdge[];
+  deepAnalysis?: DeepAnalysisResult;
 }
 
 export interface GraphNodeData {
@@ -150,6 +151,20 @@ export interface AIProvider {
 export interface AISettings {
   enabled: boolean;
   provider: AIProvider;
+}
+
+export interface ServiceContext {
+  serviceId: string;
+  usage: string;
+  criticalityLevel: 'critical' | 'important' | 'optional';
+  usageLocations: string[];
+  warnings?: string[];
+}
+
+export interface DeepAnalysisResult {
+  serviceContexts: ServiceContext[];
+  hiddenServices: Service[];
+  inferredEdgeTypes: { serviceId: string; flowType: FlowEdge['flowType']; reason: string }[];
 }
 
 export interface StackWatchAPI {

@@ -7,6 +7,7 @@ import type {
   UserConfig,
   AISettings,
   AIProvider,
+  DeepAnalysisResult,
 } from '../types';
 
 type ActivePanel = 'services' | 'dependencies' | 'flow' | 'settings';
@@ -22,6 +23,7 @@ interface StoreState {
   config: UserConfig | null;
   error: string | null;
   aiSettings: AISettings | null;
+  deepAnalysis: DeepAnalysisResult | null;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
@@ -72,13 +74,14 @@ export const useStore = create<StoreState>((set, get) => ({
   config: null,
   error: null,
   aiSettings: null,
+  deepAnalysis: null,
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
       set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
       return;
     }
-    set({ isAnalyzing: true, error: null, repoPath: path });
+    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
       // Always reload config from disk to pick up imports and manual edits
@@ -95,6 +98,7 @@ export const useStore = create<StoreState>((set, get) => ({
         dependencies: result.dependencies,
         flowNodes: result.flowNodes,
         flowEdges: result.flowEdges,
+        deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
       });
     } catch (err) {
@@ -110,7 +114,7 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
       return;
     }
-    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}` });
+    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
       const config = get().config;
@@ -120,6 +124,7 @@ export const useStore = create<StoreState>((set, get) => ({
         dependencies: result.dependencies,
         flowNodes: result.flowNodes,
         flowEdges: result.flowEdges,
+        deepAnalysis: result.deepAnalysis ?? null,
         isAnalyzing: false,
       });
     } catch (err) {

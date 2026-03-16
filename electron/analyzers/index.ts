@@ -1,9 +1,10 @@
-import type { Service, AnalysisResult, Evidence, Dependency, AISettings } from '../types'
+import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
 import { enhanceWithAI } from '../ai/provider'
+import { runDeepAnalysis } from '../ai/deepAnalyzer'
 
 export async function analyzeLocalRepo(
   folderPath: string,
@@ -11,7 +12,7 @@ export async function analyzeLocalRepo(
   excludedServices?: string[],
 ): Promise<AnalysisResult> {
   const { evidences, dependencies, projectName } = await extractEvidences(folderPath)
-  return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices)
+  return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath)
 }
 
 export async function analyzeGitHubRepo(
@@ -29,6 +30,7 @@ async function runPipeline(
   aiSettings: AISettings | undefined,
   projectName: string,
   excludedServices?: string[],
+  repoPath?: string,
 ): Promise<AnalysisResult> {
   // Step 1: Classify with heuristics (pass projectName to filter own project)
   const heuristicResults = classifyEvidences(evidences, projectName)
@@ -42,33 +44,50 @@ async function runPipeline(
     services = services.filter((s) => !excluded.has(s.id))
   }
 
-  // Step 3: Optional AI enhancement for ambiguous cases
+  // Step 3: Deep AI analysis (replaces old ambiguous-only enhancement)
+  let deepAnalysis: DeepAnalysisResult | undefined
   if (aiSettings?.enabled && aiSettings.provider) {
-    const ambiguous = findAmbiguousEvidences(evidences)
-    if (ambiguous.length > 0) {
-      const aiResults = await enhanceWithAI(ambiguous, aiSettings.provider)
-      if (aiResults.length > 0) {
-        services = mergeAIResults(services, aiResults)
+    try {
+      deepAnalysis = await runDeepAnalysis(
+        services,
+        evidences,
+        repoPath ?? null,
+        aiSettings.provider,
+      )
+
+      // Merge hidden services discovered by AI
+      if (deepAnalysis.hiddenServices.length > 0) {
+        // Filter excluded from hidden too
+        const excluded = new Set(excludedServices ?? [])
+        const newHidden = deepAnalysis.hiddenServices.filter((s) => !excluded.has(s.id))
+        services = mergeAIResults(services, newHidden)
       }
+    } catch {
+      // Silent fallback — return heuristic results without AI enrichment
     }
   }
 
   // Step 4: Infer flow graph
   const flow = inferFlowGraph(services, dependencies, projectName)
 
+  // Step 4.5: Apply AI-inferred edge types
+  if (deepAnalysis?.inferredEdgeTypes && deepAnalysis.inferredEdgeTypes.length > 0) {
+    for (const ie of deepAnalysis.inferredEdgeTypes) {
+      const nodeId = `svc-${ie.serviceId}`
+      const edge = flow.edges.find((e) => e.target === nodeId || e.source === nodeId)
+      if (edge) {
+        edge.flowType = ie.flowType
+      }
+    }
+  }
+
   return {
     services,
     dependencies,
     flowNodes: flow.nodes,
     flowEdges: flow.edges,
+    deepAnalysis,
   }
-}
-
-function findAmbiguousEvidences(evidences: Evidence[]): Evidence[] {
-  return evidences.filter(ev => {
-    const results = classifyEvidences([ev])
-    return results.length === 0 || results.some(r => r.confidence === 'low')
-  })
 }
 
 function mergeAIResults(services: Service[], aiResults: Partial<Service>[]): Service[] {

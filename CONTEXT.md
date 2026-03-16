@@ -20,20 +20,21 @@ Spec completa: `SPEC.md`
 
 > ⚠️ Actualizar esta sección al inicio de cada sesión.
 
-- **Fase**: v0.3.0 — grafo de flujo interactivo
-- **Último hito**: interactive flow graph (2026-03-16)
-  - **FEAT:** grafo de flujo ahora es un editor interactivo completo:
-    - Clic derecho sobre nodo → menú contextual (Edit, Open URL, Delete)
-    - Clic derecho en lienzo → crear nodo service o custom, reset layout
-    - Clic derecho en arista → cambiar tipo (Data/Auth/Payment/Webhook) o eliminar
-    - Doble clic en nodo → panel inline de edición (nombre, tipo, categoría, plan, URL, notas)
-    - Arrastrar desde handle → crear conexión entre nodos
-    - Drag & drop de nodos con snap to grid (16px)
-  - **ARCH:** nuevo store Zustand separado `graphStore.ts` para estado del grafo interactivo
-  - **PERSIST:** sección `graph` en `stackwatch.config.json` con nodos, aristas y excludedServices
-  - **MERGE:** al re-analizar, nodos editados mantienen cambios, excluidos no reaparecen, manuales nunca se eliminan
-  - 56 tests passing (heuristic: 13, deduplicator: 6, extractor: 24, pipeline: 4, flowInference: 9)
+- **Fase**: v0.3.1 — análisis profundo con IA
+- **Último hito**: deep AI analysis (2026-03-16)
+  - **FEAT:** cuando la IA está configurada, el pipeline ejecuta análisis profundo con tres capacidades:
+    - **Contexto de uso**: para cada servicio detectado, la IA lee el código y explica cómo se usa, su criticidad, y detecta warnings (credenciales hardcoded, etc.)
+    - **Detección de servicios ocultos**: la IA lee ficheros prioritarios (lib/, services/, api/) y encuentra servicios consumidos via wrappers o SDKs que la heurística no detectó
+    - **Inferencia de aristas del grafo**: la IA determina el tipo de conexión correcto (data/auth/payment/webhook) basándose en el contexto de uso
+  - **ARCH:** nuevo `electron/ai/deepAnalyzer.ts` con `runDeepAnalysis()` que orquesta las tres capacidades en paralelo
+  - **UI:** ServiceCard muestra contexto de uso (quote), criticidad (critical/important/optional con colores), y warnings de la IA
+  - **UX:** TopBar muestra "AI analysis..." durante análisis con IA activa; sin IA, comportamiento idéntico al anterior
+  - **TYPES:** nuevos tipos `ServiceContext`, `DeepAnalysisResult` en ambas capas; `AnalysisResult.deepAnalysis` opcional
+  - **CONTROL:** máx 5 ficheros/servicio, 500 líneas/fichero, 10 ficheros para detección oculta, batches de 3 llamadas concurrentes
+  - 58 tests passing (heuristic: 13, deduplicator: 6, extractor: 26, pipeline: 4, flowInference: 9)
 - **Hitos anteriores**:
+  - v0.3.0: grafo de flujo interactivo (context menus, node editing, custom connections, graphStore)
+  - v0.2.5: fix detección de APIs en constantes y env vars con sufijos KEY/SECRET/TOKEN
   - v0.2.4: fix own project name filtering + import config
   - v0.2.3: extractor filtra solo llamadas de red reales, IGNORED_DOMAINS ampliado, excepción api.*, process.env URL detection
   - v0.2.2: purga de bugs, eliminación de duplicación, tests del extractor
@@ -62,6 +63,8 @@ Spec completa: `SPEC.md`
 | graphStore separado del store principal | Un solo store | El grafo interactivo tiene estado propio (nodes, edges, excluded) con ciclo de vida diferente |
 | Posiciones de nodo en config.graph | electron-store | Las posiciones deben versionarse con el repo, no ser globales al sistema |
 | Panel inline sobre modal/drawer | Modal | No interrumpe el flujo visual del grafo |
+| Deep analysis con IA enriquece en lugar de reemplazar | IA reemplaza heurística | La heurística es rápida y funciona offline; la IA es complementaria |
+| Tres capacidades de IA en paralelo | Secuencial | Minimiza latencia total, cada paso es independiente |
 
 ---
 
@@ -89,7 +92,8 @@ electron/analyzers/heuristic.ts      ← clasificación semántica
 electron/analyzers/deduplicator.ts   ← agrupación y deduplicación
 electron/analyzers/index.ts          ← orquestador del pipeline completo
 electron/analyzers/flowInference.ts  ← inferencia de grafo de flujo
-electron/ai/provider.ts              ← cliente IA OpenAI-compatible
+electron/ai/provider.ts              ← cliente IA OpenAI-compatible + presets
+electron/ai/deepAnalyzer.ts          ← análisis profundo: contexto, detección oculta, aristas
 src/store/useStore.ts                ← estado global Zustand (servicios, deps, config)
 src/store/graphStore.ts              ← estado del grafo interactivo (nodes, edges, excluded)
 src/components/Settings/Settings.tsx ← configuración de IA

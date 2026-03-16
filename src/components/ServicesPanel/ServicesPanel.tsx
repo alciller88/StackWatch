@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { ServiceCard } from './ServiceCard';
-import type { Service, ServiceCategory } from '../../types';
+import type { Service, ServiceCategory, ServiceContext } from '../../types';
 
 const categories: ServiceCategory[] = [
   'domain', 'hosting', 'cicd', 'database', 'auth', 'payments',
@@ -12,7 +12,18 @@ const categories: ServiceCategory[] = [
 const planTypes: Service['plan'][] = ['free', 'paid', 'trial', 'unknown'];
 
 export const ServicesPanel: React.FC = () => {
-  const { services } = useStore();
+  const { services, deepAnalysis } = useStore();
+
+  // Build context map from deep analysis
+  const contextMap = useMemo(() => {
+    const map = new Map<string, ServiceContext>();
+    if (deepAnalysis?.serviceContexts) {
+      for (const ctx of deepAnalysis.serviceContexts) {
+        map.set(ctx.serviceId, ctx);
+      }
+    }
+    return map;
+  }, [deepAnalysis]);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | 'all'>('all');
   const [activePlan, setActivePlan] = useState<Service['plan'] | 'all'>('all');
@@ -175,6 +186,7 @@ export const ServicesPanel: React.FC = () => {
                 <ServiceCard
                   key={service.id}
                   service={service}
+                  context={contextMap.get(service.id)}
                   onEdit={service.source === 'manual' ? handleEdit : undefined}
                 />
               ))}
@@ -207,6 +219,7 @@ export const ServicesPanel: React.FC = () => {
               <ServiceCard
                 key={service.id}
                 service={service}
+                context={contextMap.get(service.id)}
                 onEdit={service.source === 'manual' ? handleEdit : undefined}
               />
             ))}

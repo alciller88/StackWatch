@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Service } from '../../types';
+import type { Service, ServiceContext } from '../../types';
 
 const categoryIcons: Record<Service['category'], string> = {
   domain: '\uD83C\uDF10',
@@ -42,12 +42,25 @@ function daysUntil(dateStr: string): number {
   return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+const criticalityColors: Record<string, string> = {
+  critical: 'text-red-400',
+  important: 'text-amber-400',
+  optional: 'text-gray-500',
+};
+
+const criticalityIcons: Record<string, string> = {
+  critical: '\u{1F534}',
+  important: '\u{1F7E1}',
+  optional: '\u{26AA}',
+};
+
 interface ServiceCardProps {
   service: Service;
+  context?: ServiceContext;
   onEdit?: (service: Service) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onEdit }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEdit }) => {
   const days = service.renewalDate ? daysUntil(service.renewalDate) : null;
   const confidence = service.confidence ?? 'high';
   const badge = confidenceBadge[confidence];
@@ -139,6 +152,31 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onEdit }) => 
             <span className="ml-1 font-medium">
               ({days < 0 ? 'overdue' : `${days}d left`})
             </span>
+          )}
+        </div>
+      )}
+
+      {/* AI Context */}
+      {context && (
+        <div className="mt-2 space-y-1">
+          <div className="text-xs text-gray-300 italic leading-relaxed">
+            &ldquo;{context.usage}&rdquo;
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px]">{criticalityIcons[context.criticalityLevel] ?? '\u{26AA}'}</span>
+            <span className={`text-[10px] font-medium capitalize ${criticalityColors[context.criticalityLevel] ?? 'text-gray-500'}`}>
+              {context.criticalityLevel}
+            </span>
+          </div>
+          {context.warnings && context.warnings.length > 0 && (
+            <div className="space-y-0.5">
+              {context.warnings.map((w, i) => (
+                <div key={i} className="text-[10px] text-amber-400 flex items-start gap-1">
+                  <span className="shrink-0">{'\u26A0'}</span>
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
