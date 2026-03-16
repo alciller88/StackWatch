@@ -172,18 +172,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       }
     }
 
-    // Filter out excluded services
-    const excluded = new Set(graphConfig?.excludedServices ?? [])
-    const filteredFlowNodes = flowNodes.filter((n) => {
-      if (!n.serviceId) return true
-      return !excluded.has(n.serviceId)
-    })
-    const validNodeIds = new Set(filteredFlowNodes.map((n) => n.id))
-    const filteredFlowEdges = flowEdges.filter(
-      (e) => validNodeIds.has(e.source) && validNodeIds.has(e.target),
-    )
-
-    let rfNodes = flowNodesToRFNodes(filteredFlowNodes, savedPositions, filteredFlowEdges)
+    // All services appear in the graph. Users can delete nodes manually per session.
+    // excludedServices is no longer used to filter on init — a fresh scan shows everything.
+    let rfNodes = flowNodesToRFNodes(flowNodes, savedPositions, flowEdges)
 
     // Apply saved data overrides (edited labels, categories, etc.)
     rfNodes = rfNodes.map((n) => {
@@ -252,7 +243,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     }
 
     // Build edges: merge inferred with saved
-    let rfEdges = flowEdgesToRFEdges(filteredFlowEdges)
+    let rfEdges = flowEdgesToRFEdges(flowEdges)
 
     // Add saved edges that aren't in the analysis
     if (graphConfig) {

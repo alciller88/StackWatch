@@ -188,7 +188,7 @@ export const ServicesPanel: React.FC = () => {
                   key={service.id}
                   service={service}
                   context={contextMap.get(service.id)}
-                  onEdit={service.source === 'manual' ? handleEdit : undefined}
+                  onEdit={handleEdit}
                 />
               ))}
             </div>
@@ -241,7 +241,7 @@ export const ServicesPanel: React.FC = () => {
                 key={service.id}
                 service={service}
                 context={contextMap.get(service.id)}
-                onEdit={service.source === 'manual' ? handleEdit : undefined}
+                onEdit={handleEdit}
               />
             ))}
           </div>
@@ -281,7 +281,7 @@ const ServiceForm: React.FC<{
       name: name.trim(),
       category,
       plan,
-      source: 'manual',
+      source: editingService?.source ?? 'manual',
       confidence,
       ...(url && { url }),
       ...(costAmount && {
