@@ -697,7 +697,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-323 tests across 22 suites. Vitest + @testing-library/react + jsdom.
+336 tests across 22 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -716,7 +716,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | healthScore | 11 | `src/utils/__tests__/` |
 | alternativeSuggester | 10 | `electron/ai/__tests__/` |
 | ServiceCard | 10 | `src/components/ServicesPanel/__tests__/` |
-| useStore | 10 | `src/store/__tests__/` |
+| useStore | 15 | `src/store/__tests__/` |
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
 | scoreHistory | 8 | `electron/analyzers/__tests__/` |
 | ContextMenu | 7 | `src/components/FlowGraph/__tests__/` |
@@ -764,3 +764,5 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] npm packages pass through without allowlist — deduplicator discards npm-only via score threshold
 - [x] AI false-positive filter (Step 0): semantic validation before AI refine, silent fallback, aiFilteredCount metric
 - [x] 3 new tests for filterFalsePositivesWithAI (valid response, malformed JSON, network error)
+- [x] Scan mode dialog: Merge (keep manual services + graph positions) vs Fresh Scan (discard all) before re-scanning repos with saved data
+- [x] 5 new tests for ScanModeDialog (no saved data skips dialog, shows dialog on saved data, cancel aborts, merge keeps manual, fresh discards manual)

@@ -24,7 +24,7 @@ Full spec: `SPEC.md` · User docs: `README.md`
 
 | Mode | What happens |
 |------|-------------|
-| **Scan (Open folder / GitHub)** | Fresh analysis from code. Previous edits NOT carried over. Detects monorepos automatically. |
+| **Scan (Open folder / GitHub)** | Analysis from code. If saved data exists, shows ScanModeDialog: **Merge** (keep manual services + graph positions) or **Fresh Scan** (discard all). No saved data → skips dialog, goes to Merge. Detects monorepos automatically. |
 | **Import config** | Full restore from exported JSON. All services, graph layout, positions, edges restored exactly. Works without a repo. |
 | **CLI / GitHub Action** | Headless scan, outputs JSON or Markdown. `--fail-on-vulns` (exit 1) and `--fail-on-unreviewed` (exit 2) for CI gates. `stackwatch init` generates config. |
 
@@ -194,7 +194,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (331 tests, 22 suites) |
+| `npm test` | vitest (336 tests, 22 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -206,7 +206,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-331 tests across 22 suites. vitest + @testing-library/react + jsdom.
+336 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -225,7 +225,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 10 | Rendering, interactions, confidence, a11y |
-| useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
+| useStore | 15 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel) |
 | Flow inference | 17 | 4-layer hierarchy (user → frontend/backend → grouping → services), virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |

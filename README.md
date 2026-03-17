@@ -75,7 +75,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (331 tests across 22 suites) |
+| `npm test` | Run unit tests (336 tests across 22 suites) |
 
 ### CLI (no Electron required)
 
@@ -258,7 +258,7 @@ The Flow panel provides a canvas-based architecture visualisation powered by Rea
 
 | Action | What happens |
 |---|---|
-| **Scan / Open repo** | Fresh analysis from code. Detects services, dependencies, and graph from scratch. No stale data — previous edits are not carried over. |
+| **Scan / Open repo** | Analysis from code. If saved data exists, prompts to **Merge** (keep manual changes + positions) or **Fresh Scan** (discard everything). |
 | **Import config** | Full restore of a previously exported `stackwatch.config.json`. Restores all services (with edits, costs, owners, comments), graph layout, node positions, and edges exactly as saved. Works with or without a repo loaded. |
 
 ### Export options
@@ -309,13 +309,15 @@ Full schema and all available fields: [`SPEC.md`](./SPEC.md)
 
 ---
 
-## Re-analysis
+## Scan mode dialog
 
-When re-analysing a project that has manual services, StackWatch shows a confirmation dialog with three options:
+When re-scanning a repo that already has saved data (manual services, graph positions, or config), StackWatch shows a **Scan Mode Dialog** with two options:
 
-- **Keep manual services** — re-run detection and merge with existing manual entries
-- **Overwrite everything** — clear manual services and start fresh
-- **Cancel** — abort re-analysis
+- **Merge** (default) — keeps manually added services and graph positions for existing nodes. New nodes are placed by dagre. Press Enter to confirm.
+- **Fresh Scan** — discards all manual services, graph positions, and saved config. Starts with a clean dagre layout. Shows a warning: "Manual changes will be lost."
+- **Escape** — cancels without scanning.
+
+If the repo has no saved data, the dialog is skipped and StackWatch goes straight to a merge scan.
 
 ---
 
@@ -419,7 +421,7 @@ StackWatch/
 
 ### Test suites
 
-331 tests across 22 suites:
+336 tests across 22 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -438,7 +440,7 @@ StackWatch/
 | healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 10 | Rendering, interactions, confidence, a11y |
-| useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
+| useStore | 15 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel) |
 | Flow inference | 17 | 4-layer hierarchy, virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
@@ -515,7 +517,8 @@ StackWatch/
 - [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
 - [x] Zombie UI badges and activity status filter in Services panel
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
-- [x] 331 tests across 22 suites (+43 tests for new modules)
+- [x] Scan mode dialog: merge (keep manual + positions) vs fresh scan on re-analyze
+- [x] 336 tests across 22 suites (+5 ScanModeDialog tests)
 
 ---
 

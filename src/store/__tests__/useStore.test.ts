@@ -41,6 +41,7 @@ const { mockStackwatch, localStorageShim } = vi.hoisted(() => {
 });
 
 import { useStore, mergeServices, ensureFlowNodes, ensureConfig } from '../useStore';
+import { useDialogStore } from '../dialogStore';
 
 // ── Helpers ──
 
@@ -282,5 +283,136 @@ describe('useStore actions', () => {
     expect(mockStackwatch.saveConfig).toHaveBeenCalledTimes(1);
     const savedConfig = mockStackwatch.saveConfig.mock.calls[0][1] as UserConfig;
     expect(savedConfig.confidenceOverrides!['redis']).toBe('high');
+  });
+});
+
+// ── ScanModeDialog (analyzeLocal) ──
+
+describe('ScanModeDialog', () => {
+  const analysisResult = {
+    services: [makeService('redis', { source: 'inferred' })],
+    dependencies: [],
+    flowNodes: [{ id: 'user', label: 'User', type: 'user' as const }, makeNode('redis')],
+    flowEdges: [{ source: 'user', target: 'svc-redis', flowType: 'data' as const }],
+  };
+
+  beforeEach(() => {
+    useStore.setState({
+      services: [],
+      dependencies: [],
+      flowNodes: [],
+      flowEdges: [],
+      repoPath: null,
+      isAnalyzing: false,
+      activePanel: 'services',
+      config: null,
+      error: null,
+      aiSettings: null,
+      deepAnalysis: null,
+      linkStatus: 'unknown',
+      analysisPhase: null,
+      hasSeenTutorial: true,
+      showTutorial: false,
+    });
+    vi.clearAllMocks();
+    mockStackwatch.analyzeLocal.mockResolvedValue(analysisResult);
+    mockStackwatch.saveConfig.mockResolvedValue(undefined);
+  });
+
+  it('no saved data → no dialog, scans directly', async () => {
+    mockStackwatch.loadConfig.mockResolvedValue(null);
+    const confirmSpy = vi.spyOn(useDialogStore.getState(), 'confirm');
+
+    await useStore.getState().analyzeLocal('/test/repo');
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(mockStackwatch.analyzeLocal).toHaveBeenCalledWith('/test/repo');
+    expect(useStore.getState().services).toHaveLength(1);
+    confirmSpy.mockRestore();
+  });
+
+  it('saved data → shows dialog', async () => {
+    const savedConfig: UserConfig = {
+      version: '1',
+      project: { name: 'Test', description: '' },
+      services: [makeService('sentry', { source: 'manual' })],
+      accounts: [],
+    };
+    mockStackwatch.loadConfig.mockResolvedValue(savedConfig);
+
+    // Auto-resolve dialog with 'merge'
+    const confirmSpy = vi.spyOn(useDialogStore.getState(), 'confirm')
+      .mockResolvedValue('merge');
+
+    await useStore.getState().analyzeLocal('/test/repo');
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(confirmSpy.mock.calls[0][0].title).toContain('Re-scanning');
+    expect(mockStackwatch.analyzeLocal).toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('cancel → does not scan', async () => {
+    const savedConfig: UserConfig = {
+      version: '1',
+      project: { name: 'Test', description: '' },
+      services: [makeService('sentry', { source: 'manual' })],
+      accounts: [],
+    };
+    mockStackwatch.loadConfig.mockResolvedValue(savedConfig);
+
+    const confirmSpy = vi.spyOn(useDialogStore.getState(), 'confirm')
+      .mockResolvedValue('cancel');
+
+    await useStore.getState().analyzeLocal('/test/repo');
+
+    expect(mockStackwatch.analyzeLocal).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('merge mode → manual services kept', async () => {
+    const manualSvc = makeService('sentry', { source: 'manual' });
+    const savedConfig: UserConfig = {
+      version: '1',
+      project: { name: 'Test', description: '' },
+      services: [manualSvc],
+      accounts: [],
+    };
+    mockStackwatch.loadConfig.mockResolvedValue(savedConfig);
+
+    const confirmSpy = vi.spyOn(useDialogStore.getState(), 'confirm')
+      .mockResolvedValue('merge');
+
+    await useStore.getState().analyzeLocal('/test/repo');
+
+    const state = useStore.getState();
+    // Should have both inferred redis AND manual sentry
+    expect(state.services).toHaveLength(2);
+    expect(state.services.find(s => s.id === 'sentry')).toBeDefined();
+    expect(state.services.find(s => s.id === 'redis')).toBeDefined();
+    confirmSpy.mockRestore();
+  });
+
+  it('fresh mode → manual services discarded', async () => {
+    const manualSvc = makeService('sentry', { source: 'manual' });
+    const savedConfig: UserConfig = {
+      version: '1',
+      project: { name: 'Test', description: '' },
+      services: [manualSvc],
+      accounts: [],
+    };
+    mockStackwatch.loadConfig.mockResolvedValue(savedConfig);
+
+    const confirmSpy = vi.spyOn(useDialogStore.getState(), 'confirm')
+      .mockResolvedValue('fresh');
+
+    await useStore.getState().analyzeLocal('/test/repo');
+
+    const state = useStore.getState();
+    // Should have only inferred redis, no manual sentry
+    expect(state.services).toHaveLength(1);
+    expect(state.services[0].id).toBe('redis');
+    expect(state.services.find(s => s.id === 'sentry')).toBeUndefined();
+    confirmSpy.mockRestore();
   });
 });

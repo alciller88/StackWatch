@@ -152,24 +152,60 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
       return;
     }
+
+    // Load config before scanning to check for saved data
+    let existingConfig: UserConfig | null = null;
+    try {
+      existingConfig = await window.stackwatch.loadConfig(path);
+    } catch {
+      // Config may not exist yet
+    }
+
+    const hasSavedData = (existingConfig?.services?.length ?? 0) > 0 ||
+      (existingConfig?.graph?.nodes?.length ?? 0) > 0;
+
+    let scanMode: 'merge' | 'fresh' = 'merge';
+
+    if (hasSavedData) {
+      const repoName = path.split(/[\\/]/).pop() || path;
+      const decision = await useDialogStore.getState().confirm({
+        title: `Re-scanning ${repoName}`,
+        message: 'This repo has saved data. How do you want to proceed?',
+        detail: 'Fresh scan will discard manual changes and graph positions.',
+        buttons: [
+          { label: 'Merge (keep manual changes)', value: 'merge', primary: true },
+          { label: '\u26A0\uFE0F Fresh Scan', value: 'fresh', danger: true },
+          { label: 'Cancel', value: 'cancel' },
+        ],
+      });
+      if (decision === 'cancel') return;
+      scanMode = decision as 'merge' | 'fresh';
+    }
+
     set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...' });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
       set({ analysisPhase: 'Loading configuration...' });
-      // Always reload config from disk to pick up imports and manual edits
-      let config: UserConfig | null = null;
-      try {
-        config = await window.stackwatch.loadConfig(path);
+
+      let config = existingConfig;
+
+      if (scanMode === 'fresh') {
+        // Fresh: discard manual services and graph positions
         if (config) {
-          // Drop saved graph positions so dagre recalculates a fresh layout
-          const { graph: _discardGraph, ...configWithoutGraph } = config;
-          set({ config: configWithoutGraph as UserConfig });
+          const { graph: _discard, ...rest } = config;
+          config = { ...rest, services: [] } as UserConfig;
         }
-      } catch {
-        // Config may not exist yet
+        set({ config: config ?? null });
+      } else {
+        // Merge: keep manual services and graph positions for existing nodes
+        if (config) {
+          set({ config });
+        }
       }
-      const manualServices = config?.services ?? [];
-      const allServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
+
+      const manualServices = scanMode === 'merge' ? (config?.services ?? []) : [];
+      const confidenceOverrides = scanMode === 'merge' ? config?.confidenceOverrides : undefined;
+      const allServices = mergeServices(result.services, manualServices, confidenceOverrides);
 
       // Ensure every service has a flow node (manual services aren't in pipeline output)
       const { nodes: extraNodes, edges: extraEdges } = ensureFlowNodes(allServices, result.flowNodes);
@@ -193,7 +229,7 @@ export const useStore = create<StoreState>((set, get) => ({
         set({ showTutorial: true });
       }
 
-      // Write source reference to config
+      // Write source reference to config (use the resolved config, not existingConfig)
       const currentConfig = ensureConfig(config);
       if (!currentConfig.source || currentConfig.source.type !== 'local' || currentConfig.source.lastSeenPath !== path) {
         const updatedConfig = {
@@ -222,18 +258,49 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ error: 'StackWatch must run inside Electron. Launch with: npm run dev' });
       return;
     }
+
+    // Check for existing saved data before scanning
+    const existingConfig = get().config;
+    const hasSavedData = (existingConfig?.services?.length ?? 0) > 0 ||
+      (existingConfig?.graph?.nodes?.length ?? 0) > 0;
+
+    let scanMode: 'merge' | 'fresh' = 'merge';
+
+    if (hasSavedData) {
+      const decision = await useDialogStore.getState().confirm({
+        title: `Re-scanning ${repo}`,
+        message: 'This repo has saved data. How do you want to proceed?',
+        detail: 'Fresh scan will discard manual changes and graph positions.',
+        buttons: [
+          { label: 'Merge (keep manual changes)', value: 'merge', primary: true },
+          { label: '\u26A0\uFE0F Fresh Scan', value: 'fresh', danger: true },
+          { label: 'Cancel', value: 'cancel' },
+        ],
+      });
+      if (decision === 'cancel') return;
+      scanMode = decision as 'merge' | 'fresh';
+    }
+
     set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...' });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
       set({ analysisPhase: 'Loading configuration...' });
-      const config = get().config;
-      // Drop saved graph positions so dagre recalculates a fresh layout
-      if (config?.graph) {
-        const { graph: _discardGraph, ...configWithoutGraph } = config;
-        set({ config: configWithoutGraph as UserConfig });
+
+      let config = existingConfig;
+
+      if (scanMode === 'fresh') {
+        // Fresh: discard manual services and graph positions
+        if (config) {
+          const { graph: _discard, ...rest } = config;
+          config = { ...rest, services: [] } as UserConfig;
+        }
+        set({ config: config ?? null });
       }
-      const manualServices = config?.services ?? [];
-      const allGhServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
+      // Merge: keep config as-is (with graph and manual services)
+
+      const manualServices = scanMode === 'merge' ? (config?.services ?? []) : [];
+      const confidenceOverrides = scanMode === 'merge' ? config?.confidenceOverrides : undefined;
+      const allGhServices = mergeServices(result.services, manualServices, confidenceOverrides);
 
       const { nodes: ghExtraNodes, edges: ghExtraEdges } = ensureFlowNodes(allGhServices, result.flowNodes);
 
@@ -357,7 +424,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   reanalyze: async () => {
-    const { repoPath, config } = get();
+    const { repoPath } = get();
     if (!repoPath || !window.stackwatch) return;
 
     if (repoPath.startsWith('github:')) {
@@ -365,29 +432,7 @@ export const useStore = create<StoreState>((set, get) => ({
       return;
     }
 
-    // Check for manual services and show confirmation
-    const manualServices = (config?.services ?? []).filter(s => s.source === 'manual');
-    if (manualServices.length > 0) {
-      const count = manualServices.length;
-      const decision = await useDialogStore.getState().confirm({
-        title: 'Re-analyze project',
-        message: `You have ${count} manually added service${count > 1 ? 's' : ''}.`,
-        detail: 'Do you want to keep your manual services after re-analysis?',
-        buttons: [
-          { label: 'Keep', value: 'keep', primary: true },
-          { label: 'Overwrite all', value: 'overwrite', danger: true },
-          { label: 'Cancel', value: 'cancel' },
-        ],
-      });
-      if (decision === 'cancel') return;
-
-      if (decision === 'overwrite') {
-        const updatedConfig = ensureConfig(config);
-        updatedConfig.services = [];
-        await get().saveConfig(updatedConfig);
-      }
-    }
-
+    // Dialog is now handled inside analyzeLocal (ScanModeDialog)
     await get().analyzeLocal(repoPath);
   },
 
