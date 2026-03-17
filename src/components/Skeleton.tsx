@@ -119,6 +119,30 @@ export const FlowGraphSkeleton: React.FC = () => (
   </div>
 )
 
+export const DiscardedPanelSkeleton: React.FC = () => (
+  <div className="flex-1 flex flex-col min-h-0">
+    <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: 'var(--color-border)' }}>
+      <SkeletonBlock width="120px" height="16px" />
+      <SkeletonBlock height="36px" />
+      <div className="flex gap-1.5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <SkeletonBlock key={i} width="70px" height="24px" />
+        ))}
+      </div>
+    </div>
+    <div className="flex-1 overflow-auto">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="px-6 py-3 border-b flex items-center gap-3" style={{ borderColor: 'var(--color-border)' }}>
+          <SkeletonBlock width="120px" height="12px" />
+          <SkeletonBlock width="30px" height="12px" />
+          <SkeletonBlock width="70px" height="16px" />
+          <div className="ml-auto"><SkeletonBlock width="60px" height="24px" /></div>
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
 export const CostsPanelSkeleton: React.FC = () => (
   <div className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--color-bg-primary)' }}>
     <SkeletonBlock width="120px" height="14px" className="mb-6" />

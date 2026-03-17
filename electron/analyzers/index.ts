@@ -1,5 +1,5 @@
 import path from 'path'
-import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult } from '../types'
+import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult, DiscardedItem } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices, confidenceRank } from './deduplicator'
@@ -104,7 +104,9 @@ async function runPipeline(
 
   // Step 1: Heuristic classification (always runs)
   const heuristicResults = classifyEvidences(evidences, projectName)
-  let services = deduplicateServices(heuristicResults)
+  const dedupResult = deduplicateServices(heuristicResults)
+  let services = dedupResult.services
+  const discardedItems: DiscardedItem[] = [...dedupResult.discarded]
 
   // Note: excludedServices only affects the graph (filtered in graphStore.initFromAnalysis),
   // NOT the services list — users should see all detected services in the Services panel.
@@ -122,13 +124,25 @@ async function runPipeline(
   // Step 2.5: AI false-positive filter (hybrid mode, before full refinement)
   let aiFilteredCount: number | undefined
   if (useAI) {
-    const preFilterCount = services.length
+    const preFilterServices = [...services]
     try {
       services = await withTimeout(
         filterFalsePositivesWithAI(services, aiSettings!.provider),
         30000, 'AI filter'
       )
-      const removed = preFilterCount - services.length
+      const kept = new Set(services.map(s => s.id))
+      for (const s of preFilterServices) {
+        if (!kept.has(s.id)) {
+          discardedItems.push({
+            name: s.name,
+            reason: 'ai_filter',
+            score: 0,
+            evidences: s.confidenceReasons?.map(r => ({ type: 'reason', value: r, file: '' })) ?? [],
+            category: s.category,
+          })
+        }
+      }
+      const removed = preFilterServices.length - services.length
       if (removed > 0) aiFilteredCount = removed
     } catch {
       // Silent fallback — filter is optional
@@ -211,6 +225,7 @@ async function runPipeline(
     deepAnalysis,
     aiError,
     aiFilteredCount,
+    discardedItems,
   }
 }
 

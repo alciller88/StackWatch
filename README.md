@@ -17,12 +17,13 @@ StackWatch scans your codebase and automatically maps every service, API, databa
 
 ## Dashboard
 
-Four panels:
+Five panels:
 
 | Panel | What you see |
 |---|---|
 | **Services** | Every external service: inferred + manual, with cost and renewal alerts, confidence badges, and AI-generated usage context |
 | **Dependencies** | Full dependency tree (npm, pip, cargo, go, composer, dart, maven, gradle, gem) with vulnerability scanning |
+| **Discarded** | Items filtered during analysis (low score, AI filter, generic terms) — with search, filter by reason, and restore button |
 | **Flow graph** | Interactive node graph of your app's architecture with drag-and-drop editing, custom connections, and context menus |
 | **Costs** | Cost breakdown by category with bar chart, monthly/yearly totals, renewal alerts, and budget mode with progress bar |
 | **Settings** | AI provider configuration (Local / Cloud / Custom) with connection testing, theme toggle (dark/light) |
@@ -75,7 +76,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (336 tests across 22 suites) |
+| `npm test` | Run unit tests (346 tests across 23 suites) |
 
 ### CLI (no Electron required)
 
@@ -380,6 +381,7 @@ StackWatch/
 │   │   ├── Sidebar/         # Panel navigation (5 panels + Stack Score)
 │   │   ├── ServicesPanel/   # Service cards, filters, add/edit form, confidence badges
 │   │   ├── DepsPanel/       # Virtualized dependencies table, vuln scanning
+│   │   ├── DiscardedPanel/ # Discarded items: search, filter, restore
 │   │   ├── CostsPanel/      # Cost breakdown, bar chart (Recharts), renewal alerts, budget mode
 │   │   ├── Doctor/          # Doctor modal (health checklist: config, services, costs, vulns, score)
 │   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
@@ -421,7 +423,7 @@ StackWatch/
 
 ### Test suites
 
-336 tests across 22 suites:
+346 tests across 23 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -444,7 +446,8 @@ StackWatch/
 | Flow inference | 17 | 4-layer hierarchy, virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 20 | Grouping, merging, best-per-type scoring, thresholds, brand collapse |
+| DiscardedPanel | 7 | Rendering, reason badges, restore, scores, empty state |
+| Deduplicator | 23 | Grouping, merging, best-per-type scoring, thresholds, brand collapse, discarded tracking |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | daysUntil | 3 | Today, future, past |
 
@@ -518,7 +521,8 @@ StackWatch/
 - [x] Zombie UI badges and activity status filter in Services panel
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
 - [x] Scan mode dialog: merge (keep manual + positions) vs fresh scan on re-analyze
-- [x] 336 tests across 22 suites (+5 ScanModeDialog tests)
+- [x] Discarded panel: virtualized list of filtered items with search, reason filter, restore to manual service
+- [x] 346 tests across 23 suites (+10 DiscardedPanel and deduplicator tracking tests)
 
 ---
 

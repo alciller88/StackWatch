@@ -1,4 +1,4 @@
-import type { Service, HeuristicResult, ServiceCategory } from '../types'
+import type { Service, HeuristicResult, ServiceCategory, DiscardedItem } from '../types'
 
 interface ServiceGroup {
   name: string
@@ -30,7 +30,7 @@ const GENERIC_SERVICE_NAMES = new Set([
   'user emails', 'insights database',
 ])
 
-export function deduplicateServices(results: HeuristicResult[]): Service[] {
+export function deduplicateServices(results: HeuristicResult[]): { services: Service[]; discarded: DiscardedItem[] } {
   const groups = new Map<string, ServiceGroup>()
 
   for (const result of results) {
@@ -78,7 +78,8 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
   collapseBrandEntries(groups)
 
   // Remove generic entries when a specific one exists in the same category
-  removeGenericEntries(groups)
+  const discarded: DiscardedItem[] = []
+  removeGenericEntries(groups, discarded)
 
   // Compute final score per group and apply thresholds
   const services: Service[] = []
@@ -90,7 +91,16 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
     }
 
     // Score threshold: discard if below 6
-    if (finalScore < 6) continue
+    if (finalScore < 6) {
+      discarded.push({
+        name: group.name,
+        reason: 'low_score',
+        score: finalScore,
+        evidences: group.reasons.map(r => ({ type: 'reason', value: r, file: '' })),
+        category: group.category,
+      })
+      continue
+    }
 
     // Derive confidence from final score
     // > 10 → high (strong multi-type evidence, no AI needed)
@@ -119,7 +129,7 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
     })
   }
 
-  return services
+  return { services, discarded }
 }
 
 function normalizeServiceKey(name: string): string {
@@ -259,7 +269,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
  * e.g., "Database" removed if "PostgreSQL" exists (both category 'database')
  *        "Email From" removed if "SendGrid" exists (both category 'email')
  */
-function removeGenericEntries(groups: Map<string, ServiceGroup>): void {
+function removeGenericEntries(groups: Map<string, ServiceGroup>, discarded: DiscardedItem[]): void {
   const keys = Array.from(groups.keys())
 
   for (const key of keys) {
@@ -276,6 +286,15 @@ function removeGenericEntries(groups: Map<string, ServiceGroup>): void {
           !GENERIC_SERVICE_NAMES.has(otherGroup.name.toLowerCase())
       )
       if (hasSpecific) {
+        let finalScore = 0
+        for (const s of group.scoreByType.values()) finalScore += s
+        discarded.push({
+          name: group.name,
+          reason: 'generic_term',
+          score: finalScore,
+          evidences: group.reasons.map(r => ({ type: 'reason', value: r, file: '' })),
+          category: group.category,
+        })
         groups.delete(key)
       }
     }

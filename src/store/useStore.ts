@@ -11,12 +11,13 @@ import type {
   DeepAnalysisResult,
   LinkStatus,
   ScoreHistoryEntry,
+  DiscardedItem,
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
-type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
+export type ActivePanel = 'services' | 'dependencies' | 'discarded' | 'flow' | 'costs' | 'settings';
 
 interface StoreState {
   services: Service[];
@@ -36,6 +37,7 @@ interface StoreState {
   showTutorial: boolean;
   showScoreHistory: boolean;
   showDoctor: boolean;
+  discardedItems: DiscardedItem[];
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
 
@@ -65,6 +67,7 @@ interface StoreState {
   closeScoreHistory: () => void;
   openDoctor: () => void;
   closeDoctor: () => void;
+  restoreDiscardedItem: (item: DiscardedItem) => Promise<void>;
   setTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
 }
@@ -144,6 +147,7 @@ export const useStore = create<StoreState>((set, get) => ({
   showTutorial: false,
   showScoreHistory: false,
   showDoctor: false,
+  discardedItems: [],
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
 
@@ -216,6 +220,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowNodes: [...result.flowNodes, ...extraNodes],
         flowEdges: [...result.flowEdges, ...extraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
+        discardedItems: result.discardedItems ?? [],
         isAnalyzing: false,
         analysisPhase: null,
         activePanel: 'flow',
@@ -310,6 +315,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowNodes: [...result.flowNodes, ...ghExtraNodes],
         flowEdges: [...result.flowEdges, ...ghExtraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
+        discardedItems: result.discardedItems ?? [],
         isAnalyzing: false,
         analysisPhase: null,
         activePanel: 'flow',
@@ -592,6 +598,7 @@ export const useStore = create<StoreState>((set, get) => ({
       repoPath: null,
       config: null,
       deepAnalysis: null,
+      discardedItems: [],
       linkStatus: 'unknown',
       activePanel: 'flow',
       error: null,
@@ -629,6 +636,23 @@ export const useStore = create<StoreState>((set, get) => ({
 
   closeDoctor: () => {
     set({ showDoctor: false });
+  },
+
+  restoreDiscardedItem: async (item: DiscardedItem) => {
+    const id = item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const service: Service = {
+      id,
+      name: item.name,
+      category: item.category ?? 'other',
+      plan: 'unknown',
+      source: 'manual',
+      confidence: 'low',
+      needsReview: true,
+    };
+    await get().addManualService(service);
+    set((state) => ({
+      discardedItems: state.discardedItems.filter(d => d.name !== item.name),
+    }));
   },
 
   setTheme: (theme: ThemeName) => {

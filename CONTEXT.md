@@ -79,7 +79,8 @@ Never filter services out of the graph. Never create services without nodes.
 │ Renderer (src/)                             │
 │  ├── Stores: useStore, graphStore,          │
 │  │   dialogStore, toastStore, historyStore  │
-│  ├── 4 panels: Services, Deps, Flow, Costs │
+│  ├── 5 panels: Services, Deps, Discarded,  │
+│  │   Flow, Costs                           │
 │  ├── Score history modal (Recharts line)   │
 │  ├── Doctor modal (health checklist)       │
 │  ├── Theme system (dark/light via CSS vars)│
@@ -161,6 +162,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/components/Skeleton.tsx` | Skeleton loaders for all 4 panels |
 | `src/components/Toast.tsx` | Toast notification container |
 | `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
+| `src/components/DiscardedPanel/` | Virtualized list of items discarded during analysis, search, reason filter, restore to manual service |
 | `src/components/CostsPanel/` | Cost breakdown by category, renewal alerts, bar chart (Recharts), budget mode |
 | `src/components/Doctor/` | Doctor modal: health checklist (config, services, costs, vulns, score) |
 | `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
@@ -194,7 +196,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (336 tests, 22 suites) |
+| `npm test` | vitest (346 tests, 23 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -206,7 +208,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-336 tests across 22 suites. vitest + @testing-library/react + jsdom.
+346 tests across 23 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -229,7 +231,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Flow inference | 17 | 4-layer hierarchy (user → frontend/backend → grouping → services), virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 20 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal |
+| DiscardedPanel | 7 | Rendering, reason badges, restore button, scores, empty state |
+| Deduplicator | 23 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal, discarded tracking |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | daysUntil | 3 | Today, future, past |
 

@@ -8,6 +8,7 @@ import { Sidebar } from './components/Sidebar/Sidebar'
 import { Dashboard } from './components/Dashboard/Dashboard'
 import { ServicesPanel } from './components/ServicesPanel/ServicesPanel'
 import { DepsPanel } from './components/DepsPanel/DepsPanel'
+import { DiscardedPanel } from './components/DiscardedPanel/DiscardedPanel'
 import { FlowGraph } from './components/FlowGraph/FlowGraph'
 import { Settings } from './components/Settings/Settings'
 import { CostsPanel } from './components/CostsPanel/CostsPanel'
@@ -18,7 +19,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
 import { ScoreHistoryPanel } from './components/ScoreHistory/ScoreHistoryPanel'
 import { DoctorModal } from './components/Doctor/DoctorModal'
-import { ServicesPanelSkeleton, DepsPanelSkeleton, FlowGraphSkeleton, CostsPanelSkeleton } from './components/Skeleton'
+import { ServicesPanelSkeleton, DepsPanelSkeleton, DiscardedPanelSkeleton, FlowGraphSkeleton, CostsPanelSkeleton } from './components/Skeleton'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
@@ -65,6 +66,7 @@ export default function App() {
       switch (activePanel) {
         case 'services': return <ServicesPanelSkeleton />
         case 'dependencies': return <DepsPanelSkeleton />
+        case 'discarded': return <DiscardedPanelSkeleton />
         case 'flow': return <FlowGraphSkeleton />
         case 'costs': return <CostsPanelSkeleton />
         default: return <Dashboard />
@@ -76,6 +78,8 @@ export default function App() {
         return <ServicesPanel />
       case 'dependencies':
         return <DepsPanel />
+      case 'discarded':
+        return <DiscardedPanel />
       case 'flow':
         return <FlowGraph />
       case 'costs':

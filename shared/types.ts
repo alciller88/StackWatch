@@ -59,6 +59,14 @@ export interface FlowEdge {
   flowType: 'data' | 'auth' | 'payment' | 'webhook';
 }
 
+export interface DiscardedItem {
+  name: string;
+  reason: 'low_score' | 'ai_filter' | 'generic_term';
+  score: number;
+  evidences: { type: string; value: string; file: string }[];
+  category?: ServiceCategory;
+}
+
 export interface AnalysisResult {
   services: Service[];
   dependencies: Dependency[];
@@ -67,6 +75,7 @@ export interface AnalysisResult {
   deepAnalysis?: DeepAnalysisResult;
   aiError?: string;
   aiFilteredCount?: number;
+  discardedItems?: DiscardedItem[];
   monorepo?: {
     type: string;
     packages: string[];

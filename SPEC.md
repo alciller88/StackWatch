@@ -17,7 +17,7 @@ Modern projects depend on dozens of external services (hosting, domain, CI/CD, a
 - **Optional AI**: enhances detection with any OpenAI-compatible provider, including free local models (Ollama, LM Studio)
 - **Deep AI analysis**: analyzes service usage context, detects hidden services consumed via wrappers, and infers graph edge types
 - **Manual enrichment**: user adds what cannot be inferred (credentials, billing accounts, renewal dates, services with no code footprint)
-- **Unified view**: dashboard with five panels — services (with confidence levels), dependencies (with vulnerability scanning), flow graph, costs (with charts), and settings
+- **Unified view**: dashboard with six panels — services (with confidence levels), dependencies (with vulnerability scanning), discarded items (restore-able), flow graph, costs (with charts), and settings
 - **Triple delivery**: desktop app + CLI tool + GitHub Action
 - **Portable and offline**: all information lives in the repo itself as versionable JSON
 - **Stack Diff**: track how your stack changes between scans
@@ -293,6 +293,18 @@ interface Service {
 
 `domain`, `hosting`, `cicd`, `database`, `auth`, `payments`, `email`, `analytics`, `monitoring`, `cdn`, `storage`, `infra`, `ai`, `mobile`, `gaming`, `data`, `messaging`, `support`, `other`
 
+### DiscardedItem
+
+```typescript
+interface DiscardedItem {
+  name: string
+  reason: 'low_score' | 'ai_filter' | 'generic_term'
+  score: number
+  evidences: { type: string; value: string; file: string }[]
+  category?: ServiceCategory
+}
+```
+
 ### Evidence (internal)
 
 ```typescript
@@ -468,6 +480,7 @@ interface UserConfig {
 | **Dashboard** | `Dashboard.tsx` | Quick start guide, features grid, keyboard shortcuts, demo mode CTA |
 | **Services** | `ServicesPanel/` | Card grid (responsive), search, filters (19 categories, 4 plans, activity status), add/edit form, "Needs Review" section, confidence badges, zombie badges |
 | **Dependencies** | `DepsPanel/` | Virtualized table, sort by name/type, group by ecosystem, vulnerability scanning button |
+| **Discarded** | `DiscardedPanel/` | Virtualized list of items discarded during analysis, search, reason filter (low_score/ai_filter/generic_term), collapsible evidences, restore to manual service |
 | **Flow** | `FlowGraph/` | React Flow canvas, minimap, controls, legend, context menus (node/edge/pane), inline node edit panel, dagre layout |
 | **Costs** | `CostsPanel/` | Monthly/yearly totals, breakdown by category, horizontal bar chart (Recharts), renewal alerts with days countdown, budget mode with progress bar |
 | **Settings** | `Settings/` | AI provider selector (3 presets), API key field, model/URL config, test connection, scan mode toggle, theme toggle (dark/light), share section, about section |
@@ -478,7 +491,7 @@ interface UserConfig {
 |---|---|
 | `TitleBar` | Custom frameless titlebar with window controls (min/max/close) |
 | `TopBar` | Import/export/share, repo path, link status, GitHub connect, re-analyze |
-| `Sidebar` | Panel navigation (5 items), Stack Score display (clickable → history), theme toggle, version, collapsible |
+| `Sidebar` | Panel navigation (6 items), Stack Score display (clickable → history), theme toggle, version, collapsible |
 | `ScoreHistoryPanel` | Modal with Recharts line chart showing score history, trend stats, min/max/average |
 | `DoctorModal` | Health check modal: config, services, costs, vulns, score breakdown with pass/fail/warn icons |
 | `ConfirmDialog` | Promise-based modal with focus trap, ARIA roles |
@@ -697,7 +710,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-336 tests across 22 suites. Vitest + @testing-library/react + jsdom.
+346 tests across 23 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -720,7 +733,8 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
 | scoreHistory | 8 | `electron/analyzers/__tests__/` |
 | ContextMenu | 7 | `src/components/FlowGraph/__tests__/` |
-| Deduplicator | 20 | `electron/analyzers/__tests__/` |
+| DiscardedPanel | 7 | `src/components/DiscardedPanel/__tests__/` |
+| Deduplicator | 23 | `electron/analyzers/__tests__/` |
 | Pipeline | 7 | `electron/analyzers/__tests__/` |
 | daysUntil | 3 | `src/utils/__tests__/` |
 
@@ -766,3 +780,6 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] 3 new tests for filterFalsePositivesWithAI (valid response, malformed JSON, network error)
 - [x] Scan mode dialog: Merge (keep manual services + graph positions) vs Fresh Scan (discard all) before re-scanning repos with saved data
 - [x] 5 new tests for ScanModeDialog (no saved data skips dialog, shows dialog on saved data, cancel aborts, merge keeps manual, fresh discards manual)
+- [x] Discarded panel: virtualized list of items filtered during analysis (low_score, ai_filter, generic_term), with search, reason filter, and restore to manual service
+- [x] Backend: deduplicator tracks discarded items (low_score, generic_term), pipeline tracks AI-filtered items, included in AnalysisResult
+- [x] 10 new tests: DiscardedPanel (7), deduplicator discarded tracking (3)
