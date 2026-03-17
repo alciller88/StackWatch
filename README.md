@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Latest Release](https://img.shields.io/github/v/release/alciller88/StackWatch)](https://github.com/alciller88/StackWatch/releases/latest)
 
 StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project uses — with costs, renewal dates, and an interactive architecture graph.
 
@@ -30,7 +31,21 @@ Five panels:
 
 ---
 
-## Getting started
+## Download
+
+Pre-built binaries for all platforms are available on the [Releases page](https://github.com/alciller88/StackWatch/releases/latest):
+
+| Platform | Download |
+|---|---|
+| **Windows** | `.exe` installer or portable `.exe` |
+| **macOS** | `.dmg` (universal — Intel + Apple Silicon) |
+| **Linux** | `.AppImage` or `.deb` |
+
+No build required — download, install, and scan.
+
+---
+
+## Getting started (from source)
 
 ### Prerequisites
 

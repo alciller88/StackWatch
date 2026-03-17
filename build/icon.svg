@@ -1,14 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#0e1420"/>
-  <rect x="40" y="40" width="432" height="432" rx="60" fill="#111620" stroke="#1e2430" stroke-width="4"/>
-  <g transform="translate(256,240)">
-    <!-- Stack layers -->
-    <path d="M-120,40 L0,-20 L120,40 L0,100 Z" fill="#1a2a3a" stroke="#e2b04a" stroke-width="3"/>
-    <path d="M-120,0 L0,-60 L120,0 L0,60 Z" fill="#1a2a3a" stroke="#e2b04a" stroke-width="3"/>
-    <path d="M-120,-40 L0,-100 L120,-40 L0,20 Z" fill="#1a2a3a" stroke="#e2b04a" stroke-width="3"/>
-    <!-- Watch eye -->
-    <circle cx="0" cy="-40" r="16" fill="none" stroke="#e2b04a" stroke-width="3"/>
-    <circle cx="0" cy="-40" r="6" fill="#e2b04a"/>
-  </g>
-  <text x="256" y="420" text-anchor="middle" font-family="monospace" font-size="42" font-weight="bold" fill="#dce1e8" letter-spacing="6">STACKWATCH</text>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#0a0c0f"/>
+  <rect x="56" y="56" width="400" height="400" rx="48" fill="#0d1017" stroke="#e2b04a" stroke-width="6"/>
+  <rect x="70" y="70" width="372" height="372" rx="38" fill="none" stroke="#e2b04a" stroke-width="1.5" opacity="0.3"/>
+  <line x1="56" y1="130" x2="120" y2="130" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="392" y1="130" x2="456" y2="130" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="56" y1="382" x2="120" y2="382" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="392" y1="382" x2="456" y2="382" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="130" y1="56" x2="130" y2="120" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="382" y1="56" x2="382" y2="120" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="130" y1="392" x2="130" y2="456" stroke="#e2b04a" stroke-width="3"/>
+  <line x1="382" y1="392" x2="382" y2="456" stroke="#e2b04a" stroke-width="3"/>
+  <text x="256" y="242" font-family="IBM Plex Mono, monospace" font-size="180" font-weight="700" fill="#e2b04a" text-anchor="middle" dominant-baseline="middle" letter-spacing="-6">SW</text>
+  <line x1="100" y1="298" x2="412" y2="298" stroke="#e2b04a" stroke-width="2" opacity="0.4"/>
+  <text x="256" y="340" font-family="IBM Plex Mono, monospace" font-size="22" font-weight="400" fill="#e2b04a" text-anchor="middle" opacity="0.7" letter-spacing="6">STACKWATCH</text>
 </svg>

@@ -24,7 +24,7 @@ mac:
     - target: zip
       arch: [universal]
   category: public.app-category.developer-tools
-  icon: build/icon.png
+  icon: build/icon
   darkModeSupport: true
   hardenedRuntime: true
   gatekeeperAssess: false
@@ -46,7 +46,7 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
-  icon: build/icon.ico
+  icon: build/icon
 
 nsis:
   oneClick: false

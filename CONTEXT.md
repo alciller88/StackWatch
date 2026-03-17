@@ -184,8 +184,9 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### Build & validation
 | File | Purpose |
 |------|---------|
-| `electron-builder.yml` | macOS dmg+zip, Windows nsis+portable, Linux AppImage+deb |
-| `build/` | icon.svg, entitlements.mac.plist, Linux icon dir |
+| `electron-builder.yml` | macOS dmg+zip, Windows nsis+portable, Linux AppImage+deb. Icon path: `build/icon` (no extension — electron-builder resolves `.icns`/`.ico`/`icons/` per platform) |
+| `build/` | icon.svg (source), icon.png (512x512), icon.icns (macOS), icon.ico (Windows), icons/ (Linux PNGs 16-512), entitlements.mac.plist |
+| `scripts/generate-icons.js` | Generates all icon formats from `build/icon.svg` using sharp + png2icons. Run: `node scripts/generate-icons.js` |
 | `scripts/validate-build.js` | 29-point production build checker |
 | `.github/workflows/build.yml` | CI: test → build → validate → upload artifacts (3 platforms). On version tags (v*): also creates GitHub Release with all platform assets. |
 
@@ -212,12 +213,41 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ### Release flow
 
-1. Update `version` in `package.json` (e.g., `0.4.0` → `0.5.0`)
-2. Commit: `chore: bump version to v0.5.0`
-3. Run `npm run release` — validates build, creates git tag `v0.5.0`, pushes tag
+1. Update `version` in `package.json` (e.g., `0.5.0` → `0.6.0`)
+2. Commit: `chore: bump version to v0.6.0`
+3. Run `npm run release` — validates build, creates git tag `v0.6.0`, pushes tag
 4. CI workflow detects the `v*` tag → runs test → build (3 platforms) → creates GitHub Release with all platform binaries attached
 
 The `release` job uses `softprops/action-gh-release@v2` with `generate_release_notes: true` (auto-generates changelog from commits since the previous tag).
+
+**Available releases**: https://github.com/alciller88/StackWatch/releases
+
+**Platform assets per release**:
+| Platform | Assets |
+|----------|--------|
+| macOS | `.dmg` (universal), `.zip` (universal) |
+| Windows | `.exe` (NSIS installer), `.exe` (portable) |
+| Linux | `.AppImage`, `.deb` |
+
+### Release troubleshooting (lessons learned)
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| `GH_TOKEN not set` in CI build step | `electron-builder.yml` has a `publish` section → electron-builder tries to auto-publish | Use `npx electron-builder --publish never` in CI. The release job handles publishing separately via `softprops/action-gh-release` |
+| `icon directory doesn't contain icons` (Linux) | `build/icons/` was empty — no PNGs | Run `node scripts/generate-icons.js` to regenerate all icon formats from SVG |
+| `Please specify author 'email'` (.deb) | Missing `author` field with email in `package.json` | Set `"author": "name <email>"` in `package.json` |
+| Blank screen on launch (packaged app) | `loadFile` path wrong — `__dirname` is `dist-electron/electron/`, needs `../..` to reach app root, not `..` | `mainWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'index.html'))` |
+| Missing `.icns` / `.ico` | Only SVG existed, no platform-specific icon formats | Run `node scripts/generate-icons.js` — generates `.icns` (macOS), `.ico` (Windows), PNGs (Linux) from SVG via sharp + png2icons |
+
+### Icon generation
+
+All icons are generated from `build/icon.svg` via `scripts/generate-icons.js`:
+
+```bash
+node scripts/generate-icons.js
+```
+
+Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after changing the SVG. All generated files (`icon.png`, `icon.icns`, `icon.ico`, `icons/*.png`) are committed to the repo so CI builds don't need to run the script.
 
 ---
 
