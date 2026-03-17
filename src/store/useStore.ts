@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
 import { computeScanDiff } from '../utils/scanDiff';
+import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
@@ -45,10 +46,12 @@ interface StoreState {
   scanDiffAdded: Set<string>;
   /** Service IDs removed in last scan (for graph diff highlight). Cleared after 3s. */
   scanDiffRemoved: Set<string>;
+  stackScore: number;
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
   mode: StoreMode;
 
+  recalculateScore: () => void;
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
   reanalyze: () => Promise<void>;
@@ -159,9 +162,16 @@ export const useStore = create<StoreState>((set, get) => ({
   discardedItems: [],
   scanDiffAdded: new Set<string>(),
   scanDiffRemoved: new Set<string>(),
+  stackScore: 0,
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
   mode: 'scan' as StoreMode,
+
+  recalculateScore: () => {
+    const { services, flowNodes, flowEdges } = get();
+    const { score } = calculateHealthScore(services, flowNodes, flowEdges);
+    set({ stackScore: score });
+  },
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
@@ -245,6 +255,8 @@ export const useStore = create<StoreState>((set, get) => ({
         activePanel: 'flow',
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
+
+      get().recalculateScore();
 
       // Toast for AI fallback
       if (result.aiError) {
@@ -367,6 +379,8 @@ export const useStore = create<StoreState>((set, get) => ({
         activePanel: 'flow',
         linkStatus: 'linked',
       });
+
+      get().recalculateScore();
 
       // Clear diff highlight after 3 seconds
       if (diff.added.size > 0 || diff.removed.size > 0) {
@@ -538,6 +552,7 @@ export const useStore = create<StoreState>((set, get) => ({
     set((state) => ({
       services: [...state.services, service],
     }));
+    get().recalculateScore();
   },
 
   updateManualService: async (service: Service) => {
@@ -550,6 +565,7 @@ export const useStore = create<StoreState>((set, get) => ({
     set((state) => ({
       services: state.services.map(s => s.id === service.id ? service : s),
     }));
+    get().recalculateScore();
   },
 
   deleteManualService: async (serviceId: string) => {
@@ -562,6 +578,7 @@ export const useStore = create<StoreState>((set, get) => ({
     set((state) => ({
       services: state.services.filter(s => s.id !== serviceId),
     }));
+    get().recalculateScore();
   },
 
   setBudget: async (budget) => {
@@ -642,6 +659,7 @@ export const useStore = create<StoreState>((set, get) => ({
         s.id === serviceId ? { ...s, confidence } : s
       ),
     }));
+    get().recalculateScore();
   },
 
   loadDemo: () => {
@@ -659,6 +677,7 @@ export const useStore = create<StoreState>((set, get) => ({
       error: null,
       mode: 'scan',
     });
+    get().recalculateScore();
   },
 
   initBlankStack: () => {
@@ -682,6 +701,7 @@ export const useStore = create<StoreState>((set, get) => ({
       error: null,
       mode: 'blank',
     });
+    get().recalculateScore();
   },
 
   dismissTutorial: () => {
@@ -749,3 +769,38 @@ export const useStore = create<StoreState>((set, get) => ({
     get().setTheme(current === 'dark' ? 'light' : 'dark');
   },
 }));
+
+// Debounced score history persistence — saves manual score changes to disk after 2s
+let _scoreDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+useStore.subscribe(
+  (state, prev) => {
+    if (state.stackScore !== prev.stackScore && state.stackScore > 0 && !state.isAnalyzing) {
+      if (_scoreDebounceTimer) clearTimeout(_scoreDebounceTimer);
+      _scoreDebounceTimer = setTimeout(() => {
+        const { repoPath, services, dependencies, flowNodes, flowEdges } = useStore.getState();
+        if (!repoPath || !window.stackwatch?.saveScoreEntry) return;
+        const breakdown = calculateHealthScore(services, flowNodes, flowEdges);
+        const entry: ScoreHistoryEntry = {
+          timestamp: new Date().toISOString(),
+          score: breakdown.score,
+          breakdown: {
+            servicesWithCost: breakdown.servicesWithCost,
+            servicesWithOwner: breakdown.servicesWithOwner,
+            servicesReviewed: breakdown.servicesReviewed,
+            graphCompleteness: breakdown.graphCompleteness,
+          },
+          serviceCount: services.length,
+          depCount: dependencies.length,
+          source: 'manual',
+        };
+        window.stackwatch.saveScoreEntry(repoPath, entry).then(() => {
+          // Reload history so the chart updates
+          useStore.getState().loadScoreHistory();
+        }).catch(() => {
+          // Non-critical
+        });
+      }, 2000);
+    }
+  }
+);

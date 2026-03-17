@@ -63,7 +63,7 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 ```
 ┌─────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (22 channels)             │
+│  ├── IPC handlers (23 channels)             │
 │  ├── electron-store (safeStorage encrypted) │
 │  ├── Analyzers (pure Node.js)               │
 │  ├── AI client (OpenAI-compatible)          │
@@ -96,8 +96,8 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 
 | Store | Purpose | Key details |
 |-------|---------|-------------|
-| `useStore` | Global state: services, deps, config, AI settings, analysis state, theme, score history, budget, mode (scan/blank) | Merged services = inferred + manual + confidence overrides. Theme persisted in localStorage. |
-| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. |
+| `useStore` | Global state: services, deps, config, AI settings, analysis state, theme, score history, budget, mode (scan/blank), stackScore | Merged services = inferred + manual + confidence overrides. Theme persisted in localStorage. `stackScore` is recalculated reactively after every service/graph mutation via `recalculateScore()`. Score changes are debounced (2s) and persisted to `.stackwatch/score-history.json` with `source: 'manual'`. |
+| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. Subscribes to node/edge count changes to trigger `useStore.recalculateScore()`. |
 | `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
 | `dialogStore` | Promise-based confirm dialogs | Returns button value string |
 | `toastStore` | Notifications | Auto-dismiss after 4s |
@@ -253,7 +253,7 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 
 ## Tests
 
-359 tests across 25 suites. vitest + @testing-library/react + jsdom.
+363 tests across 25 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -273,7 +273,7 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 12 | Rendering, interactions, confidence, a11y, evidence info popover |
 | scanDiff | 7 | Added/removed detection, empty lists, both empty, first scan |
-| useStore | 15 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel) |
+| useStore | 19 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel), reactive stackScore (add/update/delete/graph) |
 | Flow inference | 17 | 4-layer hierarchy (user → frontend/backend → grouping → services), virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |

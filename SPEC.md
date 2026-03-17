@@ -85,7 +85,7 @@ Additional post-scan steps:
 - **Snapshot save**: automatically save scan result for future diffs
 - **Renewal notifications**: OS desktop alerts for services expiring within 30 days
 - **Zombie detection**: cross-reference services with `git log` to find abandoned services (6+ months inactive)
-- **Score history**: append health score to `.stackwatch/score-history.json` after each scan (max 100 entries)
+- **Score history**: append health score to `.stackwatch/score-history.json` after each scan and after manual edits (debounced 2s, max 100 entries). Entries include `source: 'scan' | 'manual'` to distinguish origin.
 
 ### 3.1 Evidence extractor (`extractor.ts`)
 
@@ -225,11 +225,12 @@ Detects potentially abandoned services by cross-referencing with git history:
 
 ### 3.10 Score history (`scoreHistory.ts`)
 
-Persists health scores to `.stackwatch/score-history.json` after each scan:
-- Stores `{ timestamp, score, breakdown, serviceCount, depCount }` entries
+Persists health scores to `.stackwatch/score-history.json` after scans and manual edits:
+- Stores `{ timestamp, score, breakdown, serviceCount, depCount, source }` entries
+- `source`: `'scan'` (from analysis pipeline) or `'manual'` (from user edits, debounced 2s)
 - Maximum 100 entries (oldest trimmed)
 - Used by CLI to show score trends (up/down/unchanged from last scan)
-- Available via IPC `get-score-history` for future UI charting
+- Available via IPC `get-score-history` and `save-score-entry` for UI charting
 - Same `.stackwatch/` directory as Stack Diff snapshots
 
 ### 3.11 Flow inference (`flowInference.ts`)
@@ -400,6 +401,7 @@ interface ScoreHistoryEntry {
   }
   serviceCount: number
   depCount: number
+  source?: 'scan' | 'manual'  // origin of the entry
 }
 ```
 
@@ -498,7 +500,7 @@ interface UserConfig {
 | `TitleBar` | Custom frameless titlebar with window controls (min/max/close) |
 | `TopBar` | Import/export/share, repo path, link status, GitHub connect, re-analyze |
 | `Sidebar` | Panel navigation (6 items), Stack Score display (clickable → history), theme toggle, version, collapsible |
-| `ScoreHistoryPanel` | Modal with Recharts line chart showing score history, trend stats, min/max/average |
+| `ScoreHistoryPanel` | Modal with Recharts line chart showing score history, trend stats, min/max/average. Scan entries show gold dots, manual-edit entries show blue dots with dashed border. Tooltip includes source label. |
 | `DoctorModal` | Health check modal: config, services, costs, vulns, score breakdown with pass/fail/warn icons |
 | `ConfirmDialog` | Promise-based modal with focus trap, ARIA roles |
 | `Toast` | Auto-dismiss notifications (success/error/info), 4s timeout |
@@ -580,6 +582,7 @@ interface StackWatchAPI {
 
   // Score history
   getScoreHistory(folderPath: string): Promise<ScoreHistoryEntry[]>
+  saveScoreEntry(folderPath: string, entry: ScoreHistoryEntry): Promise<void>
 
   // AI
   getAISettings(): Promise<AISettings>
@@ -729,7 +732,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-359 tests across 25 suites. Vitest + @testing-library/react + jsdom.
+363 tests across 25 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -749,7 +752,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | alternativeSuggester | 10 | `electron/ai/__tests__/` |
 | ServiceCard | 12 | `src/components/ServicesPanel/__tests__/` |
 | scanDiff | 7 | `src/utils/__tests__/` |
-| useStore | 15 | `src/store/__tests__/` |
+| useStore | 19 | `src/store/__tests__/` |
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
 | scoreHistory | 8 | `electron/analyzers/__tests__/` |
 | ContextMenu | 7 | `src/components/FlowGraph/__tests__/` |

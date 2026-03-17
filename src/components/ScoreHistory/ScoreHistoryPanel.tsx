@@ -42,6 +42,7 @@ const CustomTooltip = ({
 }) => {
   if (!active || !payload || payload.length === 0) return null;
   const entry = payload[0].payload;
+  const sourceLabel = entry.source === 'manual' ? 'Manual edit' : 'Scan';
   return (
     <div
       style={{
@@ -69,7 +70,44 @@ const CustomTooltip = ({
       <div style={{ color: '#7a8da6', marginTop: 4 }}>
         {entry.serviceCount} services, {entry.depCount} deps
       </div>
+      <div style={{ color: entry.source === 'manual' ? '#60a5fa' : '#e2b04a', marginTop: 4 }}>
+        Source: {sourceLabel}
+      </div>
     </div>
+  );
+};
+
+// Custom dot: scan = solid gold circle, manual = blue circle with dashed border
+const CustomDot = (props: { cx?: number; cy?: number; payload?: ChartEntry }) => {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null || !payload) return null;
+  const isManual = payload.source === 'manual';
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={3}
+      fill={isManual ? '#60a5fa' : '#e2b04a'}
+      stroke={isManual ? '#60a5fa' : '#e2b04a'}
+      strokeWidth={isManual ? 1.5 : 0}
+      strokeDasharray={isManual ? '2 2' : undefined}
+    />
+  );
+};
+
+const CustomActiveDot = (props: { cx?: number; cy?: number; payload?: ChartEntry }) => {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null || !payload) return null;
+  const isManual = payload.source === 'manual';
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill={isManual ? '#60a5fa' : '#e2b04a'}
+      stroke="#0d1017"
+      strokeWidth={2}
+    />
   );
 };
 
@@ -262,17 +300,8 @@ export const ScoreHistoryPanel: React.FC = () => {
                       dataKey="score"
                       stroke="#e2b04a"
                       strokeWidth={2}
-                      dot={{
-                        fill: '#e2b04a',
-                        stroke: '#e2b04a',
-                        r: 3,
-                      }}
-                      activeDot={{
-                        fill: '#e2b04a',
-                        stroke: '#0d1017',
-                        strokeWidth: 2,
-                        r: 5,
-                      }}
+                      dot={<CustomDot />}
+                      activeDot={<CustomActiveDot />}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -314,7 +343,7 @@ export const ScoreHistoryPanel: React.FC = () => {
                           }}
                         >
                           {stats.diff > 0 ? '+' : ''}
-                          {stats.diff} points over {stats.count} scans
+                          {stats.diff} points over {stats.count} entries
                         </div>
                       )}
                     </div>

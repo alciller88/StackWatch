@@ -592,3 +592,14 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     await window.stackwatch.saveConfig(repoPath, config)
   },
 }))
+
+// Recalculate score when graph structure changes (node/edge add/remove)
+useGraphStore.subscribe(
+  (state, prev) => {
+    if (state.nodes.length !== prev.nodes.length || state.edges.length !== prev.edges.length) {
+      import('./useStore').then(({ useStore }) => {
+        useStore.getState().recalculateScore()
+      })
+    }
+  }
+)

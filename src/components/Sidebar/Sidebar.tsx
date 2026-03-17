@@ -1,9 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { useGraphStore } from '../../store/graphStore';
 import { APP_VERSION } from '../../constants';
-import { calculateHealthScore } from '../../utils/healthScore';
-import type { FlowNode, FlowEdge } from '../../types';
 
 import type { ActivePanel } from '../../store/useStore';
 
@@ -121,25 +118,8 @@ const sectionLabel = (text: string, collapsed: boolean) =>
   ) : null;
 
 export const Sidebar: React.FC = () => {
-  const { activePanel, setActivePanel, services, openScoreHistory, openDoctor, theme, toggleTheme } = useStore();
-  const graphNodes = useGraphStore(s => s.nodes);
-  const graphEdges = useGraphStore(s => s.edges);
+  const { activePanel, setActivePanel, services, stackScore, openScoreHistory, openDoctor, theme, toggleTheme } = useStore();
   const [collapsed, setCollapsed] = useState(false);
-
-  const breakdown = useMemo(() => {
-    const fNodes: FlowNode[] = graphNodes.map(n => ({
-      id: n.id,
-      label: n.data.label,
-      type: n.data.nodeType ?? 'external',
-      serviceId: n.data.serviceId,
-    }));
-    const fEdges: FlowEdge[] = graphEdges.map(e => ({
-      source: e.source,
-      target: e.target,
-      flowType: e.data?.flowType ?? 'data',
-    }));
-    return calculateHealthScore(services, fNodes, fEdges);
-  }, [services, graphNodes, graphEdges]);
 
   const viewItems = navItems.filter(i => i.section === 'views');
   const systemItems = navItems.filter(i => i.section === 'system');
@@ -186,18 +166,18 @@ export const Sidebar: React.FC = () => {
           onClick={openScoreHistory}
           className="w-full flex flex-col items-center py-3 border-b cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
           style={{ borderColor: 'var(--color-border)' }}
-          title={collapsed ? `Score: ${breakdown.score} — Click for history` : `Cost: ${breakdown.servicesWithCost}% | Owner: ${breakdown.servicesWithOwner}% | Reviewed: ${breakdown.servicesReviewed}% | Graph: ${breakdown.graphCompleteness}% — Click for history`}
+          title={collapsed ? `Score: ${stackScore} — Click for history` : `Stack Score: ${stackScore} — Click for history`}
         >
           <span
             className={`font-mono font-bold ${collapsed ? 'text-sm' : 'text-lg'} ${
-              breakdown.score >= 80
+              stackScore >= 80
                 ? 'text-green-400'
-                : breakdown.score >= 50
+                : stackScore >= 50
                   ? 'text-[var(--color-accent)]'
                   : 'text-red-400'
             }`}
           >
-            {breakdown.score}
+            {stackScore}
           </span>
           {!collapsed && (
             <span className="font-mono text-[10px] tracking-widest uppercase flex items-center gap-1.5" style={{ color: 'var(--color-text-muted)' }}>

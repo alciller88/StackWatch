@@ -12,6 +12,7 @@ export interface ScoreHistoryEntry {
   };
   serviceCount: number;
   depCount: number;
+  source?: 'scan' | 'manual';
 }
 
 const HISTORY_DIR = '.stackwatch';

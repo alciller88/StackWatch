@@ -265,6 +265,7 @@ export interface ScoreHistoryEntry {
   };
   serviceCount: number;
   depCount: number;
+  source?: 'scan' | 'manual';
 }
 
 export interface HtmlExportData {
@@ -302,6 +303,7 @@ export interface StackWatchAPI {
   scanVulnerabilities(deps: Dependency[]): Promise<DepVulnResult[]>;
   getStackDiff(folderPath: string): Promise<StackDiffResult | null>;
   getScoreHistory(folderPath: string): Promise<ScoreHistoryEntry[]>;
+  saveScoreEntry(folderPath: string, entry: ScoreHistoryEntry): Promise<void>;
   checkRenewals(services: Service[]): Promise<void>;
   exportHtml(data: HtmlExportData): Promise<boolean>;
   openExternalUrl(url: string): Promise<boolean>;

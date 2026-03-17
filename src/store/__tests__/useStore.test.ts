@@ -416,3 +416,112 @@ describe('ScanModeDialog', () => {
     confirmSpy.mockRestore();
   });
 });
+
+// ── Reactive Stack Score ──
+
+describe('Reactive stackScore', () => {
+  beforeEach(() => {
+    useStore.setState({
+      services: [],
+      dependencies: [],
+      flowNodes: [],
+      flowEdges: [],
+      repoPath: '/test/repo',
+      isAnalyzing: false,
+      stackScore: 0,
+      activePanel: 'services',
+      config: {
+        version: '1',
+        project: { name: 'Test', description: '' },
+        services: [],
+        accounts: [],
+      },
+      error: null,
+    });
+    vi.clearAllMocks();
+    mockStackwatch.saveConfig.mockResolvedValue(undefined);
+  });
+
+  it('recalculates score after addManualService', async () => {
+    expect(useStore.getState().stackScore).toBe(0);
+
+    const svc = makeService('stripe', {
+      source: 'manual',
+      cost: { amount: 50, currency: 'USD', period: 'monthly' },
+      owner: 'Alice',
+      needsReview: false,
+    });
+
+    await useStore.getState().addManualService(svc);
+
+    // Score should be > 0 now (cost 30 + owner 25 + reviewed 25 = 80, no graph = 0)
+    expect(useStore.getState().stackScore).toBeGreaterThan(0);
+    expect(useStore.getState().stackScore).toBe(80);
+  });
+
+  it('recalculates score after updateManualService', async () => {
+    const svc = makeService('stripe', { source: 'manual', needsReview: true });
+    useStore.setState({
+      services: [svc],
+      config: {
+        version: '1',
+        project: { name: 'Test', description: '' },
+        services: [svc],
+        accounts: [],
+      },
+    });
+    useStore.getState().recalculateScore();
+    const scoreBefore = useStore.getState().stackScore;
+
+    // Add owner and cost
+    const updated = {
+      ...svc,
+      owner: 'Bob',
+      cost: { amount: 10, currency: 'USD', period: 'monthly' as const },
+      needsReview: false,
+    };
+    await useStore.getState().updateManualService(updated);
+
+    expect(useStore.getState().stackScore).toBeGreaterThan(scoreBefore);
+  });
+
+  it('recalculates score after deleteManualService', async () => {
+    const svc = makeService('stripe', {
+      source: 'manual',
+      cost: { amount: 50, currency: 'USD', period: 'monthly' },
+      owner: 'Alice',
+      needsReview: false,
+    });
+    useStore.setState({
+      services: [svc],
+      config: {
+        version: '1',
+        project: { name: 'Test', description: '' },
+        services: [svc],
+        accounts: [],
+      },
+    });
+    useStore.getState().recalculateScore();
+    expect(useStore.getState().stackScore).toBe(80);
+
+    await useStore.getState().deleteManualService('stripe');
+
+    // No services → score is 0
+    expect(useStore.getState().stackScore).toBe(0);
+  });
+
+  it('recalculateScore uses flowNodes and flowEdges for graph completeness', () => {
+    const svc = makeService('stripe', { source: 'manual', needsReview: true });
+    const node: FlowNode = { id: 'svc-stripe', label: 'Stripe', type: 'external', serviceId: 'stripe' };
+    useStore.setState({
+      services: [svc],
+      flowNodes: [node],
+      flowEdges: [{ source: 'user', target: 'svc-stripe', flowType: 'data' }],
+    });
+
+    useStore.getState().recalculateScore();
+
+    // With 1 service connected via edge: graph completeness = 100% = 20 points
+    expect(useStore.getState().stackScore).toBe(20);
+  });
+});

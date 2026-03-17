@@ -55,6 +55,9 @@ const api: StackWatchAPI = {
   getScoreHistory: (folderPath: string) =>
     ipcRenderer.invoke('get-score-history', folderPath),
 
+  saveScoreEntry: (folderPath: string, entry: import('../shared/types').ScoreHistoryEntry) =>
+    ipcRenderer.invoke('save-score-entry', { folderPath, entry }),
+
   checkRenewals: (services: import('../shared/types').Service[]) =>
     ipcRenderer.invoke('check-renewals', services),
 

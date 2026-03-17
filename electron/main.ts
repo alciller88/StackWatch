@@ -208,6 +208,7 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
       breakdown: { servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness },
       serviceCount: result.services.length,
       depCount: result.dependencies.length,
+      source: 'scan',
     })
   } catch {
     // Non-critical: don't fail the scan if score history save fails
@@ -541,6 +542,11 @@ ipcMain.handle('check-renewals', async (_event, services: Service[]) => {
 ipcMain.handle('get-score-history', async (_event, folderPath: string) => {
   const safePath = validateRepoPath(folderPath)
   return loadScoreHistory(safePath)
+})
+
+ipcMain.handle('save-score-entry', async (_event, { folderPath, entry }: { folderPath: string; entry: import('./analyzers/scoreHistory').ScoreHistoryEntry }) => {
+  const safePath = validateRepoPath(folderPath)
+  await appendScoreEntry(safePath, entry)
 })
 
 // --- Vulnerability Scanning ---

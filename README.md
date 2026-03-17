@@ -91,7 +91,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (359 tests across 25 suites) |
+| `npm test` | Run unit tests (363 tests across 25 suites) |
 | `npm run release` | Validate, tag current version, push tag (triggers CI release) |
 
 ### Your first scan in 4 steps
@@ -460,7 +460,7 @@ StackWatch/
 
 ### Test suites
 
-359 tests across 25 suites:
+363 tests across 25 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -480,7 +480,7 @@ StackWatch/
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 12 | Rendering, interactions, confidence, a11y, evidence info popover |
 | scanDiff | 7 | Added/removed detection, empty lists, first scan |
-| useStore | 15 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel) |
+| useStore | 19 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel), reactive stackScore |
 | Flow inference | 17 | 4-layer hierarchy, virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
@@ -561,12 +561,12 @@ StackWatch/
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
 - [x] Scan mode dialog: merge (keep manual + positions) vs fresh scan on re-analyze
 - [x] Discarded panel: virtualized list of filtered items with search, reason filter, restore to manual service
-- [x] 359 tests across 25 suites (+10 DiscardedPanel and deduplicator tracking tests)
+- [x] 363 tests across 25 suites (+10 DiscardedPanel and deduplicator tracking tests)
 - [x] Layer node type: organizational nodes (User, Frontend, Backend) use type: 'layer' with custom colors and sizing
 - [x] "Add layer node" in canvas context menu, layer-specific icons, no confidence badges
 - [x] Evidence info popover: "Why was this detected?" button on service cards with score breakdown
 - [x] Graph diff visual: green highlight for new nodes, grey strikethrough for removed (3s after re-scan)
-- [x] 359 tests across 25 suites (+9 scanDiff and evidence popover tests)
+- [x] 363 tests across 25 suites (+9 scanDiff and evidence popover tests)
 - [x] Release automation: GitHub Release with platform binaries on version tags (v*), `npm run release` convenience script
 - [x] Sensitive field encryption: accountEmail/owner/notes stored as $encrypted: references in config JSON
 - [x] Error handling: configurable toast timeouts (8s for errors), AI/save/empty-scan toasts
@@ -574,6 +574,7 @@ StackWatch/
 - [x] Integration tests with fixture repo (Stripe, Sentry, PostgreSQL detection, no false positives)
 - [x] User docs: 4-step first scan guide, AI setup guide, CLI/GitHub Action examples
 - [x] Blank Stack mode: start with empty canvas + USER node, build architecture manually, no repo required
+- [x] Reactive Stack Score: recalculates in real-time after every service/graph mutation, debounced history persistence with scan/manual source differentiation
 
 ---
 
