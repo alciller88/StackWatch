@@ -131,7 +131,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
 | `electron/analyzers/heuristic.ts` | Semantic scoring classification into 19 categories (config_file: 10, ci_secret: 8, env_var credential: 7, env_var endpoint: 6, url: 5, env_var generic: 2, npm/import: 1) + hard filters (CI vars, feature flags, browser APIs) + score penalties (config suffixes: -5, descriptive phrases: -3, project name: -10) |
 | `electron/analyzers/deduplicator.ts` | Service grouping, best-score-per-unique-evidence-type (not additive per instance), thresholds (<6: discard, 6-10: low/needsReview for AI, >10: high), brand collapse, generic entry removal |
-| `electron/analyzers/flowInference.ts` | Node/edge generation from services + deps |
+| `electron/analyzers/flowInference.ts` | 4-layer hierarchical graph: user → frontend/backend (virtual) → grouping nodes (Auth Layer, Data Layer for 2+ services) → individual services. Category routing: frontend-bound (hosting, cdn, auth, analytics, support), backend-bound (database, storage, payments, email, monitoring, messaging, cicd, infra). Virtual nodes only when relevant services exist. |
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
 | `electron/analyzers/stackDiff.ts` | Stack Diff: compare scans, save/load snapshots (.stackwatch/last-scan.json) |
@@ -194,7 +194,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (319 tests, 22 suites) |
+| `npm test` | vitest (331 tests, 22 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -206,7 +206,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-323 tests across 22 suites. vitest + @testing-library/react + jsdom.
+331 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -226,7 +226,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 10 | Rendering, interactions, confidence, a11y |
 | useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
-| Flow inference | 9 | Node types, edge routing, layout |
+| Flow inference | 17 | 4-layer hierarchy (user → frontend/backend → grouping → services), virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
 | Deduplicator | 20 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal |

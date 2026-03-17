@@ -234,11 +234,14 @@ Persists health scores to `.stackwatch/score-history.json` after each scan:
 
 ### 3.11 Flow inference (`flowInference.ts`)
 
-Generates architecture graph from detected services:
-- Creates typed nodes: user, frontend, api, database, external, service
+Generates a 4-layer hierarchical architecture graph from detected services:
+- **Layer 1**: user node (always present as entry point)
+- **Layer 2**: virtual frontend node (only if hosting/cdn services detected) and virtual backend node (if backend-category services exist). Both have no serviceId, use type 'frontend'/'api', labels 'Frontend'/'Backend'. A frontend→backend edge is added when both exist.
+- **Layer 3**: intermediate grouping nodes (e.g. Auth Layer, Data Layer) — created only for category groups with 2+ services
+- **Layer 4**: individual service nodes
+- Category routing: frontend-bound (hosting, cdn, auth, analytics, support), backend-bound (database, storage, payments, email, monitoring, messaging, cicd, infra), 'other' (with url → backend, without → frontend)
 - Creates typed edges: data, auth, payment, webhook
-- Dagre hierarchical layout (top-to-bottom)
-- User node always present as entry point
+- Dagre hierarchical layout (top-to-bottom, ranksep 120, nodesep 80). Virtual nodes use 160x48 dimensions, service nodes 180x60.
 
 ### 3.12 HTML exporter (`exporters/htmlExporter.ts`)
 

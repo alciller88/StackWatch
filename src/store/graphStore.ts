@@ -16,6 +16,19 @@ import { useHistoryStore } from './historyStore'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
+const VIRTUAL_NODE_WIDTH = 160
+const VIRTUAL_NODE_HEIGHT = 48
+
+// Virtual nodes have no serviceId — they are grouping nodes (frontend, backend, layer-*)
+function isVirtualNode(node: FlowNode | Node): boolean {
+  const data = 'data' in node ? (node as Node).data : node
+  return !data?.serviceId
+}
+
+function getNodeDimensions(node: FlowNode | Node): { width: number; height: number } {
+  if (isVirtualNode(node)) return { width: VIRTUAL_NODE_WIDTH, height: VIRTUAL_NODE_HEIGHT }
+  return { width: NODE_WIDTH, height: NODE_HEIGHT }
+}
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 
 function getCurrentServices(): import('../types').Service[] {
@@ -69,10 +82,11 @@ function flowNodesToRFNodes(
     // Any new nodes → recalculate full layout with dagre to avoid overlaps
     const g = new dagre.graphlib.Graph()
     g.setDefaultEdgeLabel(() => ({}))
-    g.setGraph({ rankdir: 'TB', ranksep: 80, nodesep: 40, marginx: 20, marginy: 20 })
+    g.setGraph({ rankdir: 'TB', ranksep: 120, nodesep: 80, marginx: 20, marginy: 20 })
 
     for (const node of flowNodes) {
-      g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
+      const dim = getNodeDimensions(node)
+      g.setNode(node.id, { width: dim.width, height: dim.height })
     }
     for (const edge of flowEdges) {
       g.setEdge(edge.source, edge.target)
@@ -81,10 +95,11 @@ function flowNodesToRFNodes(
 
     positionMap = new Map()
     for (const node of flowNodes) {
+      const dim = getNodeDimensions(node)
       const pos = g.node(node.id)
       positionMap.set(node.id, {
-        x: (pos?.x ?? 0) - NODE_WIDTH / 2,
-        y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
+        x: (pos?.x ?? 0) - dim.width / 2,
+        y: (pos?.y ?? 0) - dim.height / 2,
       })
     }
   }
@@ -450,10 +465,11 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
 
     const g = new dagre.graphlib.Graph()
     g.setDefaultEdgeLabel(() => ({}))
-    g.setGraph({ rankdir: 'TB', ranksep: 80, nodesep: 40, marginx: 20, marginy: 20 })
+    g.setGraph({ rankdir: 'TB', ranksep: 120, nodesep: 80, marginx: 20, marginy: 20 })
 
     for (const node of nodes) {
-      g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT })
+      const dim = getNodeDimensions(node)
+      g.setNode(node.id, { width: dim.width, height: dim.height })
     }
     for (const edge of edges) {
       g.setEdge(edge.source, edge.target)
@@ -462,12 +478,13 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
 
     set({
       nodes: nodes.map((node) => {
+        const dim = getNodeDimensions(node)
         const pos = g.node(node.id)
         return {
           ...node,
           position: {
-            x: (pos?.x ?? 0) - NODE_WIDTH / 2,
-            y: (pos?.y ?? 0) - NODE_HEIGHT / 2,
+            x: (pos?.x ?? 0) - dim.width / 2,
+            y: (pos?.y ?? 0) - dim.height / 2,
           },
         }
       }),

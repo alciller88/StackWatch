@@ -86,7 +86,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (323 tests across 22 suites) |
+| `npm test` | Run unit tests (331 tests across 22 suites) |
 
 ### CLI (no Electron required)
 
@@ -256,7 +256,7 @@ Configure in Settings → test the connection → enable AI analysis. All AI cal
 
 The Flow panel provides a canvas-based architecture visualisation powered by React Flow:
 
-- **Auto-layout** — Dagre hierarchical layout (user → frontend → API → services)
+- **Auto-layout** — Dagre 4-layer hierarchical layout (user → frontend/backend → category groups → services)
 - **Drag and reposition** — node positions persist to config
 - **Context menus** — right-click nodes to edit, delete, exclude, or add connections
 - **Custom connections** — drag between nodes to create edges, set flow types (data/auth/payment/webhook)
@@ -430,7 +430,7 @@ StackWatch/
 
 ### Test suites
 
-323 tests across 22 suites:
+331 tests across 22 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -450,7 +450,7 @@ StackWatch/
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 10 | Rendering, interactions, confidence, a11y |
 | useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
-| Flow inference | 9 | Node types, edge routing, layout |
+| Flow inference | 17 | 4-layer hierarchy, virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
 | Deduplicator | 20 | Grouping, merging, best-per-type scoring, thresholds, brand collapse |
@@ -495,7 +495,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 323 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
+- [x] 331 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
@@ -526,7 +526,7 @@ StackWatch/
 - [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
 - [x] Zombie UI badges and activity status filter in Services panel
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
-- [x] 323 tests across 22 suites (+43 tests for new modules)
+- [x] 331 tests across 22 suites (+43 tests for new modules)
 
 ---
 

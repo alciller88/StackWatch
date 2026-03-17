@@ -49,9 +49,9 @@ describe('analyzeGitHubRepo pipeline', () => {
     expect(stripeSvc).toBeDefined()
     expect(stripeSvc!.category).toBe('payments')
 
-    // Frontend node should exist
-    const frontendNode = result.flowNodes.find(n => n.type === 'frontend')
-    expect(frontendNode).toBeDefined()
+    // Backend node should exist (Stripe is a payments service → backend)
+    const backendNode = result.flowNodes.find(n => n.type === 'api')
+    expect(backendNode).toBeDefined()
   })
 
   it('discards npm-only packages without additional evidence', async () => {
@@ -105,7 +105,7 @@ describe('analyzeGitHubRepo pipeline', () => {
 
     const nodeTypes = result.flowNodes.map(n => n.type)
     expect(nodeTypes).toContain('user')
-    expect(nodeTypes).toContain('frontend')
+    // No hosting/cdn service → no frontend virtual node
     expect(nodeTypes).toContain('api')
 
     // Stripe should produce an external node
@@ -113,14 +113,7 @@ describe('analyzeGitHubRepo pipeline', () => {
     expect(stripeNode).toBeDefined()
     expect(stripeNode!.type).toBe('external')
 
-    // Should have edges connecting the flow
-    const frontendToApi = result.flowEdges.find(
-      e => e.source === 'frontend' && e.target === 'api',
-    )
-    expect(frontendToApi).toBeDefined()
-    expect(frontendToApi!.flowType).toBe('data')
-
-    // Payment edge from api to stripe
+    // Payment edge from backend to stripe
     const paymentEdge = result.flowEdges.find(e => e.flowType === 'payment')
     expect(paymentEdge).toBeDefined()
     expect(paymentEdge!.source).toBe('api')

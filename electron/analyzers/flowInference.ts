@@ -1,76 +1,142 @@
 import type { Service, Dependency, FlowNode, FlowEdge } from '../types'
 
-const FRONTEND_DEPS = ['react', 'vue', 'svelte', '@angular/core', 'next', 'nuxt', 'gatsby']
-const BACKEND_DEPS = ['express', 'fastify', 'koa', '@nestjs/core', 'hapi', 'restify']
+// Categories routed through the frontend virtual node
+const FRONTEND_CATEGORIES = new Set<string>([
+  'hosting', 'cdn', 'auth', 'analytics', 'support',
+])
+
+// Categories routed through the backend virtual node
+const BACKEND_CATEGORIES = new Set<string>([
+  'database', 'storage', 'payments', 'email', 'monitoring',
+  'messaging', 'cicd', 'infra',
+])
+
+// Category groups that merge into a single intermediate layer node
+const CATEGORY_GROUPS: Record<string, { categories: string[]; label: string }> = {
+  auth: { categories: ['auth'], label: 'Auth Layer' },
+  data: { categories: ['database', 'storage'], label: 'Data Layer' },
+}
+
+function categoryToNodeType(cat: Service['category']): FlowNode['type'] {
+  if (cat === 'cdn') return 'cdn'
+  if (cat === 'database') return 'database'
+  return 'external'
+}
+
+function getFlowType(svc: Service): FlowEdge['flowType'] {
+  if (svc.category === 'payments') return 'payment'
+  if (svc.category === 'auth') return 'auth'
+  return 'data'
+}
+
+function findGroupKey(category: string): string {
+  for (const [key, group] of Object.entries(CATEGORY_GROUPS)) {
+    if (group.categories.includes(category)) return key
+  }
+  return category
+}
 
 export function inferFlowGraph(
   services: Service[],
-  dependencies: Dependency[],
-  projectName: string = 'App',
+  _dependencies: Dependency[],
+  _projectName: string = 'App',
 ): { nodes: FlowNode[]; edges: FlowEdge[] } {
   const nodes: FlowNode[] = []
   const edges: FlowEdge[] = []
-  const depNames = new Set(dependencies.map((d) => d.name))
 
-  // User node — always present
+  // Layer 1: User node — always present
   nodes.push({ id: 'user', label: 'User', type: 'user' })
 
-  // Frontend
-  const hasFrontend = FRONTEND_DEPS.some((d) => depNames.has(d))
-  if (hasFrontend) {
-    nodes.push({ id: 'frontend', label: projectName, type: 'frontend' })
+  // Classify services by parent
+  const frontendServices: Service[] = []
+  const backendServices: Service[] = []
+
+  for (const svc of services) {
+    if (FRONTEND_CATEGORIES.has(svc.category)) {
+      frontendServices.push(svc)
+    } else if (BACKEND_CATEGORIES.has(svc.category)) {
+      backendServices.push(svc)
+    } else {
+      // 'other' / uncategorized: with url → backend, else → frontend
+      if (svc.url) {
+        backendServices.push(svc)
+      } else {
+        frontendServices.push(svc)
+      }
+    }
+  }
+
+  // Layer 2: Virtual nodes
+  const hasHostingOrCdn = services.some(
+    (s) => s.category === 'hosting' || s.category === 'cdn',
+  )
+  const createFrontend = hasHostingOrCdn && frontendServices.length > 0
+  const createBackend = backendServices.length > 0
+
+  if (createFrontend) {
+    nodes.push({ id: 'frontend', label: 'Frontend', type: 'frontend' })
     edges.push({ source: 'user', target: 'frontend', flowType: 'data' })
   }
 
-  // Backend / API
-  const hasBackend = BACKEND_DEPS.some((d) => depNames.has(d))
-  if (hasBackend) {
-    const label = hasFrontend
-      ? (BACKEND_DEPS.find((d) => depNames.has(d)) ?? 'API')
-      : projectName
-    nodes.push({ id: 'api', label, type: 'api' })
-    if (hasFrontend) {
+  if (createBackend) {
+    nodes.push({ id: 'api', label: 'Backend', type: 'api' })
+    edges.push({ source: 'user', target: 'api', flowType: 'data' })
+    if (createFrontend) {
       edges.push({ source: 'frontend', target: 'api', flowType: 'data' })
-    } else {
-      edges.push({ source: 'user', target: 'api', flowType: 'data' })
     }
   }
 
-  const apiNodeId = hasBackend ? 'api' : hasFrontend ? 'frontend' : 'user'
+  // Parent for each service group
+  const frontendParent = createFrontend ? 'frontend' : createBackend ? 'api' : 'user'
+  const backendParent = createBackend ? 'api' : 'user'
 
-  // Map category → node type
-  const categoryToNodeType = (cat: Service['category']): FlowNode['type'] => {
-    if (cat === 'cdn') return 'cdn'
-    if (cat === 'database') return 'database'
-    return 'external'
-  }
+  // Layer 3 + 4: Group services and create intermediate nodes where needed
+  function connectServices(svcs: Service[], parentId: string) {
+    const groupMap = new Map<string, Service[]>()
 
-  // Create a node for EVERY service — no filtering, no exceptions
-  for (const svc of services) {
-    const nodeId = `svc-${svc.id}`
-    const nodeType = categoryToNodeType(svc.category)
+    for (const svc of svcs) {
+      const groupKey = findGroupKey(svc.category)
+      if (!groupMap.has(groupKey)) groupMap.set(groupKey, [])
+      groupMap.get(groupKey)!.push(svc)
+    }
 
-    nodes.push({
-      id: nodeId,
-      label: svc.name,
-      type: nodeType,
-      serviceId: svc.id,
-    })
+    for (const [groupKey, groupSvcs] of groupMap) {
+      const groupDef = CATEGORY_GROUPS[groupKey]
 
-    // Determine edge type and source based on category
-    let flowType: FlowEdge['flowType'] = 'data'
-    if (svc.category === 'payments') flowType = 'payment'
-    if (svc.category === 'auth') flowType = 'auth'
+      // Create intermediate node only if group is defined AND has 2+ services
+      if (groupDef && groupSvcs.length >= 2) {
+        const layerId = `layer-${groupKey}`
+        nodes.push({ id: layerId, label: groupDef.label, type: 'external' })
+        edges.push({ source: parentId, target: layerId, flowType: 'data' })
 
-    if (svc.category === 'cdn') {
-      edges.push({ source: 'user', target: nodeId, flowType: 'data' })
-      if (hasFrontend) {
-        edges.push({ source: nodeId, target: 'frontend', flowType: 'data' })
+        for (const svc of groupSvcs) {
+          const nodeId = `svc-${svc.id}`
+          nodes.push({
+            id: nodeId,
+            label: svc.name,
+            type: categoryToNodeType(svc.category),
+            serviceId: svc.id,
+          })
+          edges.push({ source: layerId, target: nodeId, flowType: getFlowType(svc) })
+        }
+      } else {
+        // Connect directly to parent
+        for (const svc of groupSvcs) {
+          const nodeId = `svc-${svc.id}`
+          nodes.push({
+            id: nodeId,
+            label: svc.name,
+            type: categoryToNodeType(svc.category),
+            serviceId: svc.id,
+          })
+          edges.push({ source: parentId, target: nodeId, flowType: getFlowType(svc) })
+        }
       }
-    } else {
-      edges.push({ source: apiNodeId, target: nodeId, flowType })
     }
   }
+
+  connectServices(frontendServices, frontendParent)
+  connectServices(backendServices, backendParent)
 
   return { nodes, edges }
 }
