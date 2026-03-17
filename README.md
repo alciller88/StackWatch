@@ -33,9 +33,10 @@ Four panels:
 | Panel | What you see |
 |---|---|
 | **Services** | Every external service: inferred + manual, with cost and renewal alerts, confidence badges, and AI-generated usage context |
-| **Dependencies** | Full dependency tree (npm, pip, cargo, go, composer, dart, maven, gradle, gem) with ecosystem links |
+| **Dependencies** | Full dependency tree (npm, pip, cargo, go, composer, dart, maven, gradle, gem) with vulnerability scanning |
 | **Flow graph** | Interactive node graph of your app's architecture with drag-and-drop editing, custom connections, and context menus |
-| **Settings** | AI provider configuration with connection testing and provider presets |
+| **Costs** | Cost breakdown by category with bar chart, monthly/yearly totals, and renewal alerts |
+| **Settings** | AI provider configuration (Local / Cloud / Custom) with connection testing |
 
 ---
 
@@ -228,15 +229,11 @@ When Heuristic + AI is enabled, the AI pipeline runs in two phases:
 
 ### Supported AI providers
 
-| Provider | Type | Cost |
+| Preset | Type | Cost |
 |---|---|---|
-| **Groq** (recommended) | Cloud | Free tier available |
-| **Ollama** (recommended) | Local | Free, self-hosted |
-| **LM Studio** | Local | Free, self-hosted |
-| **OpenAI** | Cloud | Paid |
-| **Mistral** | Cloud | Paid |
-| **Anthropic** | Cloud | Paid |
-| **Custom** | Any OpenAI-compatible endpoint | Varies |
+| **Local** (Ollama / LM Studio) | Local | Free, self-hosted |
+| **Cloud (Groq)** | Cloud | Free tier available |
+| **Custom** | Any OpenAI-compatible endpoint (OpenAI, Mistral, Anthropic, etc.) | Varies |
 
 Configure in Settings → test the connection → enable AI analysis. All AI calls use the OpenAI-compatible chat completions format.
 
@@ -332,6 +329,7 @@ When re-analysing a project that has manual services, StackWatch shows a confirm
 - [Zustand](https://zustand-demo.pmnd.rs/) 5 — state management
 - [Octokit](https://github.com/octokit/rest.js) — GitHub API
 - [electron-store](https://github.com/sindresorhus/electron-store) — local persistence
+- [Recharts](https://recharts.org) — cost charts
 - [Vitest](https://vitest.dev) — testing
 - [dagre](https://github.com/dagrejs/dagre) — graph layout
 
@@ -340,43 +338,68 @@ When re-analysing a project that has manual services, StackWatch shows a confirm
 ```
 StackWatch/
 ├── electron/
-│   ├── main.ts              # Main process, IPC handlers (15 channels)
-│   ├── preload.ts           # Secure renderer bridge (contextBridge)
-│   ├── types.ts             # Shared types (Service, Dependency, FlowNode, etc.)
+│   ├── main.ts              # Main process, 20 IPC handlers, CSP, notifications
+│   ├── preload.ts           # Secure renderer bridge (contextBridge, 22 methods)
+│   ├── types.ts             # Re-exports from shared/types.ts
 │   ├── analyzers/
-│   │   ├── extractor.ts     # Evidence extraction from repo files
+│   │   ├── index.ts         # Pipeline orchestrator (extract → classify → dedup → AI → flow)
+│   │   ├── extractor.ts     # Evidence extraction (env vars, imports, URLs, configs, deps)
 │   │   ├── heuristic.ts     # Semantic classification (19 categories)
 │   │   ├── deduplicator.ts  # Service grouping and deduplication
 │   │   ├── flowInference.ts # Flow graph auto-generation (dagre layout)
-│   │   ├── index.ts         # Pipeline orchestrator (extract → classify → dedup → AI → flow)
-│   │   └── __tests__/       # 60 tests (heuristic, deduplicator, extractor, pipeline, flowInference)
+│   │   ├── monorepo.ts      # Monorepo detection (npm/pnpm/lerna/turbo/nx)
+│   │   ├── vulnScanner.ts   # Vulnerability scanning (OSV.dev, 8 ecosystems)
+│   │   ├── stackDiff.ts     # Stack Diff (compare scans, save/load snapshots)
+│   │   ├── sbom.ts          # SBOM generator (CycloneDX 1.5, SPDX 2.3)
+│   │   └── __tests__/       # 7 test suites
 │   └── ai/
-│       ├── provider.ts      # OpenAI-compatible AI client + 6 provider presets
-│       └── deepAnalyzer.ts  # Deep analysis: context, hidden detection, edge inference
+│       ├── provider.ts      # OpenAI-compatible client + 3 provider presets
+│       ├── deepAnalyzer.ts  # Deep analysis: context, hidden detection, edge inference
+│       └── __tests__/       # 2 test suites
+├── cli/
+│   ├── index.ts             # CLI: scan, init, badge, --diff, --sbom, --fail-on-*
+│   └── tsconfig.json        # CLI-specific TypeScript config
+├── shared/
+│   └── types.ts             # Canonical type definitions (23 exports)
+├── src/
+│   ├── App.tsx              # Layout, panel routing, undo/redo keyboard handler
+│   ├── constants.ts         # APP_VERSION
+│   ├── demoData.ts          # Demo services, dependencies, flows
+│   ├── components/
+│   │   ├── Dashboard/       # Welcome screen, quick start, keyboard shortcuts
+│   │   ├── TopBar/          # Folder picker, GitHub, re-analyze, import/export, share
+│   │   ├── Sidebar/         # Panel navigation (5 panels + Stack Score)
+│   │   ├── ServicesPanel/   # Service cards, filters, add/edit form, confidence badges
+│   │   ├── DepsPanel/       # Virtualized dependencies table, vuln scanning
+│   │   ├── CostsPanel/      # Cost breakdown, bar chart (Recharts), renewal alerts
+│   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
+│   │   ├── Settings/        # AI provider config (3 presets), scan mode, share, about
+│   │   ├── TitleBar.tsx     # Custom frameless titlebar (minimize/maximize/close)
+│   │   ├── ConfirmDialog.tsx # Promise-based confirm modal with focus trap
+│   │   ├── ErrorBoundary.tsx # React error boundary with fallback UI
+│   │   ├── GitHubModal.tsx  # GitHub repo connection with format validation
+│   │   ├── OnboardingTutorial.tsx # 6-step post-scan walkthrough
+│   │   ├── Skeleton.tsx     # Skeleton loaders for all panels
+│   │   └── Toast.tsx        # Toast notification container
+│   ├── store/
+│   │   ├── useStore.ts      # Global state (services, deps, config, AI, analysis)
+│   │   ├── graphStore.ts    # React Flow state, debounced persist, history
+│   │   ├── historyStore.ts  # Undo/redo snapshot stacks (50 max)
+│   │   ├── dialogStore.ts   # Promise-based confirm dialog state
+│   │   └── toastStore.ts    # Toast notification state
+│   ├── utils/
+│   │   ├── badge.ts         # Badge generators (score, services, vulns, deps, scanned)
+│   │   ├── healthScore.ts   # Stack Score 0-100 calculation
+│   │   └── dates.ts         # daysUntil() utility
+│   └── hooks/
+│       └── useDebounce.ts   # Generic debounce hook
 ├── scripts/
 │   ├── launch-electron.js   # WSL-aware Electron launcher
-│   └── setup.js             # Postinstall: system deps on WSL
-├── cli/
-│   ├── index.ts             # CLI entry point (npx stackwatch)
-│   └── tsconfig.json        # CLI-specific TypeScript config
-├── src/
-│   ├── components/
-│   │   ├── TitleBar.tsx     # Custom frameless titlebar (minimize/maximize/close)
-│   │   ├── ConfirmDialog.tsx # Themed confirmation modals (replaces native OS dialogs)
-│   │   ├── Dashboard/       # Welcome screen + loading state
-│   │   ├── TopBar/          # Folder picker, GitHub, re-analyze, import/export, link status
-│   │   ├── Sidebar/         # Panel navigation (4 panels)
-│   │   ├── ServicesPanel/   # Service cards, filters, add/edit form, confidence badges
-│   │   ├── DepsPanel/       # Dependencies table with sort/filter
-│   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
-│   │   └── Settings/        # AI provider config, scan mode selector, connection testing
-│   ├── store/
-│   │   ├── useStore.ts      # Global Zustand state (services, deps, config, AI)
-│   │   ├── graphStore.ts    # Graph-specific state (nodes, edges, undo/redo history)
-│   │   ├── dialogStore.ts   # Promise-based confirm dialog state
-│   │   ├── toastStore.ts    # Toast notification state
-│   │   └── historyStore.ts  # Undo/redo snapshot stacks
-│   └── types.ts             # Renderer-side type definitions
+│   └── validate-build.js    # 29-point production build checker
+├── build/                   # icon.svg, entitlements.mac.plist, Linux icons
+├── .github/workflows/
+│   ├── build.yml            # CI: test → build → validate → artifacts (3 platforms)
+│   └── stackwatch-scan.yml  # Self-scan on PRs
 ├── SPEC.md                  # Full technical specification
 ├── CONTEXT.md               # AI agent context (keep updated)
 ├── action.yml               # GitHub Action definition
@@ -385,20 +408,28 @@ StackWatch/
 
 ### Test suites
 
+241 tests across 18 suites:
+
 | Suite | Tests | Coverage |
 |---|---|---|
-| Heuristic classifier | 13 | Category mapping, confidence, name extraction |
-| Deduplicator | 6 | Grouping, merging, confidence upgrades |
+| graphStore | 27 | initFromAnalysis, node/edge CRUD, connect, exclude, resetLayout, persistToConfig |
+| vulnScanner | 27 | Ecosystem mapping, batching, OSV parsing, severity, error handling |
 | Extractor | 26 | All file types, URL/env/import patterns |
-| Pipeline | 6 | End-to-end analysis flow, AI checkpoint/restore |
+| Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
+| badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
+| Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
+| Heuristic | 13 | Category mapping, confidence, name extraction |
+| TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
+| monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
+| historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
+| healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
+| ServiceCard | 10 | Rendering, interactions, confidence, a11y |
+| useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
 | Flow inference | 9 | Node types, edge routing, layout |
-| AI Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
-| Store (useStore) | 9 | mergeServices, ensureConfig, ensureFlowNodes, store actions |
-| AI Deep Analyzer (runDeep) | 14 | Deep analysis phases, usage context, hidden services |
-| daysUntil utility | 3 | Today, future dates, past dates |
-| ServiceCard | 10 | Rendering, interactions, confidence, accessibility |
-| TopBar | 13 | Buttons, repo path, error banner, link status |
-| ContextMenu | 7 | ARIA roles, click handlers, keyboard navigation |
+| ContextMenu | 7 | ARIA roles, click/Escape, dividers |
+| Deduplicator | 6 | Grouping, merging, confidence upgrades |
+| Pipeline | 6 | End-to-end, AI checkpoint/restore |
+| daysUntil | 3 | Today, future, past |
 
 ---
 

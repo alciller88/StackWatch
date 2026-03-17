@@ -60,11 +60,14 @@ Never filter services out of the graph. Never create services without nodes.
 ```
 ┌─────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (17 channels)             │
+│  ├── IPC handlers (20 channels)             │
 │  ├── electron-store (safeStorage encrypted) │
 │  ├── Analyzers (pure Node.js)               │
 │  ├── AI client (OpenAI-compatible)          │
 │  ├── Vuln scanner (OSV.dev API)             │
+│  ├── SBOM generator (CycloneDX/SPDX)       │
+│  ├── Stack Diff (snapshot compare)          │
+│  ├── Renewal notifications (Electron)       │
 │  └── CSP headers (production only)          │
 ├─────────────────────────────────────────────┤
 │ Preload (electron/preload.ts)               │
