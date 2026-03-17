@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2026-03-17T15:44:37.376Z",
+    "score": 20,
+    "breakdown": {
+      "servicesWithCost": 0,
+      "servicesWithOwner": 0,
+      "servicesReviewed": 0,
+      "graphCompleteness": 100
+    },
+    "serviceCount": 4,
+    "depCount": 36
+  },
+  {
+    "timestamp": "2026-03-17T15:51:34.996Z",
+    "score": 20,
+    "breakdown": {
+      "servicesWithCost": 0,
+      "servicesWithOwner": 0,
+      "servicesReviewed": 0,
+      "graphCompleteness": 100
+    },
+    "serviceCount": 4,
+    "depCount": 36
+  },
+  {
+    "timestamp": "2026-03-17T15:53:54.788Z",
+    "score": 20,
+    "breakdown": {
+      "servicesWithCost": 0,
+      "servicesWithOwner": 0,
+      "servicesReviewed": 0,
+      "graphCompleteness": 100
+    },
+    "serviceCount": 4,
+    "depCount": 36
+  }
+]
