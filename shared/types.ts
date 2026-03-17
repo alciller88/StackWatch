@@ -23,6 +23,9 @@ export interface Service {
   url?: string;
   owner?: string;
   comment?: string;
+  lastActivityDate?: string;
+  daysSinceActivity?: number;
+  zombieStatus?: 'active' | 'stale' | 'zombie';
 }
 
 export interface Dependency {
@@ -206,6 +209,19 @@ export interface StackDiffResult {
   previousTimestamp: string;
 }
 
+export interface ScoreHistoryEntry {
+  timestamp: string;
+  score: number;
+  breakdown: {
+    servicesWithCost: number;
+    servicesWithOwner: number;
+    servicesReviewed: number;
+    graphCompleteness: number;
+  };
+  serviceCount: number;
+  depCount: number;
+}
+
 export interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>;
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>;
@@ -223,6 +239,7 @@ export interface StackWatchAPI {
   relinkLocal(): Promise<string | null>;
   scanVulnerabilities(deps: Dependency[]): Promise<DepVulnResult[]>;
   getStackDiff(folderPath: string): Promise<StackDiffResult | null>;
+  getScoreHistory(folderPath: string): Promise<ScoreHistoryEntry[]>;
   checkRenewals(services: Service[]): Promise<void>;
   openExternalUrl(url: string): Promise<boolean>;
   windowMinimize(): void;

@@ -123,6 +123,10 @@ npx stackwatch --sbom spdx > sbom.spdx.json
 
 # Generate README badges (copy-paste output into your README)
 npx stackwatch badge ./my-project
+
+# Health check: find actionable problems
+npx stackwatch doctor
+npx stackwatch doctor ./my-project
 ```
 
 The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results.
@@ -339,7 +343,7 @@ When re-analysing a project that has manual services, StackWatch shows a confirm
 StackWatch/
 ├── electron/
 │   ├── main.ts              # Main process, 20 IPC handlers, CSP, notifications
-│   ├── preload.ts           # Secure renderer bridge (contextBridge, 22 methods)
+│   ├── preload.ts           # Secure renderer bridge (contextBridge, 23 methods)
 │   ├── types.ts             # Re-exports from shared/types.ts
 │   ├── analyzers/
 │   │   ├── index.ts         # Pipeline orchestrator (extract → classify → dedup → AI → flow)
@@ -351,13 +355,15 @@ StackWatch/
 │   │   ├── vulnScanner.ts   # Vulnerability scanning (OSV.dev, 8 ecosystems)
 │   │   ├── stackDiff.ts     # Stack Diff (compare scans, save/load snapshots)
 │   │   ├── sbom.ts          # SBOM generator (CycloneDX 1.5, SPDX 2.3)
+│   │   ├── zombieDetector.ts # Zombie detection (git log activity per service)
+│   │   ├── scoreHistory.ts  # Score history persistence (.stackwatch/)
 │   │   └── __tests__/       # 7 test suites
 │   └── ai/
 │       ├── provider.ts      # OpenAI-compatible client + 3 provider presets
 │       ├── deepAnalyzer.ts  # Deep analysis: context, hidden detection, edge inference
 │       └── __tests__/       # 2 test suites
 ├── cli/
-│   ├── index.ts             # CLI: scan, init, badge, --diff, --sbom, --fail-on-*
+│   ├── index.ts             # CLI: scan, init, badge, doctor, --diff, --sbom, --fail-on-*
 │   └── tsconfig.json        # CLI-specific TypeScript config
 ├── shared/
 │   └── types.ts             # Canonical type definitions (23 exports)
@@ -480,7 +486,7 @@ StackWatch/
 - [x] Skeleton loaders during analysis
 - [x] Toast notification system
 - [x] List virtualization (DepsPanel with @tanstack/react-virtual)
-- [x] CLI tool: `npx stackwatch` (scan, init, badge, --json, --md, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed)
+- [x] CLI tool: `npx stackwatch` (scan, init, badge, doctor, --json, --md, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed)
 - [x] GitHub Action for PR scanning with auto-comments
 - [x] macOS / Windows / Linux distributable builds (electron-builder: dmg, nsis, AppImage, deb)
 - [x] Monorepo support (npm workspaces, pnpm, lerna, turborepo, nx)
@@ -490,6 +496,9 @@ StackWatch/
 - [x] SBOM generation (CycloneDX 1.5 + SPDX 2.3, --sbom flag)
 - [x] Desktop renewal notifications (OS-level alerts for services expiring within 30 days)
 - [x] Cost visualization bar chart (Recharts, breakdown by category)
+- [x] Zombie service detection (git log cross-reference, 6+ months = zombie)
+- [x] Stack Score history with trend tracking (up/down/unchanged per scan)
+- [x] `stackwatch doctor` CLI command (actionable health checklist: config, ownership, costs, vulns, score)
 
 ---
 

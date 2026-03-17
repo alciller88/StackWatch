@@ -6,6 +6,8 @@ import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
 import { scanVulnerabilities } from './analyzers/vulnScanner'
 import { generateCycloneDX, generateSPDX } from './analyzers/sbom'
 import { saveScanSnapshot, loadPreviousScan, computeStackDiff } from './analyzers/stackDiff'
+import { appendScoreEntry, loadScoreHistory } from './analyzers/scoreHistory'
+import { calculateHealthScore } from '../src/utils/healthScore'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
@@ -143,6 +145,21 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
     await saveScanSnapshot(safePath, result)
   } catch {
     // Non-critical: don't fail the scan if snapshot save fails
+  }
+
+  // Append score history entry
+  try {
+    const { score, servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness } =
+      calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+    await appendScoreEntry(safePath, {
+      timestamp: new Date().toISOString(),
+      score,
+      breakdown: { servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness },
+      serviceCount: result.services.length,
+      depCount: result.dependencies.length,
+    })
+  } catch {
+    // Non-critical: don't fail the scan if score history save fails
   }
 
   return result
@@ -430,6 +447,13 @@ function checkRenewalNotifications(services: Service[]): void {
 
 ipcMain.handle('check-renewals', async (_event, services: Service[]) => {
   checkRenewalNotifications(services)
+})
+
+// --- Score History ---
+
+ipcMain.handle('get-score-history', async (_event, folderPath: string) => {
+  const safePath = validateRepoPath(folderPath)
+  return loadScoreHistory(safePath)
 })
 
 // --- Vulnerability Scanning ---

@@ -5,6 +5,7 @@ import fs from 'fs'
 import { analyzeLocalRepo } from '../electron/analyzers/index'
 import { scanVulnerabilities } from '../electron/analyzers/vulnScanner'
 import { saveScanSnapshot, loadPreviousScan, computeStackDiff } from '../electron/analyzers/stackDiff'
+import { loadScoreHistory, appendScoreEntry } from '../electron/analyzers/scoreHistory'
 import { generateCycloneDX, generateSPDX } from '../electron/analyzers/sbom'
 import { calculateHealthScore } from '../src/utils/healthScore'
 import {
@@ -21,6 +22,7 @@ const args = process.argv.slice(2)
 const subcommand = args[0] && !args[0].startsWith('-') ? args[0] : null
 const isInitCommand = subcommand === 'init'
 const isBadgeCommand = subcommand === 'badge'
+const isDoctorCommand = subcommand === 'doctor'
 
 // Parse --sbom value (next arg after --sbom)
 const sbomIndex = args.indexOf('--sbom')
@@ -39,7 +41,7 @@ const flags = {
 }
 
 // Get target path (first non-flag argument, skip subcommand)
-const targetPath = (isInitCommand || isBadgeCommand)
+const targetPath = (isInitCommand || isBadgeCommand || isDoctorCommand)
   ? args.slice(1).find(a => !a.startsWith('-')) || '.'
   : args.find(a => !a.startsWith('-')) || '.'
 
@@ -57,10 +59,12 @@ if (flags.help) {
     npx stackwatch [path] [options]
     npx stackwatch init [path]
     npx stackwatch badge [path]
+    npx stackwatch doctor [path]
 
   Commands:
     init [path]       Scan and generate a stackwatch.config.json file
     badge [path]      Scan and output README-ready Markdown badges
+    doctor [path]     Run health checks and report actionable problems
 
   Arguments:
     path              Path to repository (default: current directory)
@@ -88,6 +92,8 @@ if (flags.help) {
     npx stackwatch init ./my-project # Generate config for specific path
     npx stackwatch badge             # Generate README badges for cwd
     npx stackwatch badge ./my-project  # Generate badges for specific path
+    npx stackwatch doctor            # Run health checks for cwd
+    npx stackwatch doctor ./my-project # Run health checks for specific path
   `.trim())
   process.exit(0)
 }
@@ -113,6 +119,8 @@ async function main() {
     await runInit()
   } else if (isBadgeCommand) {
     await runBadge()
+  } else if (isDoctorCommand) {
+    await runDoctor()
   } else {
     await runScan()
   }
@@ -157,6 +165,10 @@ async function runScan() {
       })
     }
 
+    // Calculate health score and load history for trend display
+    const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+    const scoreHistory = await loadScoreHistory(resolvedPath)
+
     if (flags.json) {
       const output = diff ? { ...result, diff } : result
       console.log(JSON.stringify(output, null, 2))
@@ -165,6 +177,23 @@ async function runScan() {
       if (diff) printDiffMarkdown(diff)
     } else {
       printSummary(result, projectName)
+
+      // Stack Score with trend info
+      console.log(`  Stack Score: ${healthResult.score}/100`)
+      if (scoreHistory.length > 0) {
+        const lastEntry = scoreHistory[scoreHistory.length - 1]
+        const delta = healthResult.score - lastEntry.score
+        if (delta > 0) {
+          console.log(`    \u2191 +${delta} from last scan (${lastEntry.score} \u2192 ${healthResult.score})`)
+        } else if (delta < 0) {
+          console.log(`    \u2193 ${delta} from last scan (${lastEntry.score} \u2192 ${healthResult.score})`)
+        } else {
+          console.log(`    = no change from last scan`)
+        }
+        console.log(`    History: ${scoreHistory.length} scan${scoreHistory.length === 1 ? '' : 's'} recorded`)
+      }
+      console.log()
+
       if (flags.diff && !previousScan) {
         console.log('  No previous scan found. This scan will be saved for future comparisons.')
         console.log('  Tip: add .stackwatch/ to your .gitignore')
@@ -175,6 +204,24 @@ async function runScan() {
 
     // Save snapshot for future comparisons (always, after output)
     await saveScanSnapshot(resolvedPath, result)
+
+    // Append score history entry
+    try {
+      await appendScoreEntry(resolvedPath, {
+        timestamp: new Date().toISOString(),
+        score: healthResult.score,
+        breakdown: {
+          servicesWithCost: healthResult.servicesWithCost,
+          servicesWithOwner: healthResult.servicesWithOwner,
+          servicesReviewed: healthResult.servicesReviewed,
+          graphCompleteness: healthResult.graphCompleteness,
+        },
+        serviceCount: result.services.length,
+        depCount: result.dependencies.length,
+      })
+    } catch {
+      // Non-critical: don't fail the scan if score history save fails
+    }
 
     // Semantic exit codes (checked after output is printed)
     if (flags.failOnVulns) {
@@ -312,6 +359,207 @@ async function runBadge() {
   }
 }
 
+async function runDoctor() {
+  const resolvedPath = resolveAndValidatePath(targetPath)
+  const projectName = path.basename(resolvedPath)
+  const configPath = path.join(resolvedPath, 'stackwatch.config.json')
+
+  console.log()
+  console.log('stackwatch doctor \u2014 Health Check')
+  console.log('\u2550'.repeat(35))
+  console.log()
+
+  let errors = 0
+  let warnings = 0
+  let passed = 0
+
+  const pass = (msg: string) => { passed++; console.log(`  \u2713 ${msg}`) }
+  const fail = (msg: string) => { errors++; console.log(`  \u2717 ${msg}`) }
+  const warn = (msg: string) => { warnings++; console.log(`  \u26A0 ${msg}`) }
+
+  try {
+    // --- Configuration ---
+    console.log('Configuration')
+
+    let config: UserConfig | null = null
+    if (fs.existsSync(configPath)) {
+      pass('stackwatch.config.json found')
+      try {
+        config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as UserConfig
+      } catch {
+        fail('stackwatch.config.json is not valid JSON')
+      }
+    } else {
+      fail('stackwatch.config.json not found')
+    }
+
+    if (config?.project?.name) {
+      pass(`Project name: ${config.project.name}`)
+    } else {
+      fail('No project name defined')
+    }
+
+    console.log()
+
+    // --- Run analysis ---
+    const result = await analyzeLocalRepo(resolvedPath)
+    const services = result.services
+
+    // Merge config overrides into services if config exists
+    if (config?.services) {
+      for (const cs of config.services) {
+        const svc = services.find(s => s.id === cs.id || s.name === cs.name)
+        if (svc) {
+          if (cs.owner) svc.owner = cs.owner
+          if (cs.renewalDate) svc.renewalDate = cs.renewalDate
+          if (cs.cost) svc.cost = cs.cost
+          if (cs.plan) svc.plan = cs.plan
+        }
+      }
+    }
+
+    // --- Services ---
+    console.log(`Services (${services.length} detected)`)
+
+    if (services.length === 0) {
+      warn('No services detected')
+      console.log()
+    } else {
+      const noOwner = services.filter(s => !s.owner || !s.owner.trim())
+      if (noOwner.length > 0) {
+        warn(`${noOwner.length} service${noOwner.length === 1 ? '' : 's'} without owner: ${noOwner.map(s => s.name).join(', ')}`)
+      } else {
+        pass('All services have owners')
+      }
+
+      const paidNoRenewal = services.filter(s => s.plan === 'paid' && !s.renewalDate)
+      if (paidNoRenewal.length > 0) {
+        fail(`${paidNoRenewal.length} paid service${paidNoRenewal.length === 1 ? '' : 's'} without renewal date: ${paidNoRenewal.map(s => s.name).join(', ')}`)
+      } else if (services.some(s => s.plan === 'paid')) {
+        pass('All paid services have renewal dates')
+      }
+
+      const needReview = services.filter(s => s.needsReview)
+      if (needReview.length > 0) {
+        warn(`${needReview.length} service${needReview.length === 1 ? '' : 's'} need review: ${needReview.map(s => s.name).join(', ')}`)
+      } else {
+        pass('No services need review')
+      }
+
+      const lowConfidence = services.filter(s => s.confidence === 'low')
+      if (lowConfidence.length > 0) {
+        warn(`${lowConfidence.length} service${lowConfidence.length === 1 ? '' : 's'} with low confidence: ${lowConfidence.map(s => s.name).join(', ')}`)
+      } else {
+        pass('No low-confidence detections')
+      }
+
+      const allHaveCategory = services.every(s => s.category)
+      if (allHaveCategory) {
+        pass('All services have categories')
+      } else {
+        warn('Some services missing categories')
+      }
+
+      console.log()
+    }
+
+    // --- Costs ---
+    console.log('Costs')
+
+    const paidServices = services.filter(s => s.plan === 'paid')
+    if (paidServices.length === 0) {
+      pass('No paid services detected')
+    } else {
+      const paidNoCost = paidServices.filter(s => !s.cost || !s.cost.amount)
+      if (paidNoCost.length > 0) {
+        fail(`${paidNoCost.length} paid service${paidNoCost.length === 1 ? '' : 's'} without documented cost: ${paidNoCost.map(s => s.name).join(', ')}`)
+      } else {
+        pass('All paid services have documented costs')
+      }
+
+      const totalMonthly = paidServices.reduce((sum, s) => {
+        if (!s.cost || !s.cost.amount) return sum
+        const monthly = s.cost.period === 'yearly' ? s.cost.amount / 12 : s.cost.amount
+        return sum + monthly
+      }, 0)
+
+      if (totalMonthly > 0) {
+        pass(`Total monthly cost documented: $${totalMonthly.toFixed(2)}`)
+      }
+    }
+
+    console.log()
+
+    // --- Security ---
+    console.log('Security')
+
+    const vulnResults = await scanVulnerabilities(result.dependencies)
+    const allVulns = vulnResults.flatMap(r => r.vulnerabilities)
+    const criticalCount = allVulns.filter(v => v.severity === 'critical').length
+    const highCount = allVulns.filter(v => v.severity === 'high').length
+
+    if (allVulns.length > 0) {
+      const parts: string[] = []
+      if (criticalCount > 0) parts.push(`${criticalCount} critical`)
+      if (highCount > 0) parts.push(`${highCount} high`)
+      const medCount = allVulns.filter(v => v.severity === 'medium').length
+      if (medCount > 0) parts.push(`${medCount} medium`)
+      const lowCount = allVulns.filter(v => v.severity === 'low').length
+      if (lowCount > 0) parts.push(`${lowCount} low`)
+      const unknownCount = allVulns.filter(v => v.severity === 'unknown').length
+      if (unknownCount > 0) parts.push(`${unknownCount} unknown`)
+
+      if (criticalCount > 0 || highCount > 0) {
+        fail(`${allVulns.length} vulnerabilit${allVulns.length === 1 ? 'y' : 'ies'} found (${parts.join(', ')})`)
+      } else {
+        warn(`${allVulns.length} vulnerabilit${allVulns.length === 1 ? 'y' : 'ies'} found (${parts.join(', ')})`)
+      }
+    } else {
+      pass('No vulnerabilities found')
+    }
+
+    console.log()
+
+    // --- Stack Score ---
+    const health = calculateHealthScore(
+      services,
+      result.flowNodes,
+      result.flowEdges,
+    )
+
+    const totalServices = services.length
+    const costCount = services.filter(s => s.cost && s.cost.amount >= 0).length
+    const ownerCount = services.filter(s => s.owner && s.owner.trim()).length
+    const reviewedCount = services.filter(s => !s.needsReview).length
+
+    const nonUserNodes = result.flowNodes.filter(n => n.type !== 'user')
+    const connectedNodeIds = new Set([
+      ...result.flowEdges.map(e => e.source),
+      ...result.flowEdges.map(e => e.target),
+    ])
+    const connectedCount = nonUserNodes.filter(n => connectedNodeIds.has(n.id)).length
+    const totalNodes = nonUserNodes.length
+
+    console.log(`Stack Score: ${health.score}/100`)
+    console.log(`  Cost documented:     ${health.servicesWithCost}% (${costCount}/${totalServices} services)`)
+    console.log(`  Owner assigned:      ${health.servicesWithOwner}% (${ownerCount}/${totalServices} services)`)
+    console.log(`  Services reviewed:   ${health.servicesReviewed}% (${reviewedCount}/${totalServices} services)`)
+    console.log(`  Graph completeness:  ${health.graphCompleteness}% (${connectedCount}/${totalNodes} nodes connected)`)
+
+    console.log()
+    console.log('\u2550'.repeat(35))
+    console.log(`Summary: ${errors} error${errors === 1 ? '' : 's'}, ${warnings} warning${warnings === 1 ? '' : 's'}, ${passed} passed`)
+    console.log()
+
+    if (errors > 0) {
+      process.exit(1)
+    }
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+}
+
 function printSummary(result: AnalysisResult, projectName: string) {
   const { services, dependencies } = result
 
@@ -350,6 +598,31 @@ function printSummary(result: AnalysisResult, projectName: string) {
     console.log('  ' + '-'.repeat(60))
     for (const [eco, count] of byEco) {
       console.log(`    ${eco}: ${count}`)
+    }
+    console.log()
+  }
+
+  // Zombie / stale services
+  const zombies = services.filter(s => s.zombieStatus === 'zombie')
+  const stale = services.filter(s => s.zombieStatus === 'stale')
+  if (zombies.length > 0 || stale.length > 0) {
+    console.log('  POTENTIALLY ABANDONED SERVICES')
+    console.log('  ' + '-'.repeat(60))
+    if (zombies.length > 0) {
+      console.log('    Zombie (6+ months inactive):')
+      for (const s of zombies) {
+        const dateStr = s.lastActivityDate ? s.lastActivityDate.split('T')[0] : 'unknown'
+        const daysStr = s.daysSinceActivity != null ? `${s.daysSinceActivity} days ago` : ''
+        console.log(`      - ${s.name} (last activity: ${dateStr}, ${daysStr})`)
+      }
+    }
+    if (stale.length > 0) {
+      console.log('    Stale (3-6 months inactive):')
+      for (const s of stale) {
+        const dateStr = s.lastActivityDate ? s.lastActivityDate.split('T')[0] : 'unknown'
+        const daysStr = s.daysSinceActivity != null ? `${s.daysSinceActivity} days ago` : ''
+        console.log(`      - ${s.name} (last activity: ${dateStr}, ${daysStr})`)
+      }
     }
     console.log()
   }
@@ -399,6 +672,31 @@ function printMarkdown(result: AnalysisResult, projectName: string) {
       console.log(`| ${d.name} | ${d.version} | ${d.type} | ${d.ecosystem} |`)
     }
     console.log()
+  }
+
+  // Zombie services section
+  const zombies = services.filter(s => s.zombieStatus === 'zombie')
+  const stale = services.filter(s => s.zombieStatus === 'stale')
+  if (zombies.length > 0 || stale.length > 0) {
+    console.log(`## Zombie Services\n`)
+    if (zombies.length > 0) {
+      console.log('### Zombie (6+ months inactive)\n')
+      for (const s of zombies) {
+        const dateStr = s.lastActivityDate ? s.lastActivityDate.split('T')[0] : 'unknown'
+        const daysStr = s.daysSinceActivity != null ? `, ${s.daysSinceActivity} days ago` : ''
+        console.log(`- **${s.name}** (last activity: ${dateStr}${daysStr})`)
+      }
+      console.log()
+    }
+    if (stale.length > 0) {
+      console.log('### Stale (3-6 months inactive)\n')
+      for (const s of stale) {
+        const dateStr = s.lastActivityDate ? s.lastActivityDate.split('T')[0] : 'unknown'
+        const daysStr = s.daysSinceActivity != null ? `, ${s.daysSinceActivity} days ago` : ''
+        console.log(`- **${s.name}** (last activity: ${dateStr}${daysStr})`)
+      }
+      console.log()
+    }
   }
 
   console.log(`---\n*Generated by [StackWatch](https://github.com/alciller88/StackWatch)*`)

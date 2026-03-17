@@ -67,6 +67,8 @@ AI refine  →  validated services (false positives removed, categories fixed)
     ↓
 AI deep analysis  →  usage context + hidden services + smart edge types
     ↓
+Zombie detector  →  git log activity per service (stale/zombie/active)
+    ↓
 Flow inference  →  FlowNode[] + FlowEdge[]  (dagre layout)
     ↓
 Merge with stackwatch.config.json  →  user's manual services
@@ -80,6 +82,8 @@ Additional post-scan steps:
 - **SBOM generation**: CycloneDX or SPDX output via `--sbom` flag
 - **Snapshot save**: automatically save scan result for future diffs
 - **Renewal notifications**: OS desktop alerts for services expiring within 30 days
+- **Zombie detection**: cross-reference services with `git log` to find abandoned services (6+ months inactive)
+- **Score history**: append health score to `.stackwatch/score-history.json` after each scan (max 100 entries)
 
 ### 3.1 Evidence extractor (`extractor.ts`)
 
@@ -172,7 +176,27 @@ Generates Software Bill of Materials from detected dependencies:
 - No external dependencies — pure JSON generation
 - Available via CLI (`--sbom cyclonedx|spdx`) and IPC (`generate-sbom`)
 
-### 3.9 Flow inference (`flowInference.ts`)
+### 3.9 Zombie detector (`zombieDetector.ts`)
+
+Detects potentially abandoned services by cross-referencing with git history:
+- For each inferred service, collects its evidence files (`inferredFrom` + matching evidences)
+- Runs `git log -1 --format=%aI` per file to get last commit date (cached to avoid duplicate calls)
+- Takes the most recent date across all evidence files as `lastActivityDate`
+- Classifies: **active** (<90 days), **stale** (90-179 days), **zombie** (180+ days)
+- Only runs for local repos (not GitHub — requires git log access)
+- Silent fallback if git is unavailable or repo is not a git repo
+- Enriches `Service` objects with `lastActivityDate`, `daysSinceActivity`, `zombieStatus`
+
+### 3.10 Score history (`scoreHistory.ts`)
+
+Persists health scores to `.stackwatch/score-history.json` after each scan:
+- Stores `{ timestamp, score, breakdown, serviceCount, depCount }` entries
+- Maximum 100 entries (oldest trimmed)
+- Used by CLI to show score trends (up/down/unchanged from last scan)
+- Available via IPC `get-score-history` for future UI charting
+- Same `.stackwatch/` directory as Stack Diff snapshots
+
+### 3.11 Flow inference (`flowInference.ts`)
 
 Generates architecture graph from detected services:
 - Creates typed nodes: user, frontend, api, database, external, service
@@ -180,7 +204,7 @@ Generates architecture graph from detected services:
 - Dagre hierarchical layout (top-to-bottom)
 - User node always present as entry point
 
-### 3.10 Manual configuration (`stackwatch.config.json`)
+### 3.12 Manual configuration (`stackwatch.config.json`)
 
 The user can add services manually from the UI with an expanded form: name, category, plan, cost, renewal date, account email, owner, notes, URL. Persisted with `source: "manual"`.
 
@@ -210,6 +234,9 @@ interface Service {
   notes?: string
   url?: string
   aiContext?: ServiceContext
+  lastActivityDate?: string          // ISO date from git log
+  daysSinceActivity?: number         // days since last commit touching evidence files
+  zombieStatus?: 'active' | 'stale' | 'zombie'  // active <90d, stale 90-179d, zombie 180d+
 }
 ```
 
@@ -289,6 +316,23 @@ interface StackDiffResult {
   removedDeps: { name: string; version: string }[]
   timestamp: string
   previousTimestamp: string
+}
+```
+
+### ScoreHistoryEntry
+
+```typescript
+interface ScoreHistoryEntry {
+  timestamp: string           // ISO date
+  score: number               // 0-100
+  breakdown: {
+    servicesWithCost: number
+    servicesWithOwner: number
+    servicesReviewed: number
+    graphCompleteness: number
+  }
+  serviceCount: number
+  depCount: number
 }
 ```
 
@@ -423,7 +467,7 @@ Every service MUST have a corresponding graph node. Enforced by:
 
 ## 7. IPC communication (main ↔ renderer)
 
-22 methods exposed via `contextBridge`:
+23 methods exposed via `contextBridge`:
 
 ```typescript
 interface StackWatchAPI {
@@ -446,6 +490,9 @@ interface StackWatchAPI {
   importConfig(): Promise<UserConfig | null>
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>
   relinkLocal(): Promise<string | null>
+
+  // Score history
+  getScoreHistory(folderPath: string): Promise<ScoreHistoryEntry[]>
 
   // AI
   getAISettings(): Promise<AISettings>
@@ -472,6 +519,7 @@ interface StackWatchAPI {
 | `stackwatch [path]` | Scan a directory (default: cwd) |
 | `stackwatch init [path]` | Generate `stackwatch.config.json` from scan |
 | `stackwatch badge [path]` | Generate 5 copy-pasteable Markdown badges |
+| `stackwatch doctor [path]` | Run health checks: config, services, costs, vulns, score |
 
 ### Flags
 
@@ -615,7 +663,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Interactive flow graph with context menus, node editing, and custom connections
 - [x] Deep AI analysis provides service context, hidden detection, and smart edge types
 - [x] 241 tests passing across 18 suites
-- [x] CLI with scan, init, badge, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed
+- [x] CLI with scan, init, badge, doctor, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed
 - [x] GitHub Action posts PR comments with scan results
 - [x] Monorepo support (npm, pnpm, lerna, turbo, nx)
 - [x] Vulnerability detection via OSV.dev API (8 ecosystems)
@@ -625,3 +673,6 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Cost visualization with bar chart (Recharts)
 - [x] macOS / Windows / Linux distributable builds
 - [x] 29-point production build validation
+- [x] Zombie service detection via git log (active/stale/zombie classification)
+- [x] Stack Score history with trend tracking (.stackwatch/score-history.json)
+- [x] `stackwatch doctor` CLI command (config, services, costs, vulns, score checklist)

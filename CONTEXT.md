@@ -10,7 +10,7 @@
 **StackWatch** scans codebases and maps every external service, dependency, and paid account. Electron desktop app + CLI + GitHub Action.
 
 - **Desktop app**: Electron 35 + React 19 + Vite 6 + TypeScript 5.7 + Tailwind 4 + Zustand 5 + React Flow 11
-- **CLI**: `npx stackwatch [path] [--json|--md|--diff|--sbom cyclonedx|spdx|--fail-on-vulns|--fail-on-unreviewed]`. Subcommands: `init` (generate config), `badge` (generate README badges). Same heuristic engine, no Electron dependency.
+- **CLI**: `npx stackwatch [path] [--json|--md|--diff|--sbom cyclonedx|spdx|--fail-on-vulns|--fail-on-unreviewed]`. Subcommands: `init` (generate config), `badge` (generate README badges), `doctor` (health check). Same heuristic engine, no Electron dependency.
 - **GitHub Action**: `alciller88/StackWatch@main` — posts PR comments with scan results
 - **Config file**: `stackwatch.config.json` in the scanned repo (not this repo)
 
@@ -31,10 +31,10 @@ Full spec: `SPEC.md` · User docs: `README.md`
 ### Analysis pipeline
 
 ```
-extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep analysis] → flowInference.ts
-     │                                                                                      │
-     ├── Evidences (env vars, imports, URLs, configs)                                       ├── FlowNodes
-     ├── Dependencies (npm, pip, cargo, go, etc.)                                           └── FlowEdges
+extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep analysis] → zombieDetector.ts → flowInference.ts
+     │                                                                                                          │
+     ├── Evidences (env vars, imports, URLs, configs)                                                           ├── FlowNodes
+     ├── Dependencies (npm, pip, cargo, go, etc.)                                                               └── FlowEdges
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
@@ -60,13 +60,15 @@ Never filter services out of the graph. Never create services without nodes.
 ```
 ┌─────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (20 channels)             │
+│  ├── IPC handlers (21 channels)             │
 │  ├── electron-store (safeStorage encrypted) │
 │  ├── Analyzers (pure Node.js)               │
 │  ├── AI client (OpenAI-compatible)          │
 │  ├── Vuln scanner (OSV.dev API)             │
 │  ├── SBOM generator (CycloneDX/SPDX)       │
 │  ├── Stack Diff (snapshot compare)          │
+│  ├── Zombie detector (git log activity)     │
+│  ├── Score history (.stackwatch/)           │
 │  ├── Renewal notifications (Electron)       │
 │  └── CSP headers (production only)          │
 ├─────────────────────────────────────────────┤
@@ -130,6 +132,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
 | `electron/analyzers/stackDiff.ts` | Stack Diff: compare scans, save/load snapshots (.stackwatch/last-scan.json) |
 | `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
+| `electron/analyzers/zombieDetector.ts` | Zombie detection: git log activity per service, stale/zombie classification |
+| `electron/analyzers/scoreHistory.ts` | Score history: persist health scores to `.stackwatch/score-history.json` |
 | `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types |
 | `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
 
@@ -157,7 +161,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### CLI & CI
 | File | Purpose |
 |------|---------|
-| `cli/index.ts` | CLI entry: scan, init, badge, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
+| `cli/index.ts` | CLI entry: scan, init, badge, doctor, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
 | `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
 
 ### Build & validation
@@ -181,6 +185,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
 | `npm test` | vitest (241 tests, 18 suites) |
+| `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
 - Stale `dist-electron/tsconfig.node.tsbuildinfo` → delete and rebuild
@@ -261,6 +266,9 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | @tanstack/react-virtual | Handles 500+ rows efficiently |
 | Composite GitHub Action | Faster than Docker, reuses CLI |
 | Stack Diff via .stackwatch/last-scan.json | Simple file-based, no DB needed, gitignore-able |
+| Zombie detection via git log | Leverages existing evidence files, no external deps |
+| Score history in .stackwatch/ | Same directory as stack diff, consistent pattern |
+| Doctor as CLI subcommand | Reuses existing pipeline + vuln scanner, no new deps |
 | SBOM without external deps | CycloneDX/SPDX JSON generated directly, no library overhead |
 | Recharts for cost visualization | Lightweight, React-native, good dark theme support |
 
@@ -294,5 +302,5 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ## Open questions
 
 - Multi-project dashboard (multiple repos at once)?
-- Light theme?
+- Light theme / dark mode toggle?
 - Encrypt sensitive fields in `stackwatch.config.json`?

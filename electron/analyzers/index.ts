@@ -6,6 +6,7 @@ import { deduplicateServices, confidenceRank } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
 import { runDeepAnalysis, refineServicesWithAI } from '../ai/deepAnalyzer'
 import { detectMonorepo } from './monorepo'
+import { detectZombieServices, enrichServicesWithZombieData } from './zombieDetector'
 
 export async function analyzeLocalRepo(
   folderPath: string,
@@ -150,6 +151,16 @@ async function runPipeline(
     if (s.name.startsWith('$')) return false
     return true
   })
+
+  // Step 3.5: Zombie detection (local repos only)
+  if (repoPath && !repoPath.startsWith('github:')) {
+    try {
+      const zombieResults = await detectZombieServices(services, evidences, repoPath)
+      services = enrichServicesWithZombieData(services, zombieResults)
+    } catch {
+      // Silently skip if git is unavailable or repo is not a git repo
+    }
+  }
 
   // Step 4: Infer flow graph
   const flow = inferFlowGraph(services, dependencies, projectName)

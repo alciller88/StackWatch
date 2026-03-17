@@ -49,6 +49,9 @@ const api: StackWatchAPI = {
   getStackDiff: (folderPath: string) =>
     ipcRenderer.invoke('get-stack-diff', folderPath),
 
+  getScoreHistory: (folderPath: string) =>
+    ipcRenderer.invoke('get-score-history', folderPath),
+
   checkRenewals: (services: import('../shared/types').Service[]) =>
     ipcRenderer.invoke('check-renewals', services),
 
