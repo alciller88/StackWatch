@@ -6,6 +6,14 @@ interface GitHubModalProps {
 }
 
 const REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
+const GITHUB_URL_PATTERN = /^https?:\/\/(?:www\.)?github\.com\/([a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+)\/?.*$/;
+
+function normalizeRepo(input: string): string {
+  const trimmed = input.trim();
+  const urlMatch = trimmed.match(GITHUB_URL_PATTERN);
+  if (urlMatch) return urlMatch[1];
+  return trimmed;
+}
 
 export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) => {
   const [repo, setRepo] = useState('');
@@ -13,7 +21,8 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
   const repoInputRef = useRef<HTMLInputElement>(null);
 
   const repoTouched = repo.length > 0;
-  const repoValid = REPO_PATTERN.test(repo);
+  const normalized = normalizeRepo(repo);
+  const repoValid = REPO_PATTERN.test(normalized);
 
   useEffect(() => {
     repoInputRef.current?.focus();
@@ -58,7 +67,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (repoValid) {
-      onAnalyze(repo.trim(), token.trim());
+      onAnalyze(normalized, token.trim());
     }
   };
 
@@ -117,6 +126,11 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
                 </span>
               )}
             </div>
+            {repoTouched && repoValid && normalized !== repo.trim() && (
+              <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                Detected: {normalized}
+              </span>
+            )}
           </div>
 
           {/* Token input */}
