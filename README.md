@@ -9,7 +9,9 @@ StackWatch scans your codebase and automatically maps every service, API, databa
 
 **Zero config. Works offline. 10 seconds to your first scan.**
 
-> Screenshots coming soon. To generate them, run `npm run dev` and place images in `docs/screenshots/`.
+<p align="center">
+  <img src="docs/screenshots/StackWatch1.png" alt="StackWatch Dashboard" width="800" />
+</p>
 
 ---
 
