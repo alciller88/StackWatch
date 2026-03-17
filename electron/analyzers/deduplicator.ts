@@ -48,16 +48,12 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
       if (result.serviceName.length > existing.name.length) {
         existing.name = result.serviceName
       }
-      if (result.needsReview === false) {
-        existing.needsReview = false
-      }
     } else {
       groups.set(key, {
         name: result.serviceName,
         category: result.category,
         confidence: result.confidence,
         reasons: [result.reason],
-        needsReview: result.needsReview,
       })
     }
   }
