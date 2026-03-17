@@ -4,13 +4,27 @@ import path from 'path'
 import fs from 'fs'
 import { analyzeLocalRepo } from '../electron/analyzers/index'
 import { scanVulnerabilities } from '../electron/analyzers/vulnScanner'
-import type { AnalysisResult, UserConfig, Service } from '../shared/types'
+import { saveScanSnapshot, loadPreviousScan, computeStackDiff } from '../electron/analyzers/stackDiff'
+import { generateCycloneDX, generateSPDX } from '../electron/analyzers/sbom'
+import { calculateHealthScore } from '../src/utils/healthScore'
+import {
+  getScoreBadgeUrl,
+  getVulnBadgeUrl,
+  getDepsBadgeUrl,
+  getScannedBadgeUrl,
+} from '../src/utils/badge'
+import type { AnalysisResult, UserConfig, Service, StackDiffResult } from '../shared/types'
 
 const args = process.argv.slice(2)
 
 // Check for subcommand
 const subcommand = args[0] && !args[0].startsWith('-') ? args[0] : null
 const isInitCommand = subcommand === 'init'
+const isBadgeCommand = subcommand === 'badge'
+
+// Parse --sbom value (next arg after --sbom)
+const sbomIndex = args.indexOf('--sbom')
+const sbomFormat = sbomIndex >= 0 ? args[sbomIndex + 1] as 'cyclonedx' | 'spdx' | undefined : undefined
 
 // Parse flags
 const flags = {
@@ -20,10 +34,12 @@ const flags = {
   version: args.includes('--version') || args.includes('-v'),
   failOnVulns: args.includes('--fail-on-vulns'),
   failOnUnreviewed: args.includes('--fail-on-unreviewed'),
+  diff: args.includes('--diff'),
+  sbom: sbomFormat,
 }
 
 // Get target path (first non-flag argument, skip subcommand)
-const targetPath = isInitCommand
+const targetPath = (isInitCommand || isBadgeCommand)
   ? args.slice(1).find(a => !a.startsWith('-')) || '.'
   : args.find(a => !a.startsWith('-')) || '.'
 
@@ -40,9 +56,11 @@ if (flags.help) {
   Usage:
     npx stackwatch [path] [options]
     npx stackwatch init [path]
+    npx stackwatch badge [path]
 
   Commands:
     init [path]       Scan and generate a stackwatch.config.json file
+    badge [path]      Scan and output README-ready Markdown badges
 
   Arguments:
     path              Path to repository (default: current directory)
@@ -50,6 +68,9 @@ if (flags.help) {
   Options:
     --json            Output as JSON
     --md, --markdown  Output as Markdown table
+    --diff            Compare with previous scan and show changes
+    --sbom cyclonedx  Output CycloneDX 1.5 SBOM (JSON)
+    --sbom spdx       Output SPDX 2.3 SBOM (JSON)
     --fail-on-vulns   Exit code 1 if critical/high vulnerabilities found
     --fail-on-unreviewed  Exit code 2 if any services need review
     -h, --help        Show this help
@@ -60,9 +81,13 @@ if (flags.help) {
     npx stackwatch ./my-project      # Scan specific path
     npx stackwatch --json            # JSON output for piping
     npx stackwatch --md > SERVICES.md  # Generate Markdown report
+    npx stackwatch --sbom cyclonedx > sbom.json  # Generate CycloneDX SBOM
+    npx stackwatch --sbom spdx > sbom.spdx.json  # Generate SPDX SBOM
     npx stackwatch --fail-on-vulns   # Fail CI if vulns detected
     npx stackwatch init              # Generate config for current dir
     npx stackwatch init ./my-project # Generate config for specific path
+    npx stackwatch badge             # Generate README badges for cwd
+    npx stackwatch badge ./my-project  # Generate badges for specific path
   `.trim())
   process.exit(0)
 }
@@ -86,6 +111,8 @@ function resolveAndValidatePath(targetDir: string): string {
 async function main() {
   if (isInitCommand) {
     await runInit()
+  } else if (isBadgeCommand) {
+    await runBadge()
   } else {
     await runScan()
   }
@@ -95,20 +122,59 @@ async function runScan() {
   const resolvedPath = resolveAndValidatePath(targetPath)
   const projectName = path.basename(resolvedPath)
 
-  if (!flags.json && !flags.markdown) {
+  // Validate --sbom format if provided
+  if (flags.sbom && flags.sbom !== 'cyclonedx' && flags.sbom !== 'spdx') {
+    console.error(`Error: invalid SBOM format "${flags.sbom}". Use "cyclonedx" or "spdx".`)
+    process.exit(1)
+  }
+
+  if (!flags.json && !flags.markdown && !flags.sbom) {
     console.log(`\n  STACKWATCH — scanning ${projectName}\n`)
   }
 
   try {
+    // Load previous scan before running new one (needed for --diff)
+    const previousScan = flags.diff ? await loadPreviousScan(resolvedPath) : null
+
     const result = await analyzeLocalRepo(resolvedPath)
 
+    // SBOM output — exclusive mode, output only SBOM JSON and exit
+    if (flags.sbom) {
+      const sbom = flags.sbom === 'cyclonedx'
+        ? generateCycloneDX(result.dependencies, projectName)
+        : generateSPDX(result.dependencies, projectName)
+      console.log(JSON.stringify(sbom, null, 2))
+      return
+    }
+
+    // Compute diff if requested and previous scan exists
+    let diff: StackDiffResult | null = null
+    if (flags.diff && previousScan) {
+      diff = computeStackDiff(previousScan, {
+        timestamp: new Date().toISOString(),
+        services: result.services,
+        dependencies: result.dependencies,
+      })
+    }
+
     if (flags.json) {
-      console.log(JSON.stringify(result, null, 2))
+      const output = diff ? { ...result, diff } : result
+      console.log(JSON.stringify(output, null, 2))
     } else if (flags.markdown) {
       printMarkdown(result, projectName)
+      if (diff) printDiffMarkdown(diff)
     } else {
       printSummary(result, projectName)
+      if (flags.diff && !previousScan) {
+        console.log('  No previous scan found. This scan will be saved for future comparisons.')
+        console.log('  Tip: add .stackwatch/ to your .gitignore')
+        console.log()
+      }
+      if (diff) printDiffSummary(diff)
     }
+
+    // Save snapshot for future comparisons (always, after output)
+    await saveScanSnapshot(resolvedPath, result)
 
     // Semantic exit codes (checked after output is printed)
     if (flags.failOnVulns) {
@@ -191,6 +257,55 @@ async function runInit() {
     console.log()
     console.log('  Edit the file to add cost, owner, and renewal info for each service.')
     console.log()
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+}
+
+async function runBadge() {
+  const resolvedPath = resolveAndValidatePath(targetPath)
+  const projectName = path.basename(resolvedPath)
+
+  console.error(`\n  STACKWATCH BADGE — scanning ${projectName}\n`)
+
+  try {
+    const result = await analyzeLocalRepo(resolvedPath)
+
+    // Calculate health score
+    const { score } = calculateHealthScore(
+      result.services,
+      result.flowNodes,
+      result.flowEdges,
+    )
+
+    // Scan for vulnerabilities
+    const vulnResults = await scanVulnerabilities(result.dependencies)
+    const vulnCount = vulnResults.reduce((sum, r) => sum + r.vulnerabilities.length, 0)
+
+    const serviceCount = result.services.length
+    const depCount = result.dependencies.length
+    const date = new Date().toISOString().split('T')[0]
+
+    const scoreUrl = getScoreBadgeUrl(score)
+    const serviceColor = 'e2b04a'
+    const serviceUrl = `https://img.shields.io/badge/Services-${serviceCount}_detected-${serviceColor}`
+    const vulnUrl = getVulnBadgeUrl(vulnCount)
+    const depsUrl = getDepsBadgeUrl(depCount)
+    const scannedUrl = getScannedBadgeUrl(date)
+
+    const repoUrl = `https://github.com/alciller88/StackWatch`
+
+    const lines = [
+      `<!-- StackWatch Badges -->`,
+      `[![Stack Score](${scoreUrl})](${repoUrl})`,
+      `[![Services](${serviceUrl})](${repoUrl})`,
+      `[![Vulnerabilities](${vulnUrl})](${repoUrl})`,
+      `[![Dependencies](${depsUrl})](${repoUrl})`,
+      `[![Scanned](${scannedUrl})](${repoUrl})`,
+    ]
+
+    console.log(lines.join('\n'))
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
     process.exit(1)
@@ -287,6 +402,87 @@ function printMarkdown(result: AnalysisResult, projectName: string) {
   }
 
   console.log(`---\n*Generated by [StackWatch](https://github.com/alciller88/StackWatch)*`)
+}
+
+function printDiffSummary(diff: StackDiffResult) {
+  const hasChanges = diff.added.length > 0 || diff.removed.length > 0 ||
+    diff.changed.length > 0 || diff.addedDeps.length > 0 || diff.removedDeps.length > 0
+
+  console.log('  STACK DIFF')
+  console.log('  ' + '-'.repeat(60))
+
+  if (!hasChanges) {
+    console.log('    No changes since last scan.')
+    console.log()
+    return
+  }
+
+  if (diff.added.length > 0) {
+    const names = diff.added.map(s => s.name).join(', ')
+    console.log(`    + ${diff.added.length} new service${diff.added.length === 1 ? '' : 's'}: ${names}`)
+  }
+  if (diff.removed.length > 0) {
+    const names = diff.removed.map(s => s.name).join(', ')
+    console.log(`    - ${diff.removed.length} removed service${diff.removed.length === 1 ? '' : 's'}: ${names}`)
+  }
+  if (diff.changed.length > 0) {
+    const details = diff.changed.map(c => {
+      const parts: string[] = []
+      if (c.previousCategory !== c.service.category) {
+        parts.push(`category: ${c.previousCategory}\u2192${c.service.category}`)
+      }
+      if (c.previousConfidence !== (c.service.confidence ?? 'medium')) {
+        parts.push(`confidence: ${c.previousConfidence}\u2192${c.service.confidence ?? 'medium'}`)
+      }
+      return `${c.service.name} (${parts.join(', ')})`
+    }).join(', ')
+    console.log(`    ~ ${diff.changed.length} changed: ${details}`)
+  }
+  if (diff.addedDeps.length > 0) {
+    console.log(`    + ${diff.addedDeps.length} new dependenc${diff.addedDeps.length === 1 ? 'y' : 'ies'}`)
+  }
+  if (diff.removedDeps.length > 0) {
+    console.log(`    - ${diff.removedDeps.length} removed dependenc${diff.removedDeps.length === 1 ? 'y' : 'ies'}`)
+  }
+  console.log()
+}
+
+function printDiffMarkdown(diff: StackDiffResult) {
+  const hasChanges = diff.added.length > 0 || diff.removed.length > 0 ||
+    diff.changed.length > 0 || diff.addedDeps.length > 0 || diff.removedDeps.length > 0
+
+  console.log(`\n## Stack Diff\n`)
+
+  if (!hasChanges) {
+    console.log('No changes since last scan.\n')
+    return
+  }
+
+  if (diff.added.length > 0) {
+    console.log(`- **+${diff.added.length} new service${diff.added.length === 1 ? '' : 's'}**: ${diff.added.map(s => s.name).join(', ')}`)
+  }
+  if (diff.removed.length > 0) {
+    console.log(`- **-${diff.removed.length} removed service${diff.removed.length === 1 ? '' : 's'}**: ${diff.removed.map(s => s.name).join(', ')}`)
+  }
+  if (diff.changed.length > 0) {
+    for (const c of diff.changed) {
+      const parts: string[] = []
+      if (c.previousCategory !== c.service.category) {
+        parts.push(`category: ${c.previousCategory} → ${c.service.category}`)
+      }
+      if (c.previousConfidence !== (c.service.confidence ?? 'medium')) {
+        parts.push(`confidence: ${c.previousConfidence} → ${c.service.confidence ?? 'medium'}`)
+      }
+      console.log(`- **~${c.service.name}**: ${parts.join(', ')}`)
+    }
+  }
+  if (diff.addedDeps.length > 0) {
+    console.log(`- **+${diff.addedDeps.length} new dependenc${diff.addedDeps.length === 1 ? 'y' : 'ies'}**`)
+  }
+  if (diff.removedDeps.length > 0) {
+    console.log(`- **-${diff.removedDeps.length} removed dependenc${diff.removedDeps.length === 1 ? 'y' : 'ies'}**`)
+  }
+  console.log()
 }
 
 main()

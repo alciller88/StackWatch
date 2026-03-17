@@ -1,11 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, shell, session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, safeStorage, shell, session } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import Store from 'electron-store'
 import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
 import { scanVulnerabilities } from './analyzers/vulnScanner'
+import { generateCycloneDX, generateSPDX } from './analyzers/sbom'
+import { saveScanSnapshot, loadPreviousScan, computeStackDiff } from './analyzers/stackDiff'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
-import type { UserConfig, AISettings, AIProvider, LinkStatus } from './types'
+import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
 let store: any
 let mainWindow: BrowserWindow | null = null
@@ -134,7 +136,41 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
     // No config yet
   }
 
-  return analyzeLocalRepo(safePath, aiSettings, excludedServices)
+  const result = await analyzeLocalRepo(safePath, aiSettings, excludedServices)
+
+  // Save snapshot for future diff comparisons
+  try {
+    await saveScanSnapshot(safePath, result)
+  } catch {
+    // Non-critical: don't fail the scan if snapshot save fails
+  }
+
+  return result
+})
+
+ipcMain.handle('get-stack-diff', async (_event, folderPath: string) => {
+  const safePath = validateRepoPath(folderPath)
+  const previousScan = await loadPreviousScan(safePath)
+  if (!previousScan) return null
+
+  const aiSettings = getAISettings()
+
+  let excludedServices: string[] = []
+  try {
+    const configPath = path.join(safePath, 'stackwatch.config.json')
+    const content = await fs.readFile(configPath, 'utf-8')
+    const config = JSON.parse(content) as UserConfig
+    excludedServices = config.graph?.excludedServices ?? []
+  } catch {
+    // No config yet
+  }
+
+  const currentResult = await analyzeLocalRepo(safePath, aiSettings, excludedServices)
+  return computeStackDiff(previousScan, {
+    timestamp: new Date().toISOString(),
+    services: currentResult.services,
+    dependencies: currentResult.dependencies,
+  })
 })
 
 ipcMain.handle(
@@ -348,9 +384,70 @@ ipcMain.handle('relink-local', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
+// --- Renewal Notifications ---
+
+function daysUntil(dateStr: string): number {
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr)
+  target.setHours(0, 0, 0, 0)
+  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function checkRenewalNotifications(services: Service[]): void {
+  // Only show notifications when the app window is NOT focused
+  if (mainWindow?.isFocused()) return
+
+  const upcoming = services.filter((s) => {
+    if (!s.renewalDate) return false
+    const days = daysUntil(s.renewalDate)
+    return days > 0 && days <= 30
+  })
+
+  if (upcoming.length === 0) return
+
+  if (upcoming.length <= 3) {
+    // Show individual notifications
+    for (const s of upcoming) {
+      const days = daysUntil(s.renewalDate!)
+      new Notification({
+        title: 'StackWatch: Renewal Alert',
+        body: `${s.name} renews in ${days} days (${s.renewalDate})`,
+      }).show()
+    }
+  } else {
+    // Group into a single notification
+    const lines = upcoming.map((s) => {
+      const days = daysUntil(s.renewalDate!)
+      return `${s.name} in ${days}d`
+    })
+    new Notification({
+      title: 'StackWatch: Renewal Alert',
+      body: `${upcoming.length} services renewing soon: ${lines.join(', ')}`,
+    }).show()
+  }
+}
+
+ipcMain.handle('check-renewals', async (_event, services: Service[]) => {
+  checkRenewalNotifications(services)
+})
+
 // --- Vulnerability Scanning ---
 
 ipcMain.handle('scan-vulnerabilities', async (_event, deps: import('./types').Dependency[]) => {
   return scanVulnerabilities(deps)
+})
+
+// --- SBOM Generation ---
+
+ipcMain.handle('generate-sbom', async (_event, { deps, projectName, format }: {
+  deps: import('./types').Dependency[]
+  projectName: string
+  format: 'cyclonedx' | 'spdx'
+}) => {
+  if (format === 'cyclonedx') {
+    return generateCycloneDX(deps, projectName)
+  }
+  return generateSPDX(deps, projectName)
 })
 

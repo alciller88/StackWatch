@@ -112,6 +112,16 @@ npx stackwatch --fail-on-vulns
 
 # CI gate: fail if unreviewed services exist (exit 2)
 npx stackwatch --fail-on-unreviewed
+
+# Stack Diff: compare current scan with previous
+npx stackwatch --diff
+
+# Generate SBOM (CycloneDX or SPDX)
+npx stackwatch --sbom cyclonedx > sbom.json
+npx stackwatch --sbom spdx > sbom.spdx.json
+
+# Generate README badges (copy-paste output into your README)
+npx stackwatch badge ./my-project
 ```
 
 The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results.
@@ -439,12 +449,16 @@ StackWatch/
 - [x] Skeleton loaders during analysis
 - [x] Toast notification system
 - [x] List virtualization (DepsPanel with @tanstack/react-virtual)
-- [x] CLI tool: `npx stackwatch` (scan, --json, --md, init, --fail-on-vulns, --fail-on-unreviewed)
+- [x] CLI tool: `npx stackwatch` (scan, init, badge, --json, --md, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed)
 - [x] GitHub Action for PR scanning with auto-comments
 - [x] macOS / Windows / Linux distributable builds (electron-builder: dmg, nsis, AppImage, deb)
 - [x] Monorepo support (npm workspaces, pnpm, lerna, turborepo, nx)
-- [x] Dynamic Stack Score badge (SVG generator + shields.io)
+- [x] Dynamic Stack Score badge (SVG generator + shields.io) + vuln, deps, scanned badges
 - [x] Vulnerability detection (OSV.dev API, 8 ecosystems)
+- [x] Stack Diff between scans (--diff flag, .stackwatch/last-scan.json)
+- [x] SBOM generation (CycloneDX 1.5 + SPDX 2.3, --sbom flag)
+- [x] Desktop renewal notifications (OS-level alerts for services expiring within 30 days)
+- [x] Cost visualization bar chart (Recharts, breakdown by category)
 
 ---
 

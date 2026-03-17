@@ -6,5 +6,5 @@
     "declaration": false,
     "composite": false
   },
-  "include": ["./**/*.ts", "../electron/**/*.ts", "../shared/**/*.ts"]
+  "include": ["./**/*.ts", "../electron/**/*.ts", "../shared/**/*.ts", "../src/types.ts", "../src/utils/badge.ts", "../src/utils/healthScore.ts"]
 }

@@ -46,6 +46,12 @@ const api: StackWatchAPI = {
   scanVulnerabilities: (deps: import('../shared/types').Dependency[]) =>
     ipcRenderer.invoke('scan-vulnerabilities', deps),
 
+  getStackDiff: (folderPath: string) =>
+    ipcRenderer.invoke('get-stack-diff', folderPath),
+
+  checkRenewals: (services: import('../shared/types').Service[]) =>
+    ipcRenderer.invoke('check-renewals', services),
+
   openExternalUrl: (url: string) =>
     ipcRenderer.invoke('open-external-url', url),
 

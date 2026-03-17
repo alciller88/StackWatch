@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useStore } from '../../store/useStore';
 import type { Service } from '../../types';
 import { daysUntil } from '../../utils/dates';
@@ -134,7 +135,7 @@ export const CostsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Cost by Category */}
+      {/* Cost by Category Chart */}
       {costByCategory.length > 0 && (
         <div className="mb-6">
           <h2
@@ -143,6 +144,49 @@ export const CostsPanel: React.FC = () => {
           >
             Cost by Category
           </h2>
+          <div
+            className="mb-4"
+            style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+          >
+            <ResponsiveContainer width="100%" height={costByCategory.length * 32 + 16}>
+              <BarChart
+                layout="vertical"
+                data={costByCategory}
+                margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
+              >
+                <XAxis
+                  type="number"
+                  tick={{ fill: '#7a8da6', fontFamily: 'IBM Plex Mono', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="category"
+                  tick={{ fill: '#7a8da6', fontFamily: 'IBM Plex Mono', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={80}
+                />
+                <Tooltip
+                  cursor={false}
+                  contentStyle={{
+                    background: '#1a1f2e',
+                    border: '1px solid #2a3040',
+                    fontFamily: 'IBM Plex Mono',
+                    fontSize: 10,
+                    color: '#7a8da6',
+                  }}
+                  formatter={(value) => [formatCurrency(Number(value)), 'Monthly']}
+                />
+                <Bar dataKey="total" radius={0}>
+                  {costByCategory.map((row) => (
+                    <Cell key={row.category} fill="#e2b04a" />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
           <div
             className="border"
             style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}

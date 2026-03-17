@@ -10,7 +10,7 @@
 **StackWatch** scans codebases and maps every external service, dependency, and paid account. Electron desktop app + CLI + GitHub Action.
 
 - **Desktop app**: Electron 35 + React 19 + Vite 6 + TypeScript 5.7 + Tailwind 4 + Zustand 5 + React Flow 11
-- **CLI**: `npx stackwatch [path] [--json|--md|--fail-on-vulns|--fail-on-unreviewed]` — same heuristic engine, no Electron dependency. Also: `stackwatch init [path]` generates `stackwatch.config.json`.
+- **CLI**: `npx stackwatch [path] [--json|--md|--diff|--sbom cyclonedx|spdx|--fail-on-vulns|--fail-on-unreviewed]`. Subcommands: `init` (generate config), `badge` (generate README badges). Same heuristic engine, no Electron dependency.
 - **GitHub Action**: `alciller88/StackWatch@main` — posts PR comments with scan results
 - **Config file**: `stackwatch.config.json` in the scanned repo (not this repo)
 
@@ -125,6 +125,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/flowInference.ts` | Node/edge generation from services + deps |
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
+| `electron/analyzers/stackDiff.ts` | Stack Diff: compare scans, save/load snapshots (.stackwatch/last-scan.json) |
+| `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
 | `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types |
 | `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
 
@@ -138,12 +140,13 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/store/toastStore.ts` | Toast notifications (4s auto-dismiss) |
 | `src/store/dialogStore.ts` | Promise-based confirm dialog |
 | `src/utils/healthScore.ts` | Stack Score 0-100 (cost 30%, owner 25%, reviewed 25%, graph 20%) |
-| `src/utils/badge.ts` | SVG badge generator + shields.io URLs for Stack Score |
+| `src/utils/badge.ts` | SVG badge + shields.io URLs: score, services, vulns, deps, scanned date |
 | `src/utils/dates.ts` | Shared `daysUntil()` utility |
 | `src/hooks/useDebounce.ts` | Generic debounce hook |
 | `src/components/Skeleton.tsx` | Skeleton loaders for all 4 panels |
 | `src/components/Toast.tsx` | Toast notification container |
 | `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
+| `src/components/CostsPanel/` | Cost breakdown by category, renewal alerts, bar chart (Recharts) |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
 | `src/components/ServicesPanel/` | Service cards, form with htmlFor labels (all fields incl. currency/period), confidence badges |
 | `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
@@ -151,7 +154,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### CLI & CI
 | File | Purpose |
 |------|---------|
-| `cli/index.ts` | CLI entry: scan, init, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
+| `cli/index.ts` | CLI entry: scan, init, badge, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
 | `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
 
 ### Build & validation
@@ -254,6 +257,9 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | OSV.dev for vulns | Free, no API key, 8 ecosystems |
 | @tanstack/react-virtual | Handles 500+ rows efficiently |
 | Composite GitHub Action | Faster than Docker, reuses CLI |
+| Stack Diff via .stackwatch/last-scan.json | Simple file-based, no DB needed, gitignore-able |
+| SBOM without external deps | CycloneDX/SPDX JSON generated directly, no library overhead |
+| Recharts for cost visualization | Lightweight, React-native, good dark theme support |
 
 ---
 
@@ -284,8 +290,6 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Open questions
 
-- Renewal alerts as OS desktop notifications?
 - Multi-project dashboard (multiple repos at once)?
-- Stack Diff between scans (change tracking over time)?
 - Light theme?
 - Encrypt sensitive fields in `stackwatch.config.json`?

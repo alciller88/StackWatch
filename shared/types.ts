@@ -192,6 +192,20 @@ export interface DepVulnResult {
   vulnerabilities: Vulnerability[];
 }
 
+export interface StackDiffResult {
+  added: Service[];
+  removed: Service[];
+  changed: {
+    service: Service;
+    previousCategory: ServiceCategory;
+    previousConfidence: 'high' | 'medium' | 'low';
+  }[];
+  addedDeps: Dependency[];
+  removedDeps: Dependency[];
+  timestamp: string;
+  previousTimestamp: string;
+}
+
 export interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>;
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>;
@@ -208,6 +222,8 @@ export interface StackWatchAPI {
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>;
   relinkLocal(): Promise<string | null>;
   scanVulnerabilities(deps: Dependency[]): Promise<DepVulnResult[]>;
+  getStackDiff(folderPath: string): Promise<StackDiffResult | null>;
+  checkRenewals(services: Service[]): Promise<void>;
   openExternalUrl(url: string): Promise<boolean>;
   windowMinimize(): void;
   windowMaximize(): void;
