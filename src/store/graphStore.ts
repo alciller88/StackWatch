@@ -16,8 +16,8 @@ import { useHistoryStore } from './historyStore'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
-const LAYER_NODE_WIDTH = 200
-const LAYER_NODE_HEIGHT = 56
+const LAYER_NODE_WIDTH = 220
+const LAYER_NODE_HEIGHT = 44
 const VIRTUAL_NODE_WIDTH = 160
 const VIRTUAL_NODE_HEIGHT = 48
 
@@ -54,20 +54,22 @@ function getCurrentServices(): import('../types').Service[] {
 
 function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'medium' | 'low', layerColor?: string) {
   if (nodeType === 'layer') {
+    const color = layerColor || '#e2b04a'
     return {
       width: LAYER_NODE_WIDTH,
       height: LAYER_NODE_HEIGHT,
-      background: '#0d1017',
-      border: `2px solid ${layerColor || '#e2b04a'}`,
-      borderRadius: '12px',
-      color: '#f9fafb',
-      fontSize: '13px',
+      background: 'transparent',
+      border: `1px dashed ${color}`,
+      borderRadius: '20px',
+      color,
+      fontSize: '10px',
       fontWeight: 700,
       textTransform: 'uppercase' as const,
+      letterSpacing: '0.12em',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '8px',
+      padding: '4px 12px',
     }
   }
   return {
@@ -275,11 +277,8 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     if (graphConfig) {
       for (const gn of graphConfig.nodes) {
         if (!rfNodes.find((n) => n.id === gn.id)) {
-          // Migrate old node types (user/frontend/api) to layer
-          const oldLayerIds = new Set(['user', 'frontend', 'api'])
-          const isOldLayer = oldLayerIds.has(gn.id) && !gn.data.nodeType?.includes('layer')
-          const nodeType = isOldLayer ? 'layer' as const : (gn.data.nodeType ?? 'external')
-          const layerColor = isOldLayer ? (gn.id === 'user' ? '#e2b04a' : gn.id === 'frontend' ? '#4a8ab0' : '#6b4ab0') : gn.data.layerColor
+          const nodeType = gn.data.nodeType ?? 'external'
+          const layerColor = gn.data.layerColor
           rfNodes.push({
             id: gn.id,
             position: gn.position,

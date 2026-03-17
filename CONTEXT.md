@@ -25,6 +25,7 @@ Full spec: `SPEC.md` · User docs: `README.md`
 | Mode | What happens |
 |------|-------------|
 | **Scan (Open folder / GitHub)** | Analysis from code. If saved data exists, shows ScanModeDialog: **Merge** (keep manual services + graph positions) or **Fresh Scan** (discard all). No saved data → skips dialog, goes to Merge. Detects monorepos automatically. |
+| **Blank Stack** | No scan. Initializes empty state with only a USER layer node. Opens Flow Graph panel. User builds architecture manually. TopBar shows "Untitled Stack". No repoPath — config saved via Export only. |
 | **Import config** | Full restore from exported JSON. All services, graph layout, positions, edges restored exactly. Works without a repo. |
 | **CLI / GitHub Action** | Headless scan, outputs JSON or Markdown. `--fail-on-vulns` (exit 1) and `--fail-on-unreviewed` (exit 2) for CI gates. `stackwatch init` generates config. |
 
@@ -95,7 +96,7 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 
 | Store | Purpose | Key details |
 |-------|---------|-------------|
-| `useStore` | Global state: services, deps, config, AI settings, analysis state, theme, score history, budget | Merged services = inferred + manual + confidence overrides. Theme persisted in localStorage. |
+| `useStore` | Global state: services, deps, config, AI settings, analysis state, theme, score history, budget, mode (scan/blank) | Merged services = inferred + manual + confidence overrides. Theme persisted in localStorage. |
 | `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. |
 | `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
 | `dialogStore` | Promise-based confirm dialogs | Returns button value string |
@@ -151,7 +152,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | File | Purpose |
 |------|---------|
 | `src/App.tsx` | Layout, panel routing, undo/redo keyboard handler, skeleton switching, score history modal |
-| `src/store/useStore.ts` | Global state, analysis flow, service CRUD, import/export, theme, budget, score history |
+| `src/store/useStore.ts` | Global state, analysis flow, service CRUD, import/export, theme, budget, score history, blank stack mode |
 | `src/store/graphStore.ts` | React Flow state, debounced persist, history integration |
 | `src/store/historyStore.ts` | Undo/redo snapshot stacks (50 max) |
 | `src/store/toastStore.ts` | Toast notifications (4s auto-dismiss) |
@@ -172,7 +173,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
 | `src/components/ServicesPanel/` | Service cards with zombie badges, form with htmlFor labels, confidence badges, activity filter, evidence info popover |
-| `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
+| `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze. Shows "Untitled Stack" in blank mode. |
 
 ### CLI & CI
 | File | Purpose |

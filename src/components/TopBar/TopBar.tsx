@@ -54,6 +54,7 @@ export const TopBar: React.FC = () => {
     analysisPhase,
     aiSettings,
     linkStatus,
+    mode,
     openFolder,
     analyzeLocal,
     analyzeGitHub,
@@ -327,7 +328,7 @@ export const TopBar: React.FC = () => {
           </svg>
         </span>
         <span className={repoPath ? 'text-sm text-[var(--color-text-secondary)] truncate' : 'font-mono text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] truncate'}>
-          {repoPath ?? 'No repository loaded'}
+          {repoPath ?? (mode === 'blank' ? 'Untitled Stack' : 'No repository loaded')}
         </span>
         {repoPath && (
           <div className="flex items-center gap-1.5 shrink-0">

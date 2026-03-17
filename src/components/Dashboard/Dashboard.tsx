@@ -2,7 +2,7 @@ import React from 'react';
 import { useStore } from '../../store/useStore';
 
 export const Dashboard: React.FC = () => {
-  const { openFolder, loadDemo, isAnalyzing, analyzeLocal, services } = useStore();
+  const { openFolder, loadDemo, initBlankStack, isAnalyzing, analyzeLocal, services } = useStore();
   const lastRepo = localStorage.getItem('stackwatch-last-repo');
 
   return (
@@ -119,6 +119,17 @@ export const Dashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={initBlankStack}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
+            aria-label="Start with a blank stack"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Blank Stack
+          </button>
+
+          <button
             onClick={loadDemo}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-transparent border border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] font-mono text-[11px] uppercase tracking-widest rounded-none transition-all"
             aria-label="Explore demo with sample data"
@@ -132,7 +143,9 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-10">
-          Or use the GitHub button in the top bar to analyze a remote repository
+          Or use the GitHub button in the top bar to analyze a remote repository.
+          <br />
+          <span className="text-[var(--color-text-muted)]">Blank Stack lets you build your architecture manually without scanning.</span>
         </p>
 
         {/* Quick Start */}

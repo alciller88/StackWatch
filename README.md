@@ -81,7 +81,7 @@ npm run dev
 
 ### Your first scan in 4 steps
 
-1. **Open a folder or connect a GitHub repo** — click "Open folder" in the top bar or use the GitHub icon to enter `owner/repo`
+1. **Open a folder, connect a GitHub repo, or start a Blank Stack** — click "Open folder" in the top bar, use the GitHub icon to enter `owner/repo`, or click "Blank Stack" on the Dashboard to build your architecture manually
 2. **Review detected services** — StackWatch scans automatically and shows every service it found, with confidence levels. Click the `?` button on any card to see the evidence breakdown (which env vars, imports, and config files contributed to the detection)
 3. **Add what's missing** — manually add services that have no code footprint (domains, SaaS accounts, billing). Fill in cost, renewal date, and owner for each service
 4. **Re-analyze anytime** — click the re-analyze button when your stack changes. Choose Merge to keep your manual edits, or Fresh Scan to start over
@@ -276,11 +276,12 @@ The Flow panel provides a canvas-based architecture visualisation powered by Rea
 
 ---
 
-## Scan vs Import — two distinct modes
+## Three ways to start
 
 | Action | What happens |
 |---|---|
 | **Scan / Open repo** | Analysis from code. If saved data exists, prompts to **Merge** (keep manual changes + positions) or **Fresh Scan** (discard everything). |
+| **Blank Stack** | No scan. Starts with an empty canvas and a single USER node. Build your architecture manually — add services, nodes, and connections by hand. Save via Export. |
 | **Import config** | Full restore of a previously exported `stackwatch.config.json`. Restores all services (with edits, costs, owners, comments), graph layout, node positions, and edges exactly as saved. Works with or without a repo loaded. |
 
 ### Export options
@@ -557,6 +558,7 @@ StackWatch/
 - [x] 29-point build validation: all checks passing
 - [x] Integration tests with fixture repo (Stripe, Sentry, PostgreSQL detection, no false positives)
 - [x] User docs: 4-step first scan guide, AI setup guide, CLI/GitHub Action examples
+- [x] Blank Stack mode: start with empty canvas + USER node, build architecture manually, no repo required
 
 ---
 

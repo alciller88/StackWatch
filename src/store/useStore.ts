@@ -20,6 +20,7 @@ import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
 export type ActivePanel = 'services' | 'dependencies' | 'discarded' | 'flow' | 'costs' | 'settings';
+export type StoreMode = 'scan' | 'blank';
 
 interface StoreState {
   services: Service[];
@@ -46,6 +47,7 @@ interface StoreState {
   scanDiffRemoved: Set<string>;
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
+  mode: StoreMode;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
@@ -67,6 +69,7 @@ interface StoreState {
   setBudget: (budget: { monthly: number; currency: string; alertThreshold?: number } | null) => Promise<void>;
   importStandalone: () => Promise<void>;
   loadDemo: () => void;
+  initBlankStack: () => void;
   dismissTutorial: () => void;
   loadScoreHistory: () => Promise<void>;
   openScoreHistory: () => void;
@@ -158,6 +161,7 @@ export const useStore = create<StoreState>((set, get) => ({
   scanDiffRemoved: new Set<string>(),
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
+  mode: 'scan' as StoreMode,
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
@@ -194,7 +198,7 @@ export const useStore = create<StoreState>((set, get) => ({
       scanMode = decision as 'merge' | 'fresh';
     }
 
-    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...' });
+    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan' });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
       set({ analysisPhase: 'Loading configuration...' });
@@ -321,7 +325,7 @@ export const useStore = create<StoreState>((set, get) => ({
       scanMode = decision as 'merge' | 'fresh';
     }
 
-    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...' });
+    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan' });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
       set({ analysisPhase: 'Loading configuration...' });
@@ -577,23 +581,15 @@ export const useStore = create<StoreState>((set, get) => ({
       const services = config.services ?? [];
 
       // Build flow nodes from graph config (with serviceId linkage)
-      const oldLayerIds = new Set(['user', 'frontend', 'api']);
       const flowNodes: FlowNode[] = (config.graph?.nodes ?? []).map((n) => {
         // Match graph node to a service by ID pattern (svc-{serviceId})
         const svcId = n.id.startsWith('svc-') ? n.id.slice(4) : undefined;
-        const rawType = n.data.nodeType ?? 'external';
-        // Migrate old node types: user/frontend/api IDs without serviceId → layer
-        const isOldLayer = oldLayerIds.has(n.id) && !svcId && rawType !== 'layer';
-        const type = isOldLayer ? 'layer' as const : rawType;
-        const layerColor = isOldLayer
-          ? (n.id === 'user' ? '#e2b04a' : n.id === 'frontend' ? '#4a8ab0' : '#6b4ab0')
-          : n.data.layerColor;
         return {
           id: n.id,
           label: n.data.label,
-          type,
+          type: n.data.nodeType ?? 'external',
           serviceId: svcId,
-          layerColor,
+          layerColor: n.data.layerColor,
         };
       });
       const flowEdges: FlowEdge[] = (config.graph?.edges ?? []).map((e) => ({
@@ -661,6 +657,30 @@ export const useStore = create<StoreState>((set, get) => ({
       linkStatus: 'unknown',
       activePanel: 'flow',
       error: null,
+      mode: 'scan',
+    });
+  },
+
+  initBlankStack: () => {
+    const blankConfig: UserConfig = {
+      version: '1',
+      project: { name: 'Untitled Stack', description: '' },
+      services: [],
+      accounts: [],
+    };
+    set({
+      services: [],
+      dependencies: [],
+      flowNodes: [{ id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' }],
+      flowEdges: [],
+      repoPath: null,
+      config: blankConfig,
+      deepAnalysis: null,
+      discardedItems: [],
+      linkStatus: 'unknown',
+      activePanel: 'flow',
+      error: null,
+      mode: 'blank',
     });
   },
 

@@ -456,14 +456,22 @@ export const FlowGraph: React.FC = () => {
       style,
       data: {
         ...n.data,
-        label: (
+        label: isLayer ? (
+          <div
+            className="flex items-center gap-1.5"
+            style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em' }}
+          >
+            <span style={{ fontSize: '12px' }}>{icon}</span>
+            <span className="truncate">{n.data.label}</span>
+          </div>
+        ) : (
           <div
             className="flex items-center gap-2"
-            title={isLowConfidence && !isLayer ? 'Low confidence detection' : undefined}
+            title={isLowConfidence ? 'Low confidence detection' : undefined}
           >
             <span>{icon}</span>
             <span className={`truncate ${isRemoved ? 'line-through' : ''}`}>{n.data.label}</span>
-            {isLowConfidence && !isLayer && <span className="text-[var(--color-accent)] text-[11px]">?</span>}
+            {isLowConfidence && <span className="text-[var(--color-accent)] text-[11px]">?</span>}
           </div>
         ),
       },

@@ -483,7 +483,7 @@ interface UserConfig {
 
 | Panel | Component | Features |
 |---|---|---|
-| **Dashboard** | `Dashboard.tsx` | Quick start guide, features grid, keyboard shortcuts, demo mode CTA |
+| **Dashboard** | `Dashboard.tsx` | Quick start guide, features grid, keyboard shortcuts, demo mode CTA, Blank Stack CTA |
 | **Services** | `ServicesPanel/` | Card grid (responsive), search, filters (19 categories, 4 plans, activity status), add/edit form, "Needs Review" section, confidence badges, zombie badges |
 | **Dependencies** | `DepsPanel/` | Virtualized table, sort by name/type, group by ecosystem, vulnerability scanning button |
 | **Discarded** | `DiscardedPanel/` | Virtualized list of items discarded during analysis, search, reason filter (low_score/ai_filter/generic_term), collapsible evidences, restore to manual service |
@@ -536,7 +536,7 @@ Services with `needsReview: true` appear in a dedicated section at top of Servic
 
 | Store | Purpose | Key details |
 |---|---|---|
-| `useStore` | Global state: services, deps, config, AI settings, analysis state | Merged services = inferred + manual + confidence overrides |
+| `useStore` | Global state: services, deps, config, AI settings, analysis state, mode (scan/blank) | Merged services = inferred + manual + confidence overrides. Blank mode: empty state with USER layer node, no repoPath. |
 | `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. |
 | `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
 | `dialogStore` | Promise-based confirm dialogs | Returns button value string |
@@ -817,3 +817,4 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] User documentation: 4-step first scan guide, AI setup guide (3 providers), CLI examples, GitHub Action example
 - [x] Release automation: CI creates GitHub Release with platform binaries on version tag push (v*)
 - [x] `npm run release` convenience script: validate → git tag → push tag
+- [x] Blank Stack mode: empty canvas with USER layer node, no repo required, manual architecture building, "Untitled Stack" in TopBar
