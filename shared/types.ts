@@ -48,8 +48,9 @@ export interface Dependency {
 export interface FlowNode {
   id: string;
   label: string;
-  type: 'user' | 'cdn' | 'frontend' | 'api' | 'database' | 'external';
+  type: 'user' | 'cdn' | 'frontend' | 'api' | 'database' | 'external' | 'layer';
   serviceId?: string;
+  layerColor?: string;
 }
 
 export interface FlowEdge {
@@ -91,6 +92,7 @@ export interface GraphNodeData {
   url?: string;
   note?: string;
   source?: 'inferred' | 'manual';
+  layerColor?: string;
 }
 
 export interface GraphConfig {

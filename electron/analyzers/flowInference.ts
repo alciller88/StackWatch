@@ -45,7 +45,7 @@ export function inferFlowGraph(
   const edges: FlowEdge[] = []
 
   // Layer 1: User node — always present
-  nodes.push({ id: 'user', label: 'User', type: 'user' })
+  nodes.push({ id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' })
 
   // Classify services by parent
   const frontendServices: Service[] = []
@@ -74,12 +74,12 @@ export function inferFlowGraph(
   const createBackend = backendServices.length > 0
 
   if (createFrontend) {
-    nodes.push({ id: 'frontend', label: 'Frontend', type: 'frontend' })
+    nodes.push({ id: 'frontend', label: 'Frontend', type: 'layer', layerColor: '#4a8ab0' })
     edges.push({ source: 'user', target: 'frontend', flowType: 'data' })
   }
 
   if (createBackend) {
-    nodes.push({ id: 'api', label: 'Backend', type: 'api' })
+    nodes.push({ id: 'api', label: 'Backend', type: 'layer', layerColor: '#6b4ab0' })
     edges.push({ source: 'user', target: 'api', flowType: 'data' })
     if (createFrontend) {
       edges.push({ source: 'frontend', target: 'api', flowType: 'data' })
@@ -106,7 +106,7 @@ export function inferFlowGraph(
       // Create intermediate node only if group is defined AND has 2+ services
       if (groupDef && groupSvcs.length >= 2) {
         const layerId = `layer-${groupKey}`
-        nodes.push({ id: layerId, label: groupDef.label, type: 'external' })
+        nodes.push({ id: layerId, label: groupDef.label, type: 'layer' })
         edges.push({ source: parentId, target: layerId, flowType: 'data' })
 
         for (const svc of groupSvcs) {

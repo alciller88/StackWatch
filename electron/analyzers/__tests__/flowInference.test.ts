@@ -18,7 +18,7 @@ describe('inferFlowGraph', () => {
   it('always creates a user node even with empty inputs', () => {
     const { nodes, edges } = inferFlowGraph([], [])
     expect(nodes).toHaveLength(1)
-    expect(nodes[0]).toEqual({ id: 'user', label: 'User', type: 'user' })
+    expect(nodes[0]).toEqual({ id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' })
     expect(edges).toHaveLength(0)
   })
 
@@ -29,7 +29,7 @@ describe('inferFlowGraph', () => {
     const { nodes } = inferFlowGraph(services, [])
     const frontend = nodes.find(n => n.id === 'frontend')
     expect(frontend).toBeDefined()
-    expect(frontend!.type).toBe('frontend')
+    expect(frontend!.type).toBe('layer')
     expect(frontend!.label).toBe('Frontend')
   })
 
@@ -40,7 +40,7 @@ describe('inferFlowGraph', () => {
     const { nodes } = inferFlowGraph(services, [])
     const api = nodes.find(n => n.id === 'api')
     expect(api).toBeDefined()
-    expect(api!.type).toBe('api')
+    expect(api!.type).toBe('layer')
     expect(api!.label).toBe('Backend')
   })
 

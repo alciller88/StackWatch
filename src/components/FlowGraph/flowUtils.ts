@@ -8,6 +8,7 @@ export function getNodeColor(type: FlowNode['type']): string {
     api: '#a855f7',
     database: '#f97316',
     external: '#ec4899',
+    layer: '#e2b04a',
   }
   return colors[type] ?? '#6b7280'
 }
@@ -39,6 +40,15 @@ export function getNodeIcon(type: FlowNode['type']): string {
     api: '\u26A1',
     database: '\u{1F5C4}\uFE0F',
     external: '\u{1F50C}',
+    layer: '\u{1F4CB}',
   }
   return icons[type] ?? '\u2699\uFE0F'
+}
+
+export function getLayerIcon(label: string): string {
+  const lower = label.toLowerCase()
+  if (lower === 'user') return '\u{1F464}'
+  if (lower === 'frontend') return '\u{1F5A5}\uFE0F'
+  if (lower === 'backend') return '\u26A1'
+  return '\u{1F4CB}'
 }

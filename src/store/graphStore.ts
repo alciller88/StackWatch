@@ -16,8 +16,16 @@ import { useHistoryStore } from './historyStore'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
+const LAYER_NODE_WIDTH = 200
+const LAYER_NODE_HEIGHT = 56
 const VIRTUAL_NODE_WIDTH = 160
 const VIRTUAL_NODE_HEIGHT = 48
+
+function isLayerNode(node: FlowNode | Node): boolean {
+  const data = 'data' in node ? (node as Node).data : node
+  const nodeType = data?.nodeType ?? data?.type
+  return nodeType === 'layer'
+}
 
 // Virtual nodes have no serviceId — they are grouping nodes (frontend, backend, layer-*)
 function isVirtualNode(node: FlowNode | Node): boolean {
@@ -26,6 +34,7 @@ function isVirtualNode(node: FlowNode | Node): boolean {
 }
 
 function getNodeDimensions(node: FlowNode | Node): { width: number; height: number } {
+  if (isLayerNode(node)) return { width: LAYER_NODE_WIDTH, height: LAYER_NODE_HEIGHT }
   if (isVirtualNode(node)) return { width: VIRTUAL_NODE_WIDTH, height: VIRTUAL_NODE_HEIGHT }
   return { width: NODE_WIDTH, height: NODE_HEIGHT }
 }
@@ -43,7 +52,24 @@ function getCurrentServices(): import('../types').Service[] {
 
 // ── helpers ──
 
-function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'medium' | 'low') {
+function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'medium' | 'low', layerColor?: string) {
+  if (nodeType === 'layer') {
+    return {
+      width: LAYER_NODE_WIDTH,
+      height: LAYER_NODE_HEIGHT,
+      background: '#0d1017',
+      border: `2px solid ${layerColor || '#e2b04a'}`,
+      borderRadius: '12px',
+      color: '#f9fafb',
+      fontSize: '13px',
+      fontWeight: 700,
+      textTransform: 'uppercase' as const,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '8px',
+    }
+  }
   return {
     width: NODE_WIDTH,
     height: NODE_HEIGHT,
@@ -117,8 +143,9 @@ function flowNodesToRFNodes(
       url: undefined as string | undefined,
       note: undefined as string | undefined,
       source: (node.serviceId ? 'inferred' : 'manual') as 'inferred' | 'manual',
+      layerColor: node.layerColor,
     },
-    style: buildNodeStyle(node.type),
+    style: buildNodeStyle(node.type, undefined, node.layerColor),
   }))
 }
 
@@ -204,6 +231,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       const svcConfidence = svc?.confidence ?? 'high'
       if (saved) {
         const confidence = saved.confidence ?? svcConfidence
+        const layerColor = saved.layerColor ?? n.data.layerColor
         return {
           ...n,
           data: {
@@ -216,8 +244,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
             url: saved.url ?? n.data.url,
             note: saved.note ?? n.data.note,
             source: saved.source ?? n.data.source,
+            layerColor,
           },
-          style: buildNodeStyle(saved.nodeType ?? n.data.nodeType, confidence),
+          style: buildNodeStyle(saved.nodeType ?? n.data.nodeType, confidence, layerColor),
         }
       }
       // Enrich with service data
@@ -342,8 +371,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
         url: data.url,
         note: data.note,
         source: data.source ?? 'manual',
+        layerColor: data.layerColor,
       },
-      style: buildNodeStyle(nodeType, data.confidence),
+      style: buildNodeStyle(nodeType, data.confidence, data.layerColor),
     }
     set((state) => ({ nodes: [...state.nodes, newNode] }))
     get().persistToConfig()
@@ -359,10 +389,11 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
         const newData = { ...n.data, ...data }
         const nodeType = data.nodeType ?? n.data.nodeType
         const confidence = data.confidence ?? n.data.confidence
+        const layerColor = data.layerColor ?? n.data.layerColor
         return {
           ...n,
           data: newData,
-          style: buildNodeStyle(nodeType, confidence),
+          style: buildNodeStyle(nodeType, confidence, layerColor),
         }
       }),
     }))
@@ -522,6 +553,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
           url: n.data.url,
           note: n.data.note,
           source: n.data.source,
+          layerColor: n.data.layerColor,
         },
       })),
       edges: edges.map((e) => ({

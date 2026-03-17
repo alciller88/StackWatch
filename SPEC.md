@@ -235,13 +235,14 @@ Persists health scores to `.stackwatch/score-history.json` after each scan:
 ### 3.11 Flow inference (`flowInference.ts`)
 
 Generates a 4-layer hierarchical architecture graph from detected services:
-- **Layer 1**: user node (always present as entry point)
-- **Layer 2**: virtual frontend node (only if hosting/cdn services detected) and virtual backend node (if backend-category services exist). Both have no serviceId, use type 'frontend'/'api', labels 'Frontend'/'Backend'. A frontend→backend edge is added when both exist.
-- **Layer 3**: intermediate grouping nodes (e.g. Auth Layer, Data Layer) — created only for category groups with 2+ services
-- **Layer 4**: individual service nodes
+- **Layer 1**: user node (always present as entry point, type: 'layer', layerColor: '#e2b04a')
+- **Layer 2**: frontend layer node (only if hosting/cdn services detected, layerColor: '#4a8ab0') and backend layer node (if backend-category services exist, layerColor: '#6b4ab0'). Both have no serviceId, use type: 'layer'. A frontend→backend edge is added when both exist.
+- **Layer 3**: intermediate grouping layer nodes (e.g. Auth Layer, Data Layer, type: 'layer') — created only for category groups with 2+ services
+- **Layer 4**: individual service nodes (type: 'database'/'cdn'/'external')
 - Category routing: frontend-bound (hosting, cdn, auth, analytics, support), backend-bound (database, storage, payments, email, monitoring, messaging, cicd, infra), 'other' (with url → backend, without → frontend)
 - Creates typed edges: data, auth, payment, webhook
-- Dagre hierarchical layout (top-to-bottom, ranksep 120, nodesep 80). Virtual nodes use 160x48 dimensions, service nodes 180x60.
+- Dagre hierarchical layout (top-to-bottom, ranksep 120, nodesep 80). Layer nodes use 200x56 dimensions, service nodes 180x60.
+- Layer nodes are organizational — no serviceId, no confidence badges, can be created/edited/deleted by user via context menu.
 
 ### 3.12 HTML exporter (`exporters/htmlExporter.ts`)
 
@@ -333,9 +334,10 @@ interface Dependency {
 interface FlowNode {
   id: string
   label: string
-  type: 'user' | 'frontend' | 'api' | 'database' | 'external' | 'service'
+  type: 'user' | 'frontend' | 'api' | 'database' | 'external' | 'layer'
   category?: ServiceCategory
   serviceId?: string
+  layerColor?: string  // border color for layer nodes
 }
 
 interface FlowEdge {
@@ -783,3 +785,5 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Discarded panel: virtualized list of items filtered during analysis (low_score, ai_filter, generic_term), with search, reason filter, and restore to manual service
 - [x] Backend: deduplicator tracks discarded items (low_score, generic_term), pipeline tracks AI-filtered items, included in AnalysisResult
 - [x] 10 new tests: DiscardedPanel (7), deduplicator discarded tracking (3)
+- [x] Layer node type: organizational nodes (User, Frontend, Backend, grouping) use type: 'layer' with layerColor, 200x56 dimensions, uppercase bold styling
+- [x] "Add layer node" in pane context menu, layer-specific icons per label (User/Frontend/Backend), no confidence badges on layer nodes

@@ -12,7 +12,7 @@ import 'reactflow/dist/style.css'
 import { useStore } from '../../store/useStore'
 import { useGraphStore } from '../../store/graphStore'
 import { useDialogStore } from '../../store/dialogStore'
-import { getNodeColor, getNodeIcon, getEdgeColor } from './flowUtils'
+import { getNodeColor, getNodeIcon, getEdgeColor, getLayerIcon } from './flowUtils'
 import { ContextMenu, type MenuEntry } from './ContextMenu'
 import { NodeEditPanel } from './NodeEditPanel'
 import type { FlowNode, ServiceCategory } from '../../types'
@@ -253,6 +253,20 @@ export const FlowGraph: React.FC = () => {
           })
         },
       },
+      {
+        label: 'Add layer node',
+        icon: '\u{1F4CB}',
+        onClick: () => {
+          if (!contextMenu) return
+          const id = `layer-custom-${Date.now()}`
+          addNode(id, { x: contextMenu.x, y: contextMenu.y }, {
+            label: 'New Layer',
+            nodeType: 'layer',
+            source: 'manual',
+            layerColor: '#e2b04a',
+          })
+        },
+      },
       { divider: true },
       {
         label: 'Reset to auto layout',
@@ -416,10 +430,12 @@ export const FlowGraph: React.FC = () => {
   const styledNodes = nodes.map((n) => {
     const confidence = n.data.confidence ?? 'high'
     const isLowConfidence = confidence === 'low'
+    const isLayer = n.data.nodeType === 'layer'
+    const icon = isLayer ? getLayerIcon(n.data.label ?? '') : getNodeIcon(n.data.nodeType ?? 'external')
 
     return {
       ...n,
-      style: isLowConfidence
+      style: isLowConfidence && !isLayer
         ? { ...n.style, borderStyle: 'dashed', opacity: 0.7 }
         : n.style,
       data: {
@@ -427,11 +443,11 @@ export const FlowGraph: React.FC = () => {
         label: (
           <div
             className="flex items-center gap-2"
-            title={isLowConfidence ? 'Low confidence detection' : undefined}
+            title={isLowConfidence && !isLayer ? 'Low confidence detection' : undefined}
           >
-            <span>{getNodeIcon(n.data.nodeType ?? 'external')}</span>
+            <span>{icon}</span>
             <span className="truncate">{n.data.label}</span>
-            {isLowConfidence && <span className="text-[var(--color-accent)] text-[11px]">?</span>}
+            {isLowConfidence && !isLayer && <span className="text-[var(--color-accent)] text-[11px]">?</span>}
           </div>
         ),
       },

@@ -25,7 +25,7 @@ describe('analyzeGitHubRepo pipeline', () => {
     expect(result.dependencies).toHaveLength(0)
     // User node is always present
     expect(result.flowNodes).toHaveLength(1)
-    expect(result.flowNodes[0].type).toBe('user')
+    expect(result.flowNodes[0].type).toBe('layer')
     expect(result.flowEdges).toHaveLength(0)
   })
 
@@ -50,8 +50,9 @@ describe('analyzeGitHubRepo pipeline', () => {
     expect(stripeSvc!.category).toBe('payments')
 
     // Backend node should exist (Stripe is a payments service → backend)
-    const backendNode = result.flowNodes.find(n => n.type === 'api')
+    const backendNode = result.flowNodes.find(n => n.id === 'api')
     expect(backendNode).toBeDefined()
+    expect(backendNode!.type).toBe('layer')
   })
 
   it('discards npm-only packages without additional evidence', async () => {
@@ -103,10 +104,13 @@ describe('analyzeGitHubRepo pipeline', () => {
       mockListDir({}),
     )
 
-    const nodeTypes = result.flowNodes.map(n => n.type)
-    expect(nodeTypes).toContain('user')
+    const nodeIds = result.flowNodes.map(n => n.id)
+    expect(nodeIds).toContain('user')
     // No hosting/cdn service → no frontend virtual node
-    expect(nodeTypes).toContain('api')
+    expect(nodeIds).toContain('api')
+    // User and Backend are now layer nodes
+    expect(result.flowNodes.find(n => n.id === 'user')!.type).toBe('layer')
+    expect(result.flowNodes.find(n => n.id === 'api')!.type).toBe('layer')
 
     // Stripe should produce an external node
     const stripeNode = result.flowNodes.find(n => n.label === 'Stripe')

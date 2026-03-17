@@ -51,6 +51,8 @@ Every service MUST have a corresponding graph node. This is enforced by:
 
 Never filter services out of the graph. Never create services without nodes.
 
+Layer nodes (type: 'layer') are organizational — they do NOT represent services. The 1:1 invariant only applies to service nodes.
+
 ---
 
 ## Architecture
@@ -132,7 +134,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
 | `electron/analyzers/heuristic.ts` | Semantic scoring classification into 19 categories (config_file: 10, ci_secret: 8, env_var credential: 7, env_var endpoint: 6, url: 5, env_var generic: 2, npm/import: 1) + hard filters (CI vars, feature flags, browser APIs) + score penalties (config suffixes: -5, descriptive phrases: -3, project name: -10) |
 | `electron/analyzers/deduplicator.ts` | Service grouping, best-score-per-unique-evidence-type (not additive per instance), thresholds (<6: discard, 6-10: low/needsReview for AI, >10: high), brand collapse, generic entry removal |
-| `electron/analyzers/flowInference.ts` | 4-layer hierarchical graph: user → frontend/backend (virtual) → grouping nodes (Auth Layer, Data Layer for 2+ services) → individual services. Category routing: frontend-bound (hosting, cdn, auth, analytics, support), backend-bound (database, storage, payments, email, monitoring, messaging, cicd, infra). Virtual nodes only when relevant services exist. |
+| `electron/analyzers/flowInference.ts` | 4-layer hierarchical graph: user → frontend/backend → grouping nodes (Auth Layer, Data Layer for 2+ services) → individual services. User/Frontend/Backend/grouping nodes use type: 'layer' with layerColor. Category routing: frontend-bound (hosting, cdn, auth, analytics, support), backend-bound (database, storage, payments, email, monitoring, messaging, cicd, infra). Layer nodes only when relevant services exist. |
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
 | `electron/analyzers/stackDiff.ts` | Stack Diff: compare scans, save/load snapshots (.stackwatch/last-scan.json) |

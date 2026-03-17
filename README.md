@@ -247,11 +247,12 @@ Configure in Settings → test the connection → enable AI analysis. All AI cal
 The Flow panel provides a canvas-based architecture visualisation powered by React Flow:
 
 - **Auto-layout** — Dagre 4-layer hierarchical layout (user → frontend/backend → category groups → services)
+- **Layer nodes** — organizational nodes (User, Frontend, Backend) with distinct styling (200x56, uppercase bold, colored borders)
 - **Drag and reposition** — node positions persist to config
-- **Context menus** — right-click nodes to edit, delete, exclude, or add connections
+- **Context menus** — right-click nodes to edit, delete, exclude, or add connections; right-click canvas to add service/custom/layer nodes
 - **Custom connections** — drag between nodes to create edges, set flow types (data/auth/payment/webhook)
 - **Node editing** — inline panel for label, type, category, URL, notes
-- **Visual coding** — node borders by type (frontend=blue, API=purple, DB=orange), edges by flow type
+- **Visual coding** — node borders by type (layer=gold, DB=orange, service=pink), edges by flow type
 
 ---
 
@@ -523,6 +524,8 @@ StackWatch/
 - [x] Scan mode dialog: merge (keep manual + positions) vs fresh scan on re-analyze
 - [x] Discarded panel: virtualized list of filtered items with search, reason filter, restore to manual service
 - [x] 346 tests across 23 suites (+10 DiscardedPanel and deduplicator tracking tests)
+- [x] Layer node type: organizational nodes (User, Frontend, Backend) use type: 'layer' with custom colors and sizing
+- [x] "Add layer node" in canvas context menu, layer-specific icons, no confidence badges
 
 ---
 
