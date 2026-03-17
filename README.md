@@ -86,7 +86,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (321 tests across 22 suites) |
+| `npm test` | Run unit tests (323 tests across 22 suites) |
 
 ### CLI (no Electron required)
 
@@ -200,15 +200,14 @@ domain, hosting, CI/CD, database, auth, payments, email, analytics, monitoring, 
 
 ### Confidence levels
 
-Each detected service is assigned a confidence level based on summed evidence scores:
+Each detected service is assigned a confidence level based on the sum of its **best score per unique evidence type** (not per instance — 50 imports of the same package still scores 1):
 
 | Level | Score range | Meaning | Card border |
 |---|---|---|---|
-| **High** | ≥ 15 | Confirmed service — multiple strong evidence types | Green |
-| **Medium** | 9–14 | Likely service — moderate evidence | Yellow |
-| **Low** | 6–8 | Uncertain — weak evidence, needs user confirmation | Orange dashed |
+| **High** | > 10 | Confirmed service — multiple evidence types | Green |
+| **Low** | 6–10 | Grey zone — AI validates if configured | Orange dashed |
 
-Evidence scores: config files (10), CI secrets (8), credential env vars (7), endpoint env vars (6), URLs (5), generic env vars (2), npm packages/imports (1). Services scoring below 6 are automatically discarded.
+Evidence type scores: config files (10), CI secrets (8), credential env vars (7), endpoint env vars (6), URLs (5), generic env vars (2), npm packages/imports (1). Services scoring below 6 are automatically discarded.
 
 Services with low confidence appear in a "Needs Review" section at the top of the panel.
 
@@ -431,7 +430,7 @@ StackWatch/
 
 ### Test suites
 
-321 tests across 22 suites:
+323 tests across 22 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -454,7 +453,7 @@ StackWatch/
 | Flow inference | 9 | Node types, edge routing, layout |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 18 | Grouping, merging, score summing, thresholds, brand collapse |
+| Deduplicator | 20 | Grouping, merging, best-per-type scoring, thresholds, brand collapse |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | daysUntil | 3 | Today, future, past |
 
@@ -496,7 +495,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 321 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
+- [x] 323 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
@@ -527,7 +526,7 @@ StackWatch/
 - [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
 - [x] Zombie UI badges and activity status filter in Services panel
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
-- [x] 321 tests across 22 suites (+43 tests for new modules)
+- [x] 323 tests across 22 suites (+43 tests for new modules)
 
 ---
 

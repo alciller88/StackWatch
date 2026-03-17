@@ -38,7 +38,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
-- **Heuristic mode** (default): fast, offline, ~80% coverage, semantic evidence scoring (score per evidence type, penalties for config suffixes/descriptive names/project name), score-based confidence thresholds at dedup
+- **Heuristic mode** (default): fast, offline, ~80% coverage, semantic evidence scoring (best score per unique evidence type, not additive per instance), thresholds: <6 discard, 6-10 low/AI-validated, >10 high
 - **Hybrid mode**: heuristics → AI filter (≤40 services, targets low/needsReview only; high confidence passes through) → AI refine (medium/low only) → AI deep analysis (~95% coverage)
 - AI is always optional — silent fallback to heuristic results on failure
 
@@ -130,7 +130,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. |
 | `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
 | `electron/analyzers/heuristic.ts` | Semantic scoring classification into 19 categories (config_file: 10, ci_secret: 8, env_var credential: 7, env_var endpoint: 6, url: 5, env_var generic: 2, npm/import: 1) + hard filters (CI vars, feature flags, browser APIs) + score penalties (config suffixes: -5, descriptive phrases: -3, project name: -10) |
-| `electron/analyzers/deduplicator.ts` | Service grouping, score summing, score-based confidence thresholds (<6: discard, 6-8: low/needsReview, 9-14: medium, ≥15: high), brand collapse, generic entry removal, npm-only penalty (-4) |
+| `electron/analyzers/deduplicator.ts` | Service grouping, best-score-per-unique-evidence-type (not additive per instance), thresholds (<6: discard, 6-10: low/needsReview for AI, >10: high), brand collapse, generic entry removal |
 | `electron/analyzers/flowInference.ts` | Node/edge generation from services + deps |
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
@@ -206,7 +206,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-321 tests across 22 suites. vitest + @testing-library/react + jsdom.
+323 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -229,7 +229,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Flow inference | 9 | Node types, edge routing, layout |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 18 | Grouping, merging, score summing, score-based confidence thresholds, brand collapse, generic entry removal, npm-only penalty |
+| Deduplicator | 20 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | daysUntil | 3 | Today, future, past |
 

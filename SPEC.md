@@ -148,9 +148,9 @@ Classifies evidence using semantic scoring — no hardcoded service allowlists:
 
 Groups related detections of the same service and applies score-based confidence:
 - Name-based grouping (case-insensitive, prefix matching)
-- **Score summing:** Merges evidence scores when grouping the same service
-- **npm-only penalty:** Services with only import/npm_package evidence receive -4 penalty
-- **Score thresholds:** `< 6` → discard, `6-8` → low confidence + needsReview, `9-14` → medium, `≥ 15` → high
+- **Best-score-per-type:** Tracks the highest score per unique evidence type (import and npm_package count as one type). 50 imports of framer-motion = score 1, not 50.
+- **Final score** = sum of best scores across unique evidence types. Example: Sentry with env_var(6) + ci_secret(8) + import(1) = 15
+- **Score thresholds:** `< 6` → discard, `6-10` → low confidence + needsReview (grey zone, AI validates), `> 10` → high confidence (no AI needed)
 - Preferred category from strongest evidence
 - **Brand collapse:** "BrandName + descriptor" entries collapse into "BrandName" (e.g., "Cloudflare Sitekey" + "Cloudflare Turnstile" → "Cloudflare"). Handles variant spellings (Dockerhub → Docker Hub).
 - **Generic entry removal:** Removes generic entries (Database, Email From, Email Server, etc.) when a specific service exists in the same category
@@ -694,7 +694,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-321 tests across 22 suites. Vitest + @testing-library/react + jsdom.
+323 tests across 22 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -717,7 +717,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
 | scoreHistory | 8 | `electron/analyzers/__tests__/` |
 | ContextMenu | 7 | `src/components/FlowGraph/__tests__/` |
-| Deduplicator | 18 | `electron/analyzers/__tests__/` |
+| Deduplicator | 20 | `electron/analyzers/__tests__/` |
 | Pipeline | 7 | `electron/analyzers/__tests__/` |
 | daysUntil | 3 | `src/utils/__tests__/` |
 

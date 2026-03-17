@@ -5,9 +5,14 @@ interface ServiceGroup {
   category: ServiceCategory
   confidence: 'high' | 'medium' | 'low'
   reasons: string[]
-  score: number
-  evidenceTypes: Set<string>
+  /** Best (max) score per unique evidence type. Final score = sum of values. */
+  scoreByType: Map<string, number>
   needsReview?: boolean
+}
+
+/** Normalize evidence type key — import and npm_package count as the same type */
+function evidenceTypeKey(type: string): string {
+  return (type === 'import' || type === 'npm_package') ? 'import/npm' : type
 }
 
 // Well-known brand names for collapsing "BrandName + descriptor" entries
@@ -32,10 +37,14 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
     const key = normalizeServiceKey(result.serviceName)
     if (!key) continue
 
+    const typeKey = evidenceTypeKey(result.evidenceType)
     const existing = groups.get(key)
     if (existing) {
-      // Sum scores
-      existing.score += result.score
+      // Keep best (max) score per evidence type — not additive per instance
+      const prev = existing.scoreByType.get(typeKey) ?? 0
+      if (result.score > prev) {
+        existing.scoreByType.set(typeKey, result.score)
+      }
 
       // Prefer more specific category over 'other'
       if (existing.category === 'other' && result.category !== 'other') {
@@ -45,20 +54,19 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
       if (!existing.reasons.includes(result.reason)) {
         existing.reasons.push(result.reason)
       }
-      // Track evidence types
-      existing.evidenceTypes.add(result.evidenceType)
       // Use better name (longer, more specific)
       if (result.serviceName.length > existing.name.length) {
         existing.name = result.serviceName
       }
     } else {
+      const scoreMap = new Map<string, number>()
+      scoreMap.set(typeKey, result.score)
       groups.set(key, {
         name: result.serviceName,
         category: result.category,
         confidence: result.confidence,
         reasons: [result.reason],
-        score: result.score,
-        evidenceTypes: new Set([result.evidenceType]),
+        scoreByType: scoreMap,
       })
     }
   }
@@ -72,31 +80,28 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
   // Remove generic entries when a specific one exists in the same category
   removeGenericEntries(groups)
 
-  // Apply dedup-time penalties and score thresholds
+  // Compute final score per group and apply thresholds
   const services: Service[] = []
   for (const [key, group] of groups) {
-    let finalScore = group.score
-
-    // Penalty: only has import/npm_package evidence without anything stronger → -4
-    const weakOnly = Array.from(group.evidenceTypes).every(t => t === 'import' || t === 'npm_package')
-    if (weakOnly) {
-      finalScore -= 4
+    // Final score = sum of best scores per unique evidence type
+    let finalScore = 0
+    for (const s of group.scoreByType.values()) {
+      finalScore += s
     }
 
     // Score threshold: discard if below 6
     if (finalScore < 6) continue
 
-    // Derive confidence from summed score
+    // Derive confidence from final score
+    // > 10 → high (strong multi-type evidence, no AI needed)
+    // 6-10 → low, needsReview (grey zone, AI validates)
     let confidence: 'high' | 'medium' | 'low'
     let needsReview: boolean
-    if (finalScore >= 15) {
+    if (finalScore > 10) {
       confidence = 'high'
       needsReview = false
-    } else if (finalScore >= 9) {
-      confidence = 'medium'
-      needsReview = false
     } else {
-      // score 6-8
+      // score 6-10
       confidence = 'low'
       needsReview = true
     }
@@ -156,12 +161,12 @@ function mergeInto(groups: Map<string, ServiceGroup>, into: string, from: string
   const gFrom = groups.get(from)
   if (!gInto || !gFrom) return
 
-  // Sum scores
-  gInto.score += gFrom.score
-
-  // Merge evidence types
-  for (const t of gFrom.evidenceTypes) {
-    gInto.evidenceTypes.add(t)
+  // Merge scoreByType: keep max per type
+  for (const [type, score] of gFrom.scoreByType) {
+    const prev = gInto.scoreByType.get(type) ?? 0
+    if (score > prev) {
+      gInto.scoreByType.set(type, score)
+    }
   }
 
   if (gInto.category === 'other' && gFrom.category !== 'other') {
@@ -237,8 +242,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
         category: g.category,
         confidence: g.confidence,
         reasons: [...g.reasons],
-        score: g.score,
-        evidenceTypes: new Set(g.evidenceTypes),
+        scoreByType: new Map(g.scoreByType),
       }
       groups.set(brandKey, brandGroup)
       groups.delete(first)
