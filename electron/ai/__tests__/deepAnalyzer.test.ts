@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Service, AIProvider } from '../../types'
-import { safeParseJSON, refineServicesWithAI } from '../deepAnalyzer'
+import { safeParseJSON, refineServicesWithAI, filterFalsePositivesWithAI } from '../deepAnalyzer'
 
 // ── Helpers ──
 
@@ -292,5 +292,66 @@ describe('refineServicesWithAI', () => {
 
     expect(result).toEqual([])
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
+
+// ── filterFalsePositivesWithAI ──
+
+describe('filterFalsePositivesWithAI', () => {
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.restoreAllMocks()
+  })
+
+  it('keeps only services whose IDs are returned by AI', async () => {
+    vi.stubGlobal('fetch', mockFetchResponse('["redis", "stripe"]'))
+
+    const services = [
+      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('is-e2e', 'Is E2e', 'other', 'low'),
+      mockService('stripe', 'Stripe', 'payments', 'high'),
+      mockService('exit-code', 'Exit Code', 'other', 'low'),
+    ]
+
+    const result = await filterFalsePositivesWithAI(services, testProvider)
+
+    expect(result).toHaveLength(2)
+    expect(result.map(s => s.id)).toEqual(['redis', 'stripe'])
+  })
+
+  it('returns original services when AI returns malformed JSON', async () => {
+    vi.stubGlobal('fetch', mockFetchResponse('Sure! Here are the real services: redis, stripe'))
+
+    const services = [
+      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('stripe', 'Stripe', 'payments', 'high'),
+    ]
+
+    const result = await filterFalsePositivesWithAI(services, testProvider)
+
+    expect(result).toHaveLength(2)
+    expect(result[0].id).toBe('redis')
+    expect(result[1].id).toBe('stripe')
+  })
+
+  it('returns original services on fetch error (silent fallback)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
+
+    const services = [
+      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('stripe', 'Stripe', 'payments', 'high'),
+    ]
+
+    const result = await filterFalsePositivesWithAI(services, testProvider)
+
+    expect(result).toHaveLength(2)
+    expect(result[0].id).toBe('redis')
+    expect(result[1].id).toBe('stripe')
   })
 })

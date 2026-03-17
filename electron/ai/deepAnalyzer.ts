@@ -420,6 +420,97 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   return result
 }
 
+// ── Step 0: AI false-positive filter ──
+//
+// Lightweight AI call that reviews deduplicator output and returns only
+// the IDs of services that are real external dependencies. Runs before
+// refineServicesWithAI (which does heavier per-service work).
+
+const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert reviewing a codebase scan.
+Your job is to identify which detected items are NOT real external services.
+
+A REAL external service is a third-party SaaS, API, platform, database,
+or infrastructure tool that exists as an independent product the project
+depends on (e.g. Stripe, PostgreSQL, Sentry, Vercel, Twilio).
+
+These are NOT real external services and must be excluded:
+- Feature flags or app config (IS_*, DISABLE_*, *_ENABLED, *_ROLLOUT)
+- Internal app parameters (*_INTERVAL, *_MINUTES, *_DELAY, *_LIMIT, *_SIZE)
+- CI/CD pipeline variables (EXIT_CODE, HEAD_REF, BRANCH_NAME, *_REPORT)
+- The project's own name or internal brand identifiers
+- Generic non-product words (Team, Project, Run, Ci, Edge, Single, Sender)
+- Browser polyfills or utilities (*_POLYFILL, *_OBSERVER)
+- Duplicate entries referring to the same service already present
+
+Respond ONLY with a JSON array of service IDs to KEEP. No explanation,
+no markdown, no preamble. Example: ["id1", "id2", "id3"]`
+
+export async function filterFalsePositivesWithAI(
+  services: Service[],
+  provider: AIProvider,
+): Promise<Service[]> {
+  if (services.length === 0) return services
+
+  const payload = services.map(s => ({
+    id: s.id,
+    name: s.name,
+    category: s.category,
+    inferredFrom: s.inferredFrom,
+  }))
+
+  const userPrompt = `Review these detected services and return only the IDs of real external services:\n${JSON.stringify(payload)}`
+
+  // Build messages with system + user prompt
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (provider.apiKey) {
+    headers['Authorization'] = `Bearer ${provider.apiKey}`
+  }
+
+  let text: string
+  try {
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: provider.model,
+        max_tokens: 500,
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: AI_FILTER_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+      signal: AbortSignal.timeout(60000),
+    })
+
+    if (!response.ok) throw new Error(`AI HTTP ${response.status}`)
+
+    const data = await response.json()
+    if (!Array.isArray(data.choices) || data.choices.length === 0) {
+      throw new Error('AI returned empty response')
+    }
+    text = (data.choices[0]?.message?.content ?? '').replace(/```json|```/g, '').trim()
+  } catch {
+    // Silent fallback: return original services
+    return services
+  }
+
+  const keepIds = safeParseJSON<unknown>(text, null)
+
+  // Validate: must be an array of strings
+  if (!Array.isArray(keepIds) || !keepIds.every(id => typeof id === 'string')) {
+    return services
+  }
+
+  const keepSet = new Set(keepIds as string[])
+  const filtered = services.filter(s => keepSet.has(s.id))
+
+  // Safety: if AI removed everything, that's clearly wrong — fallback
+  if (filtered.length === 0) return services
+
+  return filtered
+}
+
 // ── Orchestrator ──
 
 export async function runDeepAnalysis(

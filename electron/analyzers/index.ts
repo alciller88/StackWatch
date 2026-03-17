@@ -4,7 +4,7 @@ import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices, confidenceRank } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
-import { runDeepAnalysis, refineServicesWithAI } from '../ai/deepAnalyzer'
+import { runDeepAnalysis, refineServicesWithAI, filterFalsePositivesWithAI } from '../ai/deepAnalyzer'
 import { detectMonorepo } from './monorepo'
 import { detectZombieServices, enrichServicesWithZombieData } from './zombieDetector'
 
@@ -109,6 +109,19 @@ async function runPipeline(
   // Note: excludedServices only affects the graph (filtered in graphStore.initFromAnalysis),
   // NOT the services list — users should see all detected services in the Services panel.
 
+  // Step 2.5: AI false-positive filter (hybrid mode, before full refinement)
+  let aiFilteredCount: number | undefined
+  if (useAI) {
+    const preFilterCount = services.length
+    try {
+      services = await filterFalsePositivesWithAI(services, aiSettings!.provider)
+      const removed = preFilterCount - services.length
+      if (removed > 0) aiFilteredCount = removed
+    } catch {
+      // Silent fallback — filter is optional
+    }
+  }
+
   // Step 3: AI enhancement (hybrid mode)
   let deepAnalysis: DeepAnalysisResult | undefined
   let aiError: string | undefined
@@ -183,6 +196,7 @@ async function runPipeline(
     flowEdges: flow.edges,
     deepAnalysis,
     aiError,
+    aiFilteredCount,
   }
 }
 

@@ -66,6 +66,7 @@ export interface AnalysisResult {
   flowEdges: FlowEdge[];
   deepAnalysis?: DeepAnalysisResult;
   aiError?: string;
+  aiFilteredCount?: number;
   monorepo?: {
     type: string;
     packages: string[];

@@ -219,7 +219,7 @@ StackWatch works 100% offline without AI. Two scan modes are available in **Sett
 | Mode | Speed | Requires AI | Description |
 |------|-------|-------------|-------------|
 | **Heuristic only** | Fast | No | Pattern-based detection (~80% coverage). Default. |
-| **Heuristic + AI** | Medium | Yes | Heuristics first, then AI validates, refines, and discovers hidden services (~95%) |
+| **Heuristic + AI** | Medium | Yes | Heuristics first, then AI filters false positives, validates, refines, and discovers hidden services (~95%) |
 
 When Heuristic + AI is enabled, the AI pipeline runs in two phases:
 

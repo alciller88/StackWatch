@@ -63,7 +63,9 @@ Heuristic classifier  →  HeuristicResult[]  (semantic, no fixed lists)
     ↓
 Deduplicator  →  DetectedService[]  (grouped, no duplicates)
     ↓ (if AI configured)
-AI refine  →  validated services (false positives removed, categories fixed)
+AI filter  →  semantic false-positive removal (keeps only real external services)
+    ↓
+AI refine  →  validated services (categories fixed, duplicates merged)
     ↓
 AI deep analysis  →  usage context + hidden services + smart edge types
     ↓
@@ -139,10 +141,11 @@ Detects 5 monorepo types:
 
 Resolves simple glob patterns (e.g., `packages/*`). Scans each workspace package separately and merges results.
 
-### 3.5 Deep AI analysis (`ai/deepAnalyzer.ts`)
+### 3.5 AI analysis (`ai/deepAnalyzer.ts`)
 
-Only runs if the user configures an AI provider. Four capabilities:
+Only runs if the user configures an AI provider. Five capabilities:
 
+0. **False-positive filter** (`filterFalsePositivesWithAI`): Reviews all deduplicator output in a single lightweight AI call. Returns only service IDs that are real external dependencies. Silent fallback on failure. Runs before refinement. Reports `aiFilteredCount` in `AnalysisResult`.
 1. **Service context**: For each detected service, reads relevant code files and determines usage description, criticality level (critical/important/optional), and warnings (hardcoded secrets, missing error handling).
 2. **Hidden service detection**: Reads priority files (lib/, services/, api/) and finds services consumed via wrappers or custom SDKs that heuristic analysis missed.
 3. **Smart graph edges**: Determines correct edge type (data/auth/payment/webhook) based on actual service usage context.
@@ -665,14 +668,14 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-305 tests across 22 suites. Vitest + @testing-library/react + jsdom.
+308 tests across 22 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
 | graphStore | 27 | `src/store/__tests__/` |
 | vulnScanner | 27 | `electron/analyzers/__tests__/` |
 | Extractor | 26 | `electron/analyzers/__tests__/` |
-| Deep Analyzer | 19 | `electron/ai/__tests__/` |
+| Deep Analyzer | 22 | `electron/ai/__tests__/` |
 | badge | 17 | `src/utils/__tests__/` |
 | htmlExporter | 13 | `electron/exporters/__tests__/` |
 | Deep Analyzer (runDeep) | 13 | `electron/ai/__tests__/` |
@@ -730,3 +733,5 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Brand collapse deduplication: multi-evidence per brand → single entry
 - [x] CLI `--all` flag to show low-confidence and needs-review services
 - [x] 21 new tests: heuristic filtering (16) + deduplicator brand collapse (5)
+- [x] AI false-positive filter (Step 0): semantic validation before AI refine, silent fallback, aiFilteredCount metric
+- [x] 3 new tests for filterFalsePositivesWithAI (valid response, malformed JSON, network error)

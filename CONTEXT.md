@@ -31,7 +31,7 @@ Full spec: `SPEC.md` · User docs: `README.md`
 ### Analysis pipeline
 
 ```
-extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep analysis + alternatives] → zombieDetector.ts → flowInference.ts
+extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine] → [AI deep analysis + alternatives] → zombieDetector.ts → flowInference.ts
      │                                                                                                          │
      ├── Evidences (env vars, imports, URLs, configs)                                                           ├── FlowNodes
      ├── Dependencies (npm, pip, cargo, go, etc.)                                                               └── FlowEdges
@@ -39,7 +39,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep a
 ```
 
 - **Heuristic mode** (default): fast, offline, ~80% coverage, aggressive false-positive filtering (config suffixes, CI vars, feature flags, browser APIs, project-name exclusion)
-- **Hybrid mode**: heuristics → AI validates/refines → AI deep analysis (~95% coverage)
+- **Hybrid mode**: heuristics → AI filter (false-positive removal) → AI validates/refines → AI deep analysis (~95% coverage)
 - AI is always optional — silent fallback to heuristic results on failure
 
 ### Critical invariant: Service ↔ Graph Node 1:1
@@ -138,7 +138,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
 | `electron/analyzers/zombieDetector.ts` | Zombie detection: git log activity per service, stale/zombie classification |
 | `electron/analyzers/scoreHistory.ts` | Score history: persist health scores to `.stackwatch/score-history.json` |
-| `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types, alternative suggestions |
+| `electron/ai/deepAnalyzer.ts` | AI: false-positive filter, refine services, usage context, hidden detection, edge types, alternative suggestions |
 | `electron/ai/alternativeSuggester.ts` | AI: suggest cheaper/open-source alternatives for detected services |
 | `electron/exporters/htmlExporter.ts` | Self-contained HTML report generator (dark theme, print-friendly) |
 | `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
@@ -206,14 +206,14 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-305 tests across 22 suites. vitest + @testing-library/react + jsdom.
+308 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
 | graphStore | 27 | initFromAnalysis, node/edge CRUD, connect, exclude, resetLayout, persistToConfig |
 | vulnScanner | 27 | Ecosystem mapping, batching, OSV parsing, severity, error handling |
 | Extractor | 26 | File types, URL/env/import patterns |
-| Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
+| Deep Analyzer | 22 | refineServicesWithAI, filterFalsePositivesWithAI, safeParseJSON, malformed responses |
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
