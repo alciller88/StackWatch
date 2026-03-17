@@ -20,7 +20,7 @@ vi.mock('child_process', async (importOriginal) => {
 
   // Create a wrapper around the original execFile
   const mockExecFile = Object.assign(
-    (...args: any[]) => actual.execFile(...args),
+    ((...args: any[]) => (actual.execFile as Function)(...args)) as typeof actual.execFile,
     {
       // Override the promisify custom symbol to return our mock
       [promisify.custom]: execFileAsyncMock,

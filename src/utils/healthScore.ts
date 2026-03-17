@@ -1,4 +1,4 @@
-import type { Service, FlowNode, FlowEdge } from '../types';
+import type { Service, FlowNode, FlowEdge } from '../../shared/types';
 
 export interface HealthBreakdown {
   score: number;
