@@ -5,6 +5,16 @@ export function classifyEvidences(evidences: Evidence[], projectName?: string): 
   const normalizedProject = projectName
     ? projectName.toLowerCase().replace(/[^a-z0-9]/g, '')
     : null
+  // Also support common variations of the project name (e.g., "cal.com" → "cal", "calcom", "calendso")
+  const projectAliases: string[] = []
+  if (normalizedProject) {
+    projectAliases.push(normalizedProject)
+    // Strip "com", "io", "dev" suffixes (e.g., "calcom" → "cal")
+    const stripped = normalizedProject.replace(/(com|io|dev|app|org)$/i, '')
+    if (stripped && stripped !== normalizedProject && stripped.length >= 2) {
+      projectAliases.push(stripped)
+    }
+  }
 
   for (const ev of evidences) {
     let result: HeuristicResult | null = null
@@ -35,9 +45,12 @@ export function classifyEvidences(evidences: Evidence[], projectName?: string): 
 
     if (result) {
       // Filter out the project's own name from detected services
-      if (normalizedProject) {
+      if (projectAliases.length > 0) {
         const normalizedService = result.serviceName.toLowerCase().replace(/[^a-z0-9]/g, '')
-        if (normalizedService === normalizedProject) continue
+        // Discard if the service name equals or contains the project name
+        if (projectAliases.some(alias =>
+          normalizedService === alias || normalizedService.includes(alias)
+        )) continue
       }
       results.push(result)
     }
@@ -71,7 +84,87 @@ const GENERIC_NAMES = new Set([
   'connection', 'socket', 'channel', 'pipe', 'stdio',
   'timeout', 'interval', 'timer', 'delay', 'retry',
   'options', 'settings', 'preferences', 'constants',
+  // CI/script action verbs and artifacts (Problem 2 & 4)
+  'run', 'deploy', 'release', 'trigger', 'exit', 'merge', 'branch',
+  'head', 'last', 'full', 'seed', 'ci', 'project', 'team', 'single',
+  'directory', 'sender', 'sink', 'edge',
+  // Generic names that are not external services (Problem 4)
+  'api v2', 'auth bearer', 'last day', 'http code', 'exit code',
+  'full prompt', 'original files', 'merge files', 'html report',
 ])
+
+// Suffixes that indicate configuration parameters, not services (Problem 1)
+const CONFIG_SUFFIXES = [
+  '_ENABLED', '_DISABLED', '_INTERVAL', '_DELAY_MS', '_DELAY', '_MINUTES',
+  '_SECONDS', '_TIMEOUT', '_LIMIT', '_MAX', '_MIN', '_SIZE', '_COUNT',
+  '_RATE', '_PRICE', '_COST', '_POLICY', '_ROLLOUT', '_REPORT', '_REPORTS',
+  '_DIR', '_PATH', '_MODE', '_LEVEL', '_SCHEDULE', '_THRESHOLD', '_RETRIES',
+  '_BATCH', '_TTL', '_CACHE', '_QUOTA',
+  // CI artifacts
+  '_ARTIFACT', '_ARTIFACTS',
+]
+
+// CI variable patterns to discard (Problem 2)
+const CI_VARIABLE_PATTERNS = [
+  /^EXIT_CODE$/i, /^HTTP_CODE$/i, /^HEAD_REF$/i, /^HEAD_BRANCH$/i,
+  /^BRANCH_NAME$/i, /^LAST_DAY$/i, /^HTML_REPORT$/i,
+  /^DEVIN_/i, /^COPILOT_/i,
+]
+
+// Feature flag / app config patterns to discard (Problem 3)
+const FEATURE_FLAG_PATTERNS = [
+  /^IS_/i,                    // IS_E2E, IS_PREMIUM, IS_SELF_HOSTED
+  /^DISABLE_/i,               // DISABLE_SIGNUP, etc. (further checked below)
+  /^ENABLE_/i,                // ENABLE_* (further checked below)
+  /^BOOKER_/i,                // App-specific UI config
+  /^AVAILABILITY_/i,          // App-specific scheduling config
+  /^COMPANY_NAME$/i,
+  /^APP_NAME$/i,
+  /^WEBSITE_URL$/i,
+  /^WEBAPP_URL$/i,
+  /^MINUTES_TO_BOOK$/i,
+]
+
+// Browser APIs / polyfills to discard (Problem 5)
+const BROWSER_API_PATTERNS = [
+  /_POLYFILL$/i, /_OBSERVER$/i, /_LOGIN_ENABLED$/i,
+]
+
+/** Check if an env var name ends in a config suffix */
+function hasConfigSuffix(upper: string): boolean {
+  return CONFIG_SUFFIXES.some(suffix => upper.endsWith(suffix))
+}
+
+/** Check if the env var matches CI variable patterns */
+function isCIVariable(upper: string): boolean {
+  return CI_VARIABLE_PATTERNS.some(p => p.test(upper))
+}
+
+/** Check if the env var matches feature flag / app config patterns */
+function isFeatureFlag(upper: string): boolean {
+  if (FEATURE_FLAG_PATTERNS.some(p => p.test(upper))) {
+    // Exception: DISABLE_/ENABLE_ + known service name should still pass
+    const stripped = upper.replace(/^(DISABLE_|ENABLE_)/, '')
+    if (isKnownServiceToken(stripped)) return false
+    return true
+  }
+  if (BROWSER_API_PATTERNS.some(p => p.test(upper))) return true
+  // *_SEATS, *_CREDITS — pricing params
+  if (/_SEATS$/i.test(upper) || /_CREDITS$/i.test(upper)) return true
+  return false
+}
+
+/** Check if a token is a known real service (for DISABLE_/ENABLE_ exceptions) */
+function isKnownServiceToken(token: string): boolean {
+  const t = token.toLowerCase().replace(/_/g, '')
+  const known = [
+    'stripe', 'sendgrid', 'sentry', 'redis', 'postgres', 'vercel',
+    'twilio', 'cloudflare', 'posthog', 'intercom', 'zendesk', 'salesforce',
+    'github', 'datadog', 'newrelic', 'pagerduty', 'slack', 'aws', 'gcp',
+    'azure', 'docker', 'heroku', 'netlify', 'firebase',
+  ]
+  return known.some(k => t.includes(k))
+}
 
 function isGenericName(name: string): boolean {
   return GENERIC_NAMES.has(name.toLowerCase().trim())
@@ -87,11 +180,24 @@ function classifyEnvVar(name: string): HeuristicResult | null {
   const ignorePattern = /^(NODE_ENV|PORT|HOST|DEBUG|LOG_LEVEL|TZ|LANG|PATH|HOME|PWD|NEXT_PUBLIC_URL|VITE_APP_URL|PUBLIC_URL|HOSTNAME|SHELL|USER|TERM|EDITOR|CI|npm_\w+)$/
   if (ignorePattern.test(upper)) return null
 
-  // Extract service candidate by removing generic prefixes and suffixes
-  const serviceCandidate = upper
-    .replace(/^[^A-Z]+/, '') // strip leading non-alpha chars ($, digits, etc.)
+  // Problem 2: Filter CI variable patterns
+  if (isCIVariable(upper)) return null
+
+  // Problem 3: Filter feature flags and app config patterns
+  // (applied to raw name before prefix stripping)
+  const stripped = upper
     .replace(/^(NEXT_PUBLIC_|VITE_|REACT_APP_|EXPO_PUBLIC_|NUXT_PUBLIC_|GATSBY_)/, '')
-    .replace(/_(SECRET|KEY|TOKEN|URL|HOST|PORT|USER|PASSWORD|API|ID|ENDPOINT|DSN|URI|BASE|REGION|BUCKET|PROJECT|APP|CLIENT|ACCESS|PRIVATE|PUBLIC|CONFIG|DOMAIN|ACCOUNT|ORG|WEBHOOK|CALLBACK|REDIRECT|VERSION).*$/, '')
+  if (isFeatureFlag(stripped)) return null
+
+  // Problem 1: Filter config suffixes (on the stripped name, before service extraction)
+  if (hasConfigSuffix(stripped)) {
+    return null
+  }
+
+  // Extract service candidate by removing generic prefixes and suffixes
+  const serviceCandidate = stripped
+    .replace(/^[^A-Z]+/, '') // strip leading non-alpha chars ($, digits, etc.)
+    .replace(/_(SECRET|KEY|TOKEN|URL|HOST|PORT|USER|PASSWORD|API|ID|ENDPOINT|DSN|URI|BASE|REGION|BUCKET|PROJECT|APP|CLIENT|ACCESS|PRIVATE|PUBLIC|CONFIG|DOMAIN|ACCOUNT|ORG|WEBHOOK|CALLBACK|REDIRECT|VERSION|DATABASE|SIGNATURE|ENCRYPTION).*$/, '')
     .toLowerCase()
     .replace(/_/g, ' ')
     .trim()
@@ -344,12 +450,13 @@ export function inferCategory(name: string): ServiceCategory {
   if (/sentry|datadog|newrelic|monitor|observ|log|error|trace|grafana|pagerduty|bugsnag|rollbar|honeybadger/.test(n)) return 'monitoring'
   if (/analytic|gtm|segment|mixpanel|amplitude|posthog|plausible|fathom|ga|google.analytics|hotjar|heap/.test(n)) return 'analytics'
   if (/s3|storage|blob|cloudinary|upload|bucket|media|imagekit|bunny|backblaze|minio|uploadthing/.test(n)) return 'storage'
-  if (/auth|oauth|jwt|clerk|okta|cognito|auth0|keycloak|passport|supertokens/.test(n)) return 'auth'
+  // Auth: includes SAML and Outlook (OAuth provider) — Problem 5
+  if (/auth|oauth|jwt|clerk|okta|cognito|auth0|keycloak|passport|supertokens|saml|outlook/.test(n)) return 'auth'
   if (/vercel|netlify|railway|render|fly|heroku|deploy|hosting|surge|pages/.test(n)) return 'hosting'
   if (/github|gitlab|bitbucket|ci|cd|pipeline|action|jenkins|circleci|travis|codecov|sonar/.test(n)) return 'cicd'
   if (/openai|anthropic|groq|mistral|llm|gpt|claude|gemini|cohere|hugging|replicate|together|perplexity|wandb|mlflow/.test(n)) return 'ai'
   if (/twilio|vonage|sms|push|notification|onesignal|pusher|ably|socket|kafka|rabbitmq|nats/.test(n)) return 'messaging'
-  if (/cloudflare|fastly|akamai|cdn|edge|bunnycdn/.test(n)) return 'cdn'
+  if (/cloudflare|fastly|akamai|cdn|bunnycdn/.test(n)) return 'cdn'
   if (/aws|gcp|azure|terraform|kubernetes|docker|infra|cloud|digitalocean|linode|hetzner/.test(n)) return 'infra'
   if (/domain|dns|namecheap|godaddy|route53|registrar/.test(n)) return 'domain'
   if (/firebase|appcenter|expo|capacitor|ionic/.test(n)) return 'mobile'

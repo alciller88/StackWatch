@@ -5,7 +5,23 @@ interface ServiceGroup {
   category: ServiceCategory
   confidence: 'high' | 'medium' | 'low'
   reasons: string[]
+  needsReview?: boolean
 }
+
+// Well-known brand names for collapsing "BrandName + descriptor" entries
+const KNOWN_BRANDS = [
+  'cloudflare', 'vercel', 'docker', 'aws', 'google', 'azure', 'stripe',
+  'sendgrid', 'sentry', 'twilio', 'github', 'gitlab', 'redis', 'postgres',
+  'postgresql', 'mongo', 'mongodb', 'firebase', 'heroku', 'netlify',
+  'datadog', 'newrelic', 'pagerduty', 'slack', 'intercom', 'zendesk',
+  'salesforce', 'posthog', 'hubspot', 'mailgun', 'postmark',
+]
+
+// Generic service names that should be replaced by specific ones when found
+const GENERIC_SERVICE_NAMES = new Set([
+  'database', 'email', 'email from', 'email server', 'user email',
+  'user emails', 'insights database',
+])
 
 export function deduplicateServices(results: HeuristicResult[]): Service[] {
   const groups = new Map<string, ServiceGroup>()
@@ -32,18 +48,28 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
       if (result.serviceName.length > existing.name.length) {
         existing.name = result.serviceName
       }
+      if (result.needsReview === false) {
+        existing.needsReview = false
+      }
     } else {
       groups.set(key, {
         name: result.serviceName,
         category: result.category,
         confidence: result.confidence,
         reasons: [result.reason],
+        needsReview: result.needsReview,
       })
     }
   }
 
   // Merge related groups (e.g. "Upstash Redis" + "Upstash Ratelimit" → "Upstash")
   mergeRelatedGroups(groups)
+
+  // Problem 6: Collapse brand + descriptor entries into brand root
+  collapseBrandEntries(groups)
+
+  // Problem 6: Remove generic entries when a specific one exists in the same category
+  removeGenericEntries(groups)
 
   const services: Service[] = []
   for (const [key, group] of groups) {
@@ -54,7 +80,7 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
       plan: 'unknown',
       source: 'inferred',
       confidence: group.confidence,
-      needsReview: group.confidence === 'low',
+      needsReview: group.needsReview ?? group.confidence === 'low',
       confidenceReasons: group.reasons,
       inferredFrom: group.reasons[0],
     })
@@ -90,23 +116,137 @@ function mergeRelatedGroups(groups: Map<string, ServiceGroup>): void {
       const longer = a.length <= b.length ? b : a
 
       if (longer.startsWith(shorter + '-') || longer === shorter) {
-        const gShorter = groups.get(shorter)!
-        const gLonger = groups.get(longer)!
-
-        // Merge into shorter key (more general name)
-        if (confidenceRank(gLonger.confidence) > confidenceRank(gShorter.confidence)) {
-          gShorter.confidence = gLonger.confidence
-        }
-        if (gShorter.category === 'other' && gLonger.category !== 'other') {
-          gShorter.category = gLonger.category
-        }
-        for (const reason of gLonger.reasons) {
-          if (!gShorter.reasons.includes(reason)) {
-            gShorter.reasons.push(reason)
-          }
-        }
-        groups.delete(longer)
+        mergeInto(groups, shorter, longer)
       }
     }
   }
+}
+
+/** Merge group `from` into group `into` and delete `from` */
+function mergeInto(groups: Map<string, ServiceGroup>, into: string, from: string): void {
+  const gInto = groups.get(into)
+  const gFrom = groups.get(from)
+  if (!gInto || !gFrom) return
+
+  if (confidenceRank(gFrom.confidence) > confidenceRank(gInto.confidence)) {
+    gInto.confidence = gFrom.confidence
+  }
+  if (gInto.category === 'other' && gFrom.category !== 'other') {
+    gInto.category = gFrom.category
+  }
+  for (const reason of gFrom.reasons) {
+    if (!gInto.reasons.includes(reason)) {
+      gInto.reasons.push(reason)
+    }
+  }
+  groups.delete(from)
+}
+
+/**
+ * Problem 6: Collapse "BrandName Descriptor" entries into "BrandName"
+ * e.g., "Cloudflare Sitekey" + "Cloudflare Use Turnstile" → "Cloudflare"
+ *       "Docker Hub" + "Dockerhub" → "Docker Hub"
+ *       "Vercel Use Botid In Booker" → "Vercel"
+ */
+function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
+  // Normalize variant spellings first (e.g., "dockerhub" → "docker-hub")
+  const variantMap: Record<string, string> = {
+    'dockerhub': 'docker-hub',
+  }
+  for (const [variant, canonical] of Object.entries(variantMap)) {
+    if (groups.has(variant) && groups.has(canonical)) {
+      mergeInto(groups, canonical, variant)
+    } else if (groups.has(variant)) {
+      const g = groups.get(variant)!
+      g.name = toTitleCaseSimple(canonical.replace(/-/g, ' '))
+      groups.set(canonical, g)
+      groups.delete(variant)
+    }
+  }
+
+  const keys = Array.from(groups.keys())
+
+  for (const brand of KNOWN_BRANDS) {
+    const brandKey = brand.replace(/[^a-z0-9]+/g, '-')
+    const matching = keys.filter(k =>
+      groups.has(k) &&
+      k !== brandKey &&
+      k.startsWith(brandKey + '-')
+    )
+
+    if (matching.length === 0) continue
+
+    // If brand root exists, merge into it; otherwise create it from best match
+    if (groups.has(brandKey)) {
+      for (const key of matching) {
+        mergeInto(groups, brandKey, key)
+      }
+      // Keep the brand root's name as the canonical brand name
+      const root = groups.get(brandKey)!
+      root.name = toTitleCaseSimple(brand)
+    } else if (matching.length === 1) {
+      // Single match: promote it to brand root but keep a good name
+      const first = matching[0]
+      const g = groups.get(first)!
+      // Use the existing name if it's a well-known variant (e.g., "Docker Hub")
+      // Otherwise simplify to the brand name
+      const existingWords = g.name.split(/\s+/).length
+      const brandName = existingWords <= 2 ? g.name : toTitleCaseSimple(brand)
+      g.name = brandName
+      groups.set(brandKey, g)
+      groups.delete(first)
+    } else {
+      // Multiple matches: create brand root from the first, merge rest
+      const first = matching[0]
+      const g = groups.get(first)!
+      const brandGroup: ServiceGroup = {
+        name: toTitleCaseSimple(brand),
+        category: g.category,
+        confidence: g.confidence,
+        reasons: [...g.reasons],
+      }
+      groups.set(brandKey, brandGroup)
+      groups.delete(first)
+
+      for (let i = 1; i < matching.length; i++) {
+        mergeInto(groups, brandKey, matching[i])
+      }
+    }
+  }
+}
+
+/**
+ * Problem 6: Remove generic entries when a specific one exists.
+ * e.g., "Database" removed if "PostgreSQL" exists (both category 'database')
+ *        "Email From" removed if "SendGrid" exists (both category 'email')
+ */
+function removeGenericEntries(groups: Map<string, ServiceGroup>): void {
+  const keys = Array.from(groups.keys())
+
+  for (const key of keys) {
+    if (!groups.has(key)) continue
+    const group = groups.get(key)!
+    const lowerName = group.name.toLowerCase()
+
+    if (GENERIC_SERVICE_NAMES.has(lowerName)) {
+      // Check if a specific service in the same category exists
+      const hasSpecific = Array.from(groups.entries()).some(
+        ([otherKey, otherGroup]) =>
+          otherKey !== key &&
+          otherGroup.category === group.category &&
+          !GENERIC_SERVICE_NAMES.has(otherGroup.name.toLowerCase())
+      )
+      if (hasSpecific) {
+        groups.delete(key)
+      }
+    }
+  }
+}
+
+function toTitleCaseSimple(str: string): string {
+  return str
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
 }

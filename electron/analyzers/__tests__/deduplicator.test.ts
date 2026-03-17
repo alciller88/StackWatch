@@ -61,4 +61,62 @@ describe('deduplicateServices', () => {
     const services = deduplicateServices(results)
     expect(services.length).toBe(3)
   })
+
+  describe('brand collapse (Problem 6)', () => {
+    it('collapses Docker Hub + Dockerhub into one entry', () => {
+      const results: HeuristicResult[] = [
+        { serviceName: 'Docker Hub', category: 'infra', confidence: 'high', reason: 'action' },
+        { serviceName: 'Dockerhub', category: 'infra', confidence: 'medium', reason: 'env' },
+      ]
+      const services = deduplicateServices(results)
+      expect(services.length).toBe(1)
+      expect(services[0].name).toBe('Docker Hub')
+      expect(services[0].confidence).toBe('high')
+    })
+
+    it('collapses Cloudflare Sitekey + Cloudflare Turnstile into Cloudflare', () => {
+      const results: HeuristicResult[] = [
+        { serviceName: 'Cloudflare Sitekey', category: 'cdn', confidence: 'medium', reason: 'env 1' },
+        { serviceName: 'Cloudflare Use Turnstile', category: 'cdn', confidence: 'medium', reason: 'env 2' },
+        { serviceName: 'Cloudflare Turnstile', category: 'cdn', confidence: 'medium', reason: 'env 3' },
+      ]
+      const services = deduplicateServices(results)
+      expect(services.length).toBe(1)
+      expect(services[0].name).toBe('Cloudflare')
+    })
+
+    it('collapses Vercel + Vercel Use Botid In Booker into Vercel', () => {
+      const results: HeuristicResult[] = [
+        { serviceName: 'Vercel', category: 'hosting', confidence: 'high', reason: 'config' },
+        { serviceName: 'Vercel Use Botid In Booker', category: 'hosting', confidence: 'medium', reason: 'env' },
+      ]
+      const services = deduplicateServices(results)
+      expect(services.length).toBe(1)
+      expect(services[0].name).toBe('Vercel')
+      expect(services[0].confidence).toBe('high')
+    })
+
+    it('removes generic "Database" when PostgreSQL exists', () => {
+      const results: HeuristicResult[] = [
+        { serviceName: 'Database', category: 'database', confidence: 'medium', reason: 'env 1' },
+        { serviceName: 'PostgreSQL', category: 'database', confidence: 'high', reason: 'connection string' },
+        { serviceName: 'Insights Database', category: 'database', confidence: 'low', reason: 'env 2' },
+      ]
+      const services = deduplicateServices(results)
+      expect(services.length).toBe(1)
+      expect(services[0].name).toBe('PostgreSQL')
+    })
+
+    it('removes generic email entries when specific provider exists', () => {
+      const results: HeuristicResult[] = [
+        { serviceName: 'Email From', category: 'email', confidence: 'medium', reason: 'env 1' },
+        { serviceName: 'Email Server', category: 'email', confidence: 'medium', reason: 'env 2' },
+        { serviceName: 'User Email', category: 'email', confidence: 'low', reason: 'env 3' },
+        { serviceName: 'SendGrid', category: 'email', confidence: 'high', reason: 'npm package' },
+      ]
+      const services = deduplicateServices(results)
+      expect(services.length).toBe(1)
+      expect(services[0].name).toBe('SendGrid')
+    })
+  })
 })

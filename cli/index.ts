@@ -40,6 +40,7 @@ const flags = {
   failOnUnreviewed: args.includes('--fail-on-unreviewed'),
   diff: args.includes('--diff'),
   sbom: sbomFormat,
+  all: args.includes('--all'),
 }
 
 // Get target path (first non-flag argument, skip subcommand)
@@ -78,6 +79,7 @@ if (flags.help) {
     --diff            Compare with previous scan and show changes
     --sbom cyclonedx  Output CycloneDX 1.5 SBOM (JSON)
     --sbom spdx       Output SPDX 2.3 SBOM (JSON)
+    --all             Show all services including low-confidence and needs-review
     --fail-on-vulns   Exit code 1 if critical/high vulnerabilities found
     --fail-on-unreviewed  Exit code 2 if any services need review
     -h, --help        Show this help
@@ -586,8 +588,15 @@ async function runDoctor() {
   }
 }
 
+/** Filter out low-confidence and needsReview services unless --all is set */
+function filterServices(services: Service[]): Service[] {
+  if (flags.all) return services
+  return services.filter(s => s.confidence !== 'low' && !s.needsReview)
+}
+
 function printSummary(result: AnalysisResult, projectName: string) {
-  const { services, dependencies } = result
+  const { dependencies } = result
+  const services = filterServices(result.services)
 
   console.log(`  Project:      ${projectName}`)
   console.log(`  Services:     ${services.length}`)
@@ -681,7 +690,8 @@ function printSummary(result: AnalysisResult, projectName: string) {
 }
 
 function printMarkdown(result: AnalysisResult, projectName: string) {
-  const { services, dependencies } = result
+  const { dependencies } = result
+  const services = filterServices(result.services)
   const date = new Date().toISOString().split('T')[0]
 
   console.log(`# Services — ${projectName}\n`)

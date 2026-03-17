@@ -130,9 +130,12 @@ npx stackwatch doctor ./my-project
 
 # Export self-contained HTML report
 npx stackwatch --html > report.html
+
+# Show ALL services including low-confidence and needs-review
+npx stackwatch --all
 ```
 
-The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results.
+The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results. By default, low-confidence and needs-review services are hidden; use `--all` to see everything.
 
 ### GitHub Action
 
@@ -370,7 +373,7 @@ StackWatch/
 │   └── exporters/
 │       └── htmlExporter.ts  # Self-contained HTML report generator
 ├── cli/
-│   ├── index.ts             # CLI: scan, init, badge, doctor, --diff, --sbom, --html, --fail-on-*
+│   ├── index.ts             # CLI: scan, init, badge, doctor, --diff, --sbom, --html, --all, --fail-on-*
 │   └── tsconfig.json        # CLI-specific TypeScript config
 ├── shared/
 │   └── types.ts             # Canonical type definitions (23 exports)

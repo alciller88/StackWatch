@@ -38,7 +38,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep a
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
-- **Heuristic mode** (default): fast, offline, ~80% coverage
+- **Heuristic mode** (default): fast, offline, ~80% coverage, aggressive false-positive filtering (config suffixes, CI vars, feature flags, browser APIs, project-name exclusion)
 - **Hybrid mode**: heuristics → AI validates/refines → AI deep analysis (~95% coverage)
 - AI is always optional — silent fallback to heuristic results on failure
 
@@ -129,8 +129,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/preload.ts` | IPC bridge via contextBridge (StackWatchAPI) |
 | `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. |
 | `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
-| `electron/analyzers/heuristic.ts` | Semantic classification into 19 categories |
-| `electron/analyzers/deduplicator.ts` | Service grouping, merge, confidence upgrade |
+| `electron/analyzers/heuristic.ts` | Semantic classification into 19 categories + false-positive filtering (config suffixes, CI vars, feature flags, browser APIs) |
+| `electron/analyzers/deduplicator.ts` | Service grouping, merge, confidence upgrade, brand collapse, generic entry removal |
 | `electron/analyzers/flowInference.ts` | Node/edge generation from services + deps |
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
@@ -171,7 +171,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### CLI & CI
 | File | Purpose |
 |------|---------|
-| `cli/index.ts` | CLI entry: scan, init, badge, doctor, --diff, --sbom, --html, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
+| `cli/index.ts` | CLI entry: scan, init, badge, doctor, --diff, --sbom, --html, --all, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
 | `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
 
 ### Build & validation
@@ -194,7 +194,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (284 tests, 22 suites) |
+| `npm test` | vitest (305 tests, 22 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -206,7 +206,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-284 tests across 22 suites. vitest + @testing-library/react + jsdom.
+305 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -217,7 +217,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
-| Heuristic | 13 | Category mapping, confidence, name extraction |
+| Heuristic | 34 | Category mapping, confidence, name extraction, config suffix filtering, CI var filtering, feature flag filtering, generic names, project name exclusion |
 | TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
 | zombieDetector | 12 | Classification thresholds, caching, enrichment, git failure handling |
 | monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
@@ -229,7 +229,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Flow inference | 9 | Node types, edge routing, layout |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 6 | Grouping, merging, confidence upgrades |
+| Deduplicator | 11 | Grouping, merging, confidence upgrades, brand collapse, generic entry removal |
 | Pipeline | 6 | End-to-end, AI checkpoint/restore |
 | daysUntil | 3 | Today, future, past |
 
