@@ -25,11 +25,19 @@ export const ServicesPanel: React.FC = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | 'all'>('all');
   const [activePlan, setActivePlan] = useState<Service['plan'] | 'all'>('all');
+  const [activeActivity, setActiveActivity] = useState<'all' | 'active' | 'stale' | 'zombie'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
   const needsReview = useMemo(() => {
     return services.filter(s => s.needsReview || s.confidence === 'low');
+  }, [services]);
+
+  const zombieCounts = useMemo(() => {
+    const zombie = services.filter(s => s.zombieStatus === 'zombie').length;
+    const stale = services.filter(s => s.zombieStatus === 'stale').length;
+    const hasAny = zombie > 0 || stale > 0;
+    return { zombie, stale, hasAny };
   }, [services]);
 
   const filtered = useMemo(() => {
@@ -43,9 +51,13 @@ export const ServicesPanel: React.FC = () => {
       if (activePlan !== 'all' && s.plan !== activePlan) {
         return false;
       }
+      if (activeActivity !== 'all') {
+        const status = s.zombieStatus ?? 'active';
+        if (activeActivity !== status) return false;
+      }
       return true;
     });
-  }, [services, search, activeCategory, activePlan]);
+  }, [services, search, activeCategory, activePlan, activeActivity]);
 
   const handleEdit = (service: Service) => {
     setEditingService(service);
@@ -154,6 +166,25 @@ export const ServicesPanel: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* Activity status filter — only if any services have zombie/stale status */}
+        {zombieCounts.hasAny && (
+          <div className="flex gap-1.5">
+            {(['all', 'active', 'stale', 'zombie'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setActiveActivity(status)}
+                className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
+                  activeActivity === status
+                    ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
+                    : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+                }`}
+              >
+                {status === 'all' ? 'All Activity' : status}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Service Form */}
@@ -166,6 +197,25 @@ export const ServicesPanel: React.FC = () => {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-6 space-y-6">
+        {/* Zombie summary banner */}
+        {zombieCounts.hasAny && !search && activeCategory === 'all' && activePlan === 'all' && activeActivity === 'all' && (
+          <div className="bg-[#1a1520] border border-[#4a2040] rounded-sm px-4 py-2.5 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#c05050] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">
+              {zombieCounts.zombie > 0 && (
+                <span className="text-[#c05050]">{zombieCounts.zombie} zombie service{zombieCounts.zombie !== 1 ? 's' : ''}</span>
+              )}
+              {zombieCounts.zombie > 0 && zombieCounts.stale > 0 && ', '}
+              {zombieCounts.stale > 0 && (
+                <span className="text-[#c8a040]">{zombieCounts.stale} stale service{zombieCounts.stale !== 1 ? 's' : ''}</span>
+              )}
+              <span className="text-[var(--color-text-muted)]"> detected</span>
+            </span>
+          </div>
+        )}
+
         {/* Needs Review Section */}
         {needsReview.length > 0 && !search && activeCategory === 'all' && activePlan === 'all' && (
           <div className="bg-[#2a1e0a] border border-[#6b3d0a] rounded-sm p-4">

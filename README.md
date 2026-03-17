@@ -86,7 +86,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (241 tests across 18 suites) |
+| `npm test` | Run unit tests (284 tests across 22 suites) |
 
 ### CLI (no Electron required)
 
@@ -385,6 +385,7 @@ StackWatch/
 │   │   ├── ServicesPanel/   # Service cards, filters, add/edit form, confidence badges
 │   │   ├── DepsPanel/       # Virtualized dependencies table, vuln scanning
 │   │   ├── CostsPanel/      # Cost breakdown, bar chart (Recharts), renewal alerts, budget mode
+│   │   ├── Doctor/          # Doctor modal (health checklist: config, services, costs, vulns, score)
 │   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
 │   │   ├── ScoreHistory/    # Score history modal (Recharts line chart, trend stats)
 │   │   ├── Settings/        # AI provider config (3 presets), scan mode, theme toggle, share, about
@@ -424,7 +425,7 @@ StackWatch/
 
 ### Test suites
 
-241 tests across 18 suites:
+284 tests across 22 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -433,15 +434,19 @@ StackWatch/
 | Extractor | 26 | All file types, URL/env/import patterns |
 | Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
+| htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
 | Heuristic | 13 | Category mapping, confidence, name extraction |
 | TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
+| zombieDetector | 12 | Classification thresholds, caching, enrichment, git failure handling |
 | monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
 | historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
 | healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
+| alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 10 | Rendering, interactions, confidence, a11y |
 | useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
 | Flow inference | 9 | Node types, edge routing, layout |
+| scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
 | Deduplicator | 6 | Grouping, merging, confidence upgrades |
 | Pipeline | 6 | End-to-end, AI checkpoint/restore |
@@ -485,7 +490,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 241 tests across 18 suites (stores, analyzers, utils, UI components)
+- [x] 284 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
@@ -514,6 +519,9 @@ StackWatch/
 - [x] Light/dark theme toggle (CSS variables, Settings + Sidebar, localStorage persistence)
 - [x] Static HTML export (self-contained dashboard report, --html flag, print-friendly)
 - [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
+- [x] Zombie UI badges and activity status filter in Services panel
+- [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
+- [x] 284 tests across 22 suites (+43 tests for new modules)
 
 ---
 

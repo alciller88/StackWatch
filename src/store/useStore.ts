@@ -35,6 +35,7 @@ interface StoreState {
   hasSeenTutorial: boolean;
   showTutorial: boolean;
   showScoreHistory: boolean;
+  showDoctor: boolean;
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
 
@@ -62,6 +63,8 @@ interface StoreState {
   loadScoreHistory: () => Promise<void>;
   openScoreHistory: () => void;
   closeScoreHistory: () => void;
+  openDoctor: () => void;
+  closeDoctor: () => void;
   setTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
 }
@@ -140,6 +143,7 @@ export const useStore = create<StoreState>((set, get) => ({
   hasSeenTutorial: localStorage.getItem('stackwatch-tutorial-seen') === 'true',
   showTutorial: false,
   showScoreHistory: false,
+  showDoctor: false,
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
 
@@ -559,6 +563,14 @@ export const useStore = create<StoreState>((set, get) => ({
 
   closeScoreHistory: () => {
     set({ showScoreHistory: false });
+  },
+
+  openDoctor: () => {
+    set({ showDoctor: true });
+  },
+
+  closeDoctor: () => {
+    set({ showDoctor: false });
   },
 
   setTheme: (theme: ThemeName) => {

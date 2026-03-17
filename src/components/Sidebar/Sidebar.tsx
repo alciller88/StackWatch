@@ -106,7 +106,7 @@ const sectionLabel = (text: string, collapsed: boolean) =>
   ) : null;
 
 export const Sidebar: React.FC = () => {
-  const { activePanel, setActivePanel, services, openScoreHistory, theme, toggleTheme } = useStore();
+  const { activePanel, setActivePanel, services, openScoreHistory, openDoctor, theme, toggleTheme } = useStore();
   const graphNodes = useGraphStore(s => s.nodes);
   const graphEdges = useGraphStore(s => s.edges);
   const [collapsed, setCollapsed] = useState(false);
@@ -191,6 +191,25 @@ export const Sidebar: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
               </svg>
             </span>
+          )}
+        </button>
+      )}
+
+      {/* Doctor */}
+      {services.length > 0 && (
+        <button
+          onClick={openDoctor}
+          className={`w-full flex items-center gap-3 px-4 py-2 border-b transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] ${
+            collapsed ? 'justify-center' : ''
+          }`}
+          style={{ borderColor: 'var(--color-border)' }}
+          title={collapsed ? 'Doctor' : 'Run health checks'}
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          {!collapsed && (
+            <span className="font-mono text-[11px] uppercase tracking-widest">Doctor</span>
           )}
         </button>
       )}

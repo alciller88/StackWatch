@@ -57,6 +57,16 @@ const criticalityIcons: Record<string, string> = {
   optional: '\u{26AA}',
 };
 
+const zombieBadgeStyles: Record<string, { bg: string; text: string; border: string }> = {
+  zombie: { bg: 'bg-[#2a1010]', text: 'text-[#c05050]', border: 'border-[#6b2020]' },
+  stale: { bg: 'bg-[#2a2010]', text: 'text-[#c8a040]', border: 'border-[#6b5520]' },
+};
+
+const zombieBorderStyles: Record<string, string> = {
+  zombie: 'border-l-2 border-l-[#c05050]/50',
+  stale: 'border-l-2 border-l-[#c8a040]/50',
+};
+
 interface ServiceCardProps {
   service: Service;
   context?: ServiceContext;
@@ -94,12 +104,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
   }
 
   const isClickable = !!onEdit;
+  const zombieStyle = service.zombieStatus && service.zombieStatus !== 'active'
+    ? zombieBorderStyles[service.zombieStatus]
+    : '';
+  const inactiveMonths = service.daysSinceActivity != null
+    ? Math.floor(service.daysSinceActivity / 30)
+    : null;
 
   return (
     <div
       className={`border rounded-none p-4 transition-colors overflow-hidden ${
         confidenceBorder[service.confidence ?? 'default']
-      } ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'} focus:ring-1 focus:ring-[var(--color-accent)] focus:outline-none`}
+      } ${zombieStyle} ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'} focus:ring-1 focus:ring-[var(--color-accent)] focus:outline-none`}
       style={{ background: 'var(--color-bg-secondary)' }}
       onClick={onEdit ? () => onEdit(service) : undefined}
       role={isClickable ? 'button' : undefined}
@@ -161,13 +177,26 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
         </div>
       </div>
 
-      {/* Plan badge */}
+      {/* Plan badge + Zombie badge */}
       <div className="flex items-center gap-2 mb-3">
         <span
           className={`font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-none font-medium border ${planColors[service.plan]}`}
         >
           {service.plan}
         </span>
+        {service.zombieStatus && service.zombieStatus !== 'active' && (() => {
+          const zStyle = zombieBadgeStyles[service.zombieStatus];
+          const label = inactiveMonths != null && inactiveMonths > 0
+            ? `Inactive ${inactiveMonths}mo`
+            : service.zombieStatus === 'zombie' ? 'Zombie' : 'Stale';
+          return (
+            <span
+              className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium border ${zStyle.bg} ${zStyle.text} ${zStyle.border}`}
+            >
+              {label}
+            </span>
+          );
+        })()}
       </div>
 
       {/* Owner */}

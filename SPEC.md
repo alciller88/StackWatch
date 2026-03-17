@@ -428,7 +428,7 @@ interface UserConfig {
 | Panel | Component | Features |
 |---|---|---|
 | **Dashboard** | `Dashboard.tsx` | Quick start guide, features grid, keyboard shortcuts, demo mode CTA |
-| **Services** | `ServicesPanel/` | Card grid (responsive), search, filters (19 categories, 4 plans), add/edit form, "Needs Review" section, confidence badges |
+| **Services** | `ServicesPanel/` | Card grid (responsive), search, filters (19 categories, 4 plans, activity status), add/edit form, "Needs Review" section, confidence badges, zombie badges |
 | **Dependencies** | `DepsPanel/` | Virtualized table, sort by name/type, group by ecosystem, vulnerability scanning button |
 | **Flow** | `FlowGraph/` | React Flow canvas, minimap, controls, legend, context menus (node/edge/pane), inline node edit panel, dagre layout |
 | **Costs** | `CostsPanel/` | Monthly/yearly totals, breakdown by category, horizontal bar chart (Recharts), renewal alerts with days countdown, budget mode with progress bar |
@@ -442,6 +442,7 @@ interface UserConfig {
 | `TopBar` | Import/export/share, repo path, link status, GitHub connect, re-analyze |
 | `Sidebar` | Panel navigation (5 items), Stack Score display (clickable → history), theme toggle, version, collapsible |
 | `ScoreHistoryPanel` | Modal with Recharts line chart showing score history, trend stats, min/max/average |
+| `DoctorModal` | Health check modal: config, services, costs, vulns, score breakdown with pass/fail/warn icons |
 | `ConfirmDialog` | Promise-based modal with focus trap, ARIA roles |
 | `Toast` | Auto-dismiss notifications (success/error/info), 4s timeout |
 | `Skeleton` | Skeleton loaders for all panels during analysis |
@@ -657,7 +658,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-241 tests across 18 suites. Vitest + @testing-library/react + jsdom.
+284 tests across 22 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -666,15 +667,19 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | Extractor | 26 | `electron/analyzers/__tests__/` |
 | Deep Analyzer | 19 | `electron/ai/__tests__/` |
 | badge | 17 | `src/utils/__tests__/` |
+| htmlExporter | 13 | `electron/exporters/__tests__/` |
 | Deep Analyzer (runDeep) | 13 | `electron/ai/__tests__/` |
 | Heuristic | 13 | `electron/analyzers/__tests__/` |
 | TopBar | 13 | `src/components/TopBar/__tests__/` |
+| zombieDetector | 12 | `electron/analyzers/__tests__/` |
 | monorepo | 12 | `electron/analyzers/__tests__/` |
 | historyStore | 12 | `src/store/__tests__/` |
 | healthScore | 11 | `src/utils/__tests__/` |
+| alternativeSuggester | 10 | `electron/ai/__tests__/` |
 | ServiceCard | 10 | `src/components/ServicesPanel/__tests__/` |
 | useStore | 10 | `src/store/__tests__/` |
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
+| scoreHistory | 8 | `electron/analyzers/__tests__/` |
 | ContextMenu | 7 | `src/components/FlowGraph/__tests__/` |
 | Deduplicator | 6 | `electron/analyzers/__tests__/` |
 | Pipeline | 6 | `electron/analyzers/__tests__/` |
@@ -692,7 +697,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Flow graph shows confidence indicators (dashed borders for low confidence)
 - [x] Interactive flow graph with context menus, node editing, and custom connections
 - [x] Deep AI analysis provides service context, hidden detection, and smart edge types
-- [x] 241 tests passing across 18 suites
+- [x] 284 tests passing across 22 suites
 - [x] CLI with scan, init, badge, doctor, --diff, --sbom, --html, --fail-on-vulns, --fail-on-unreviewed
 - [x] GitHub Action posts PR comments with scan results
 - [x] Monorepo support (npm, pnpm, lerna, turbo, nx)
@@ -711,3 +716,6 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Light/dark theme toggle (CSS variables, localStorage persistence, Settings + Sidebar controls)
 - [x] Static HTML export (self-contained report, CLI --html flag, IPC export-html, print-friendly)
 - [x] AI stack alternatives (cheaper/open-source suggestions per service, Step D in deep analysis)
+- [x] Zombie UI badges and activity filter in ServicesPanel
+- [x] Doctor modal in desktop app (health checklist with live vuln scan)
+- [x] 43 new tests: zombieDetector (12), scoreHistory (8), htmlExporter (13), alternativeSuggester (10)

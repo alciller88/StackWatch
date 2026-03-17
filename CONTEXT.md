@@ -81,6 +81,7 @@ Never filter services out of the graph. Never create services without nodes.
 │  │   dialogStore, toastStore, historyStore  │
 │  ├── 4 panels: Services, Deps, Flow, Costs │
 │  ├── Score history modal (Recharts line)   │
+│  ├── Doctor modal (health checklist)       │
 │  ├── Theme system (dark/light via CSS vars)│
 │  ├── Skeleton loaders during analysis       │
 │  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)     │
@@ -161,9 +162,10 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/components/Toast.tsx` | Toast notification container |
 | `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
 | `src/components/CostsPanel/` | Cost breakdown by category, renewal alerts, bar chart (Recharts), budget mode |
+| `src/components/Doctor/` | Doctor modal: health checklist (config, services, costs, vulns, score) |
 | `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
-| `src/components/ServicesPanel/` | Service cards, form with htmlFor labels (all fields incl. currency/period), confidence badges |
+| `src/components/ServicesPanel/` | Service cards with zombie badges, form with htmlFor labels, confidence badges, activity filter |
 | `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
 
 ### CLI & CI
@@ -192,7 +194,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (241 tests, 18 suites) |
+| `npm test` | vitest (284 tests, 22 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -204,7 +206,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-241 tests across 18 suites. vitest + @testing-library/react + jsdom.
+284 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -213,15 +215,19 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Extractor | 26 | File types, URL/env/import patterns |
 | Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
+| htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
 | Heuristic | 13 | Category mapping, confidence, name extraction |
 | TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
+| zombieDetector | 12 | Classification thresholds, caching, enrichment, git failure handling |
 | monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
 | historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
 | healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
+| alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
 | ServiceCard | 10 | Rendering, interactions, confidence, a11y |
 | useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
 | Flow inference | 9 | Node types, edge routing, layout |
+| scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
 | Deduplicator | 6 | Grouping, merging, confidence upgrades |
 | Pipeline | 6 | End-to-end, AI checkpoint/restore |
