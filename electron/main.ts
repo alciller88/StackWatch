@@ -46,7 +46,7 @@ function createWindow() {
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://api.github.com https://*.openai.com https://*.groq.com; img-src 'self' data: https://img.shields.io",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://api.github.com https://*.openai.com https://*.groq.com https://api.mistral.ai https://api.anthropic.com http://localhost:11434 http://localhost:1234; img-src 'self' data: https://img.shields.io",
           ],
         },
       })
@@ -112,8 +112,8 @@ ipcMain.handle('open-external-url', async (_event, url: string) => {
 
 function validateRepoPath(repoPath: string): string {
   if (!repoPath) throw new Error('Repository path cannot be empty')
+  if (/(?:^|[\\/])\.\.(?:[\\/]|$)/.test(repoPath)) throw new Error('Invalid repository path: must not contain ".."')
   const resolved = path.resolve(repoPath)
-  if (resolved.includes('..')) throw new Error('Invalid repository path: must not contain ".."')
   return resolved
 }
 

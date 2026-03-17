@@ -399,13 +399,11 @@ export const FlowGraph: React.FC = () => {
         <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
           <button
             onClick={() => openFolder()}
+            className="bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] transition-colors"
             style={{
-              background: 'transparent', border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
               fontFamily: 'IBM Plex Mono', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase',
               padding: '6px 16px', cursor: 'pointer',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-bg-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-accent)'; }}
           >
             Open folder
           </button>

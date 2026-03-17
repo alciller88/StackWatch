@@ -48,7 +48,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
     return (
       <div className="flex items-center justify-center h-full w-full bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-mono p-8">
-        <div className="max-w-[480px] w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-8 text-center">
+        <div className="max-w-[480px] w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-none p-8 text-center">
           <h1 className="text-xl font-semibold text-[var(--color-accent)] mb-3">
             Something went wrong
           </h1>
@@ -57,14 +57,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </p>
 
           {this.state.error && (
-            <pre className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] border border-[var(--color-border-light)] rounded px-4 py-3 text-left overflow-x-auto whitespace-pre-wrap break-words mb-5">
+            <pre className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] border border-[var(--color-border-light)] rounded-none px-4 py-3 text-left overflow-x-auto whitespace-pre-wrap break-words mb-5">
               {this.state.error.name}: {this.state.error.message}
             </pre>
           )}
 
           <button
             onClick={this.handleReload}
-            className="text-sm font-inherit font-medium text-[var(--color-bg-primary)] bg-[var(--color-accent)] border-none rounded px-6 py-2 cursor-pointer"
+            className="text-sm font-inherit font-medium text-[var(--color-bg-primary)] bg-[var(--color-accent)] border-none rounded-none px-6 py-2 cursor-pointer"
             aria-label="Reload application"
           >
             Reload

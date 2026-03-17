@@ -94,7 +94,7 @@ Never filter services out of the graph. Never create services without nodes.
 - **Encryption**: `safeStorage.encryptString()` derives machine-unique key for `electron-store`. Fallback: `userData`-based seed.
 - **CSP**: `Content-Security-Policy` via `session.webRequest.onHeadersReceived`. Production only (disabled in dev for Vite HMR).
 - **External URLs**: all opened via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only). No `window.open()`.
-- **Path validation**: `validateRepoPath()` resolves and rejects `..` traversal.
+- **Path validation**: `validateRepoPath()` checks raw input for `..` traversal via regex before resolving.
 - **Secrets**: GitHub tokens and AI API keys stored in encrypted electron-store, never in config JSON.
 
 ### Type system
@@ -105,7 +105,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
   ↗ electron/types.ts    ← re-exports
 ```
 
-`SERVICE_CATEGORIES` is a `const` array — the `ServiceCategory` union type is derived from it. All consumers import from `shared/types.ts` (or its re-exports). There is NO duplicated category list anywhere.
+`SERVICE_CATEGORIES` is a `const` array — the `ServiceCategory` union type is derived from it. All consumers import from `shared/types.ts` (or its re-exports). There is NO duplicated category list anywhere. `Vulnerability` and `DepVulnResult` interfaces live in `shared/types.ts` only — `vulnScanner.ts` imports from there.
 
 **Build artifact warning**: Vite resolves `shared/types.ts` directly. If a stale `shared/types.js` exists in the repo root, Vite will pick it up instead → app breaks. This file is gitignored. If it appears, delete it.
 
@@ -145,7 +145,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/components/Toast.tsx` | Toast notification container |
 | `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
-| `src/components/ServicesPanel/` | Service cards, form with htmlFor labels, confidence badges |
+| `src/components/ServicesPanel/` | Service cards, form with htmlFor labels (all fields incl. currency/period), confidence badges |
 | `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
 
 ### CLI & CI

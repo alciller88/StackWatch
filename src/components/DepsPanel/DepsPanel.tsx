@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useStore } from '../../store/useStore';
+import { useToastStore } from '../../store/toastStore';
 import type { Dependency, DepVulnResult, Vulnerability } from '../../types';
 
 type SortKey = 'name' | 'type';
@@ -43,7 +44,7 @@ export const DepsPanel: React.FC = () => {
       setVulnResults(results);
       setVulnScanned(true);
     } catch {
-      // Silent fail
+      useToastStore.getState().addToast('Vulnerability scan failed', 'error');
     } finally {
       setVulnLoading(false);
     }

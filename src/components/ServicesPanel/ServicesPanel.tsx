@@ -443,7 +443,9 @@ const ServiceForm: React.FC<{
           {errors.cost && <p className="text-red-500 text-[10px] mt-1">{errors.cost}</p>}
         </div>
         <div className="w-16">
+          <label htmlFor="sf-currency" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Currency</label>
           <select
+            id="sf-currency"
             value={costCurrency}
             onChange={(e) => setCostCurrency(e.target.value)}
             className="rounded-sm px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] border"
@@ -454,7 +456,9 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div className="w-16">
+          <label htmlFor="sf-period" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Period</label>
           <select
+            id="sf-period"
             value={costPeriod}
             onChange={(e) => setCostPeriod(e.target.value as 'monthly' | 'yearly')}
             className="rounded-sm px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] border"

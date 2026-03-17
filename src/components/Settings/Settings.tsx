@@ -164,14 +164,13 @@ export const Settings: React.FC = () => {
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">API Key</label>
                       {currentPreset?.setupUrl && (
-                        <a
-                          href={currentPreset.setupUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => window.stackwatch.openExternalUrl(currentPreset.setupUrl!)}
+                          className="text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer p-0"
                         >
                           {selectedPreset === 'Groq' ? 'Get free API key' : 'Get API key'} &rarr;
-                        </a>
+                        </button>
                       )}
                     </div>
                     <div className="relative">
@@ -291,7 +290,7 @@ export const Settings: React.FC = () => {
                     {selectedPreset === 'Ollama' && (
                       <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[10px] text-[#4a8ab0] space-y-1">
                         <p className="font-medium">Setup:</p>
-                        <p>1. Install Ollama from <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-80">ollama.com</a></p>
+                        <p>1. Install Ollama from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://ollama.com')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">ollama.com</button></p>
                         <p>2. Run: <code className="bg-[#1a2a3a] px-1">ollama pull llama3.2</code></p>
                         <p>3. Ollama runs automatically on port 11434</p>
                       </div>
@@ -299,7 +298,7 @@ export const Settings: React.FC = () => {
                     {selectedPreset === 'LM Studio' && (
                       <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[10px] text-[#4a8ab0] space-y-1">
                         <p className="font-medium">Setup:</p>
-                        <p>1. Download from <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer" className="underline hover:opacity-80">lmstudio.ai</a></p>
+                        <p>1. Download from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://lmstudio.ai')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">lmstudio.ai</button></p>
                         <p>2. Load any GGUF model</p>
                         <p>3. Start the local server (port 1234)</p>
                       </div>
@@ -455,22 +454,20 @@ export const Settings: React.FC = () => {
           <p className="font-mono text-[13px] text-[var(--color-accent)]">StackWatch v{APP_VERSION}</p>
           <p className="font-mono text-[11px] text-[var(--color-text-muted)]">Know your stack, own your stack.</p>
           <div className="space-y-1">
-            <a
-              href="https://github.com/alciller88/StackWatch"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block font-mono text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-opacity"
+            <button
+              type="button"
+              onClick={() => window.stackwatch.openExternalUrl('https://github.com/alciller88/StackWatch')}
+              className="block font-mono text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer p-0 text-left"
             >
               GitHub
-            </a>
-            <a
-              href="https://github.com/alciller88/StackWatch/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block font-mono text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-opacity"
+            </button>
+            <button
+              type="button"
+              onClick={() => window.stackwatch.openExternalUrl('https://github.com/alciller88/StackWatch/issues')}
+              className="block font-mono text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer p-0 text-left"
             >
               Report an issue
-            </a>
+            </button>
             <span className="block font-mono text-[11px] text-[var(--color-text-muted)]">MIT License</span>
           </div>
         </div>

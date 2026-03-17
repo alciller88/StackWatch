@@ -1,20 +1,4 @@
-import type { Dependency } from '../types'
-
-export interface Vulnerability {
-  id: string
-  summary: string
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'unknown'
-  aliases: string[]
-  fixedVersion?: string
-  url?: string
-}
-
-export interface DepVulnResult {
-  ecosystem: string
-  name: string
-  version: string
-  vulnerabilities: Vulnerability[]
-}
+import type { Dependency, Vulnerability, DepVulnResult } from '../../shared/types'
 
 // Map StackWatch ecosystems to OSV ecosystems
 const ecosystemMap: Record<string, string> = {
