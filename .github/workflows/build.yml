@@ -59,10 +59,8 @@ jobs:
 
       # TypeScript compile + Vite bundle + electron-builder package
       # Signing is skipped unless CSC_LINK / APPLE_ID secrets are set
-      - run: npm run build
-        env:
-          # Prevent electron-builder from publishing
-          EP_PRE_RELEASE: true
+      - run: npm run build:prod
+      - run: npx electron-builder --publish never
 
       - name: Validate build
         run: npm run validate
