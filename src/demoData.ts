@@ -87,20 +87,22 @@ export const demoDependencies: Dependency[] = [
 ];
 
 export const demoFlowNodes: FlowNode[] = [
-  { id: 'user', label: 'User', type: 'user' },
+  { id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' },
   { id: 'svc-cloudflare', label: 'Cloudflare CDN', type: 'cdn', serviceId: 'cloudflare' },
-  { id: 'svc-vercel', label: 'Vercel (Next.js)', type: 'frontend', serviceId: 'vercel' },
-  { id: 'api-layer', label: 'API Routes', type: 'api' },
+  { id: 'frontend', label: 'Frontend', type: 'layer', layerColor: '#4a8ab0' },
+  { id: 'api', label: 'Backend', type: 'layer', layerColor: '#6b4ab0' },
+  { id: 'svc-vercel', label: 'Vercel (Next.js)', type: 'external', serviceId: 'vercel' },
   { id: 'svc-supabase', label: 'Supabase DB', type: 'database', serviceId: 'supabase' },
   { id: 'svc-stripe', label: 'Stripe', type: 'external', serviceId: 'stripe' },
   { id: 'svc-sentry', label: 'Sentry', type: 'external', serviceId: 'sentry' },
 ];
 
 export const demoFlowEdges: FlowEdge[] = [
+  { source: 'user', target: 'frontend', flowType: 'data' },
   { source: 'user', target: 'svc-cloudflare', flowType: 'data' },
-  { source: 'svc-cloudflare', target: 'svc-vercel', flowType: 'data' },
-  { source: 'svc-vercel', target: 'api-layer', flowType: 'data' },
-  { source: 'api-layer', target: 'svc-supabase', flowType: 'data' },
-  { source: 'api-layer', target: 'svc-stripe', flowType: 'payment' },
-  { source: 'svc-vercel', target: 'svc-sentry', flowType: 'data' },
+  { source: 'frontend', target: 'svc-vercel', flowType: 'data' },
+  { source: 'frontend', target: 'api', flowType: 'data' },
+  { source: 'api', target: 'svc-supabase', flowType: 'data' },
+  { source: 'api', target: 'svc-stripe', flowType: 'payment' },
+  { source: 'frontend', target: 'svc-sentry', flowType: 'data' },
 ];

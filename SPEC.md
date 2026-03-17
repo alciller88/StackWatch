@@ -335,7 +335,10 @@ interface Dependency {
 interface FlowNode {
   id: string
   label: string
-  type: 'user' | 'frontend' | 'api' | 'database' | 'external' | 'layer'
+  type: 'user' | 'cdn' | 'frontend' | 'api' | 'database' | 'external' | 'layer'
+  // Active types produced by flowInference: 'layer' (User/Frontend/Backend/grouping),
+  // 'database', 'cdn', 'external' (services). Old types 'user'/'frontend'/'api' kept
+  // in union for backward compatibility with saved configs.
   category?: ServiceCategory
   serviceId?: string
   layerColor?: string  // border color for layer nodes

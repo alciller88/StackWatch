@@ -292,7 +292,7 @@ describe('ScanModeDialog', () => {
   const analysisResult = {
     services: [makeService('redis', { source: 'inferred' })],
     dependencies: [],
-    flowNodes: [{ id: 'user', label: 'User', type: 'user' as const }, makeNode('redis')],
+    flowNodes: [{ id: 'user', label: 'User', type: 'layer' as const, layerColor: '#e2b04a' }, makeNode('redis')],
     flowEdges: [{ source: 'user', target: 'svc-redis', flowType: 'data' as const }],
   };
 

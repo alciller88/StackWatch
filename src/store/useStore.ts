@@ -600,7 +600,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
       // Ensure 'user' node exists
       if (!flowNodes.find(n => n.id === 'user')) {
-        flowNodes.unshift({ id: 'user', label: 'User', type: 'user' });
+        flowNodes.unshift({ id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' });
       }
 
       set({

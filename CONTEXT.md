@@ -51,7 +51,7 @@ Every service MUST have a corresponding graph node. This is enforced by:
 
 Never filter services out of the graph. Never create services without nodes.
 
-Layer nodes (type: 'layer') are organizational — they do NOT represent services. The 1:1 invariant only applies to service nodes.
+Layer nodes (type: 'layer') are organizational — they do NOT represent services. The 1:1 invariant only applies to service nodes. All structural nodes (User, Frontend, Backend, grouping nodes like Auth Layer/Data Layer) now use type: 'layer' with layerColor. The old types 'user', 'frontend', 'api' are kept in the union for backward compatibility with saved configs but are no longer produced by flowInference or demo data.
 
 ---
 
