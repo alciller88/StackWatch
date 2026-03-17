@@ -43,6 +43,9 @@ const api: StackWatchAPI = {
   relinkLocal: () =>
     ipcRenderer.invoke('relink-local'),
 
+  scanVulnerabilities: (deps: import('../shared/types').Dependency[]) =>
+    ipcRenderer.invoke('scan-vulnerabilities', deps),
+
   openExternalUrl: (url: string) =>
     ipcRenderer.invoke('open-external-url', url),
 

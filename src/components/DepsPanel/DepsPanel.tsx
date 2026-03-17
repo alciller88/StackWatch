@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useStore } from '../../store/useStore';
-import type { Dependency } from '../../types';
+import type { Dependency, DepVulnResult, Vulnerability } from '../../types';
 
 type SortKey = 'name' | 'type';
 type SortDir = 'asc' | 'desc';
@@ -31,6 +31,33 @@ export const DepsPanel: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [groupByType, setGroupByType] = useState(false);
+  const [vulnResults, setVulnResults] = useState<DepVulnResult[]>([]);
+  const [vulnLoading, setVulnLoading] = useState(false);
+  const [vulnScanned, setVulnScanned] = useState(false);
+
+  const scanVulns = async () => {
+    if (!window.stackwatch?.scanVulnerabilities || dependencies.length === 0) return;
+    setVulnLoading(true);
+    try {
+      const results = await window.stackwatch.scanVulnerabilities(dependencies);
+      setVulnResults(results);
+      setVulnScanned(true);
+    } catch {
+      // Silent fail
+    } finally {
+      setVulnLoading(false);
+    }
+  };
+
+  const vulnMap = useMemo(() => {
+    const map = new Map<string, DepVulnResult>();
+    for (const r of vulnResults) {
+      map.set(`${r.ecosystem}-${r.name}`, r);
+    }
+    return map;
+  }, [vulnResults]);
+
+  const totalVulns = vulnResults.reduce((sum, r) => sum + r.vulnerabilities.length, 0);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -105,7 +132,20 @@ export const DepsPanel: React.FC = () => {
       onClick={() => openExternal(dep)}
       title={`Open ${dep.name} on ${dep.ecosystem}`}
     >
-      <td className="px-4 py-2.5 font-mono text-[12px] text-[var(--color-text-primary)]">{dep.name}</td>
+      <td className="px-4 py-2.5 font-mono text-[12px] text-[var(--color-text-primary)]">
+        <span className="flex items-center gap-1.5">
+          {dep.name}
+          {vulnMap.has(`${dep.ecosystem}-${dep.name}`) && (
+            <span
+              className="shrink-0 text-[9px] px-1 py-0.5 font-medium uppercase tracking-wide"
+              style={{ color: '#c05050', border: '1px solid #c05050' }}
+              title={vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.map((v: Vulnerability) => `${v.id}: ${v.summary}`).join('\n')}
+            >
+              {vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.length} vuln{vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </span>
+      </td>
       <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-secondary)]">{dep.version}</td>
       <td className="px-4 py-2.5">
         <span
@@ -139,6 +179,29 @@ export const DepsPanel: React.FC = () => {
             />
             Group by type
           </label>
+          <button
+            onClick={scanVulns}
+            disabled={vulnLoading || dependencies.length === 0}
+            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase rounded-sm transition-colors border disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              borderColor: vulnScanned && totalVulns > 0 ? '#c05050' : 'var(--color-border)',
+              color: vulnScanned && totalVulns > 0 ? '#c05050' : 'var(--color-text-secondary)',
+            }}
+          >
+            {vulnLoading ? (
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-7a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            {vulnScanned
+              ? totalVulns > 0 ? `${totalVulns} vuln${totalVulns !== 1 ? 's' : ''}` : 'No vulns'
+              : 'Scan vulns'}
+          </button>
         </div>
 
         <div className="flex gap-3">
@@ -185,6 +248,18 @@ export const DepsPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Vulnerability summary */}
+      {vulnScanned && totalVulns > 0 && (
+        <div className="px-6 py-2 border-b flex items-center gap-3" style={{ borderColor: 'var(--color-border)', background: '#1a0a0a' }}>
+          <span className="text-[#c05050] font-mono text-[10px] uppercase tracking-widest font-medium">
+            {totalVulns} vulnerabilit{totalVulns !== 1 ? 'ies' : 'y'} in {vulnResults.length} package{vulnResults.length !== 1 ? 's' : ''}
+          </span>
+          <span className="text-[var(--color-text-muted)] font-mono text-[10px]">
+            via OSV.dev
+          </span>
+        </div>
+      )}
 
       {/* Table */}
       <div className="flex-1 overflow-auto" ref={tableContainerRef}>

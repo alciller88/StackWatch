@@ -172,6 +172,22 @@ export interface DeepAnalysisResult {
   inferredEdgeTypes: { serviceId: string; flowType: FlowEdge['flowType']; reason: string }[];
 }
 
+export interface Vulnerability {
+  id: string;
+  summary: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'unknown';
+  aliases: string[];
+  fixedVersion?: string;
+  url?: string;
+}
+
+export interface DepVulnResult {
+  ecosystem: string;
+  name: string;
+  version: string;
+  vulnerabilities: Vulnerability[];
+}
+
 export interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>;
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>;
@@ -187,6 +203,7 @@ export interface StackWatchAPI {
   exportServicesMd(content: string): Promise<boolean>;
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>;
   relinkLocal(): Promise<string | null>;
+  scanVulnerabilities(deps: Dependency[]): Promise<DepVulnResult[]>;
   openExternalUrl(url: string): Promise<boolean>;
   windowMinimize(): void;
   windowMaximize(): void;

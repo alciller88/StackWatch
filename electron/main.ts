@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import Store from 'electron-store'
 import { analyzeLocalRepo, analyzeGitHubRepo } from './analyzers/index'
+import { scanVulnerabilities } from './analyzers/vulnScanner'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import type { UserConfig, AISettings, AIProvider, LinkStatus } from './types'
 
@@ -345,5 +346,11 @@ ipcMain.handle('relink-local', async () => {
     title: 'Re-link to local repository',
   })
   return result.canceled ? null : result.filePaths[0]
+})
+
+// --- Vulnerability Scanning ---
+
+ipcMain.handle('scan-vulnerabilities', async (_event, deps: import('./types').Dependency[]) => {
+  return scanVulnerabilities(deps)
 })
 

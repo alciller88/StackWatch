@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useGraphStore } from '../../store/graphStore';
 import { useDialogStore } from '../../store/dialogStore';
 import { GitHubModal } from '../GitHubModal';
-import type { Service, UserConfig, ServiceCategory } from '../../types';
+import { getScoreBadgeMarkdown, getScoreBadgeHtml, generateScoreBadgeSvg } from '../../utils/badge';
+import { calculateHealthScore } from '../../utils/healthScore';
+import type { Service, UserConfig, ServiceCategory, FlowEdge } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
   const date = new Date().toISOString().split('T')[0];
@@ -64,6 +67,20 @@ export const TopBar: React.FC = () => {
   } = useStore();
 
   const { confirm } = useDialogStore();
+  const graphNodes = useGraphStore(s => s.nodes);
+  const graphEdges = useGraphStore(s => s.edges);
+
+  const stackScore = useMemo(() => {
+    if (services.length === 0) return 0;
+    const fNodes = graphNodes.map(n => ({
+      id: n.id, label: n.data.label, type: n.data.nodeType ?? 'external' as const, serviceId: n.data.serviceId,
+    }));
+    const fEdges = graphEdges.map(e => ({
+      source: e.source, target: e.target, flowType: (e.data?.flowType as FlowEdge['flowType']) ?? 'data',
+    }));
+    return calculateHealthScore(services, fNodes, fEdges).score;
+  }, [services, graphNodes, graphEdges]);
+
   const [showGitHub, setShowGitHub] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -134,13 +151,11 @@ export const TopBar: React.FC = () => {
   };
 
   const getBadgeMarkdown = (): string => {
-    const count = services.length;
-    return `![Analyzed with StackWatch](https://img.shields.io/badge/StackWatch-${count}%20services-gold)`;
+    return getScoreBadgeMarkdown(stackScore, services.length);
   };
 
   const getBadgeHtml = (): string => {
-    const count = services.length;
-    return `<a href="https://github.com/alciller88/StackWatch"><img src="https://img.shields.io/badge/StackWatch-${count}%20services-gold" alt="Analyzed with StackWatch" /></a>`;
+    return getScoreBadgeHtml(stackScore, services.length);
   };
 
   const getStackSummary = (): string => {
@@ -151,7 +166,7 @@ export const TopBar: React.FC = () => {
       const monthly = s.cost.period === 'yearly' ? s.cost.amount / 12 : s.cost.amount;
       return sum + monthly;
     }, 0);
-    return `\u{1F50D} My project uses ${serviceCount} services, ${depCount} dependencies, ~$${Math.round(monthlyCost)}/mo\nAnalyzed with StackWatch`;
+    return `\u{1F50D} My project uses ${serviceCount} services, ${depCount} dependencies, ~$${Math.round(monthlyCost)}/mo\nStack Score: ${stackScore}/100\nAnalyzed with StackWatch`;
   };
 
   return (
@@ -249,6 +264,16 @@ export const TopBar: React.FC = () => {
                   role="menuitem"
                 >
                   {shareCopied === 'summary' ? 'Copied!' : 'Copy Stack Summary'}
+                </button>
+                <button
+                  onClick={() => {
+                    const svg = generateScoreBadgeSvg(stackScore, services.length);
+                    handleShareCopy('svg', svg);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
+                  role="menuitem"
+                >
+                  {shareCopied === 'svg' ? 'Copied!' : 'Copy Badge (SVG)'}
                 </button>
               </div>
             )}
