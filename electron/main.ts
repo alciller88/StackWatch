@@ -15,12 +15,9 @@ let store: any
 let mainWindow: BrowserWindow | null = null
 
 function getEncryptionKey(): string {
-  if (safeStorage.isEncryptionAvailable()) {
-    // Derive a machine-unique key using safeStorage
-    const encrypted = safeStorage.encryptString('stackwatch-v1')
-    return encrypted.toString('base64').slice(0, 32)
-  }
-  // Fallback: use the userData path as a machine-specific seed
+  // Deterministic machine-unique key from userData path.
+  // NOTE: safeStorage.encryptString() is non-deterministic (random nonce each call),
+  // so it cannot be used to derive a stable encryption key for electron-store.
   return `sw-${Buffer.from(app.getPath('userData')).toString('base64').slice(0, 24)}`
 }
 
@@ -72,9 +69,19 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  store = new (Store as any)({
-    encryptionKey: getEncryptionKey(),
-  })
+  const key = getEncryptionKey()
+  try {
+    store = new (Store as any)({ encryptionKey: key })
+    // Force a read to detect corrupted/mis-keyed data early
+    store.store
+  } catch {
+    // Store corrupted (e.g. encryption key changed) — delete and recreate
+    try {
+      const storePath = path.join(app.getPath('userData'), 'config.json')
+      require('fs').unlinkSync(storePath)
+    } catch { /* ignore if file doesn't exist */ }
+    store = new (Store as any)({ encryptionKey: key })
+  }
   createWindow()
 })
 

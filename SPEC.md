@@ -40,7 +40,7 @@ Modern projects depend on dozens of external services (hosting, domain, CI/CD, a
 | Cost charts | Recharts 3 | React-native charting, dark theme support |
 | Dep virtualization | @tanstack/react-virtual | Handles 500+ dependency rows |
 | Remote GitHub | Octokit (`@octokit/rest`) | Official client, well documented |
-| Local persistence | `electron-store` | Encrypted JSON via safeStorage |
+| Local persistence | `electron-store` | Encrypted JSON via deterministic machine key |
 | IPC | `contextBridge` + `ipcMain/ipcRenderer` | Secure main ↔ renderer separation |
 | .gitignore | `ignore` (npm) | Respect repo exclusions during scan |
 | Testing | Vitest + @testing-library/react + jsdom | Fast, React-compatible |
@@ -640,7 +640,7 @@ interface StackWatchAPI {
 
 | Area | Implementation |
 |---|---|
-| **Encryption** | `safeStorage.encryptString()` for electron-store. Machine-unique key. |
+| **Encryption** | Deterministic key from `app.getPath('userData')` for electron-store. Auto-recovery on corrupted store. |
 | **CSP** | Production-only Content-Security-Policy via `session.webRequest.onHeadersReceived` |
 | **External URLs** | All via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only) |
 | **Path validation** | `validateRepoPath()` checks raw input for `..` traversal via regex before resolving |

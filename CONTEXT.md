@@ -100,7 +100,7 @@ Never filter services out of the graph. Never create services without nodes.
 
 ### Security model
 
-- **Encryption**: `safeStorage.encryptString()` derives machine-unique key for `electron-store`. Fallback: `userData`-based seed.
+- **Encryption**: Deterministic machine-unique key derived from `app.getPath('userData')` for `electron-store`. Auto-recovery on corrupted store (key mismatch → delete and recreate).
 - **CSP**: `Content-Security-Policy` via `session.webRequest.onHeadersReceived`. Production only (disabled in dev for Vite HMR).
 - **External URLs**: all opened via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only). No `window.open()`.
 - **Path validation**: `validateRepoPath()` checks raw input for `..` traversal via regex before resolving.
