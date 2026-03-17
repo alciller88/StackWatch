@@ -24,7 +24,7 @@ mac:
     - target: zip
       arch: [universal]
   category: public.app-category.developer-tools
-  icon: build/icon.icns
+  icon: build/icon.png
   darkModeSupport: true
   hardenedRuntime: true
   gatekeeperAssess: false
