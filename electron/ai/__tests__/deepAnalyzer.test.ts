@@ -377,17 +377,17 @@ describe('filterFalsePositivesWithAI', () => {
     expect(result[1].id).toBe('stripe')
   })
 
-  it('skips AI filter when more than 40 services', async () => {
+  it('skips AI filter when more than 100 services', async () => {
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
 
-    const services = Array.from({ length: 41 }, (_, i) =>
+    const services = Array.from({ length: 101 }, (_, i) =>
       mockService(`svc-${i}`, `Service ${i}`, 'other', 'low')
     )
 
     const result = await filterFalsePositivesWithAI(services, testProvider)
 
-    expect(result).toHaveLength(41)
+    expect(result).toHaveLength(101)
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

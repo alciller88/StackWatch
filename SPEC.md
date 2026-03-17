@@ -170,7 +170,7 @@ Resolves simple glob patterns (e.g., `packages/*`). Scans each workspace package
 
 Only runs if the user configures an AI provider. Five capabilities:
 
-0. **False-positive filter** (`filterFalsePositivesWithAI`): Reviews ALL services including high-confidence — catches generic names (OAuth2, Connect, Embed, Docs) that pass scoring with strong evidence but aren't real products. Skips if >40 services. Reports `aiFilteredCount` in `AnalysisResult`.
+0. **False-positive filter** (`filterFalsePositivesWithAI`): Reviews ALL services including high-confidence — catches generic names (OAuth2, Connect, Embed, Docs) that pass scoring with strong evidence but aren't real products. Skips if >100 services. Reports `aiFilteredCount` in `AnalysisResult`.
 0b. **Service refinement** (`refineServicesWithAI`): Only processes medium/low confidence services. High confidence services are not sent to AI. Fixes categories, adjusts confidence, removes false positives, merges duplicates.
 1. **Service context**: For each detected service, reads relevant code files and determines usage description, criticality level (critical/important/optional), and warnings (hardcoded secrets, missing error handling).
 2. **Hidden service detection**: Reads priority files (lib/, services/, api/) and finds services consumed via wrappers or custom SDKs that heuristic analysis missed.

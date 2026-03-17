@@ -459,10 +459,8 @@ export async function filterFalsePositivesWithAI(
   if (services.length === 0) return services
 
   // Skip AI filter if too many services (avoid expensive calls / 429s)
-  if (services.length > 40) return services
+  if (services.length > 100) return services
 
-  // Send ALL services to AI — even high-confidence ones can be generic
-  // names (e.g. "OAuth2", "Connect") that slipped through with strong evidence
   const payload = services.map(s => ({
     id: s.id,
     name: s.name,
@@ -486,7 +484,7 @@ export async function filterFalsePositivesWithAI(
       headers,
       body: JSON.stringify({
         model: provider.model,
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.1,
         messages: [
           { role: 'system', content: AI_FILTER_SYSTEM_PROMPT },
