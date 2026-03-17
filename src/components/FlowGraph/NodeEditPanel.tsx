@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { SERVICE_CATEGORIES } from '../../types'
 import type { FlowNode, ServiceCategory } from '../../types'
 
-const NODE_TYPES: FlowNode['type'][] = ['user', 'cdn', 'frontend', 'api', 'database', 'external']
+const NODE_TYPES: FlowNode['type'][] = ['layer', 'cdn', 'api', 'database', 'external']
 
 const CATEGORIES = SERVICE_CATEGORIES;
 

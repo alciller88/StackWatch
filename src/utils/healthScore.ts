@@ -21,8 +21,8 @@ export function calculateHealthScore(
   const servicesWithOwner = services.filter(s => s.owner && s.owner.trim()).length / services.length;
   const servicesReviewed = services.filter(s => !s.needsReview).length / services.length;
 
-  // Graph completeness: % of non-user nodes that have at least one edge (source or target)
-  const nonUserNodes = flowNodes.filter(n => n.type !== 'user');
+  // Graph completeness: % of service nodes that have at least one edge (source or target)
+  const nonUserNodes = flowNodes.filter(n => !!n.serviceId);
   const connectedNodeIds = new Set([
     ...flowEdges.map(e => e.source),
     ...flowEdges.map(e => e.target),

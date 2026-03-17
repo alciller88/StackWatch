@@ -577,14 +577,23 @@ export const useStore = create<StoreState>((set, get) => ({
       const services = config.services ?? [];
 
       // Build flow nodes from graph config (with serviceId linkage)
+      const oldLayerIds = new Set(['user', 'frontend', 'api']);
       const flowNodes: FlowNode[] = (config.graph?.nodes ?? []).map((n) => {
         // Match graph node to a service by ID pattern (svc-{serviceId})
         const svcId = n.id.startsWith('svc-') ? n.id.slice(4) : undefined;
+        const rawType = n.data.nodeType ?? 'external';
+        // Migrate old node types: user/frontend/api IDs without serviceId → layer
+        const isOldLayer = oldLayerIds.has(n.id) && !svcId && rawType !== 'layer';
+        const type = isOldLayer ? 'layer' as const : rawType;
+        const layerColor = isOldLayer
+          ? (n.id === 'user' ? '#e2b04a' : n.id === 'frontend' ? '#4a8ab0' : '#6b4ab0')
+          : n.data.layerColor;
         return {
           id: n.id,
           label: n.data.label,
-          type: n.data.nodeType ?? 'external',
+          type,
           serviceId: svcId,
+          layerColor,
         };
       });
       const flowEdges: FlowEdge[] = (config.graph?.edges ?? []).map((e) => ({

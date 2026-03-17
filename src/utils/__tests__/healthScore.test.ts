@@ -13,8 +13,8 @@ function makeService(overrides: Partial<Service> = {}): Service {
   }
 }
 
-function makeNode(id: string, type: FlowNode['type'] = 'external'): FlowNode {
-  return { id, label: id, type }
+function makeNode(id: string, type: FlowNode['type'] = 'external', serviceId?: string): FlowNode {
+  return { id, label: id, type, serviceId }
 }
 
 function makeEdge(source: string, target: string): FlowEdge {
@@ -65,8 +65,8 @@ describe('calculateHealthScore', () => {
     const services = [
       makeService({ id: 's1', needsReview: true }),
     ]
-    const nodes = [makeNode('n1', 'api'), makeNode('n2', 'database')]
-    const edges = [makeEdge('n1', 'n2')]
+    const nodes = [makeNode('svc-s1', 'api', 's1'), makeNode('svc-s2', 'database', 's2')]
+    const edges = [makeEdge('svc-s1', 'svc-s2')]
     const result = calculateHealthScore(services, nodes, edges)
     expect(result.graphCompleteness).toBe(100)
     expect(result.score).toBe(20)
@@ -87,8 +87,8 @@ describe('calculateHealthScore', () => {
         needsReview: false,
       }),
     ]
-    const nodes = [makeNode('n1', 'api'), makeNode('n2', 'database')]
-    const edges = [makeEdge('n1', 'n2')]
+    const nodes = [makeNode('svc-s1', 'api', 's1'), makeNode('svc-s2', 'database', 's2')]
+    const edges = [makeEdge('svc-s1', 'svc-s2')]
     const result = calculateHealthScore(services, nodes, edges)
     expect(result.score).toBe(100)
   })
@@ -106,8 +106,8 @@ describe('calculateHealthScore', () => {
         needsReview: true,
       }),
     ]
-    const nodes = [makeNode('n1', 'api'), makeNode('n2', 'database')]
-    const edges = [makeEdge('n1', 'n2')]
+    const nodes = [makeNode('svc-s1', 'api', 's1'), makeNode('svc-s2', 'database', 's2')]
+    const edges = [makeEdge('svc-s1', 'svc-s2')]
     const result = calculateHealthScore(services, nodes, edges)
 
     expect(result.servicesWithCost).toBe(50)
@@ -126,8 +126,8 @@ describe('calculateHealthScore', () => {
         needsReview: false,
       }),
     ]
-    const nodes = [makeNode('n1', 'api'), makeNode('n2', 'database')]
-    const edges = [makeEdge('n1', 'n2')]
+    const nodes = [makeNode('svc-s1', 'api', 's1'), makeNode('svc-s2', 'database', 's2')]
+    const edges = [makeEdge('svc-s1', 'svc-s2')]
     const result = calculateHealthScore(services, nodes, edges)
     expect(result.score).toBeLessThanOrEqual(100)
   })
@@ -140,10 +140,10 @@ describe('calculateHealthScore', () => {
     expect(result.score).toBeGreaterThanOrEqual(0)
   })
 
-  it('excludes user-type nodes from graph completeness', () => {
+  it('excludes layer nodes (no serviceId) from graph completeness', () => {
     const services = [makeService({ id: 's1', needsReview: true })]
-    const nodes = [makeNode('user-1', 'user'), makeNode('n1', 'api')]
-    const edges = [makeEdge('user-1', 'n1')]
+    const nodes = [makeNode('user', 'layer'), makeNode('svc-s1', 'api', 's1')]
+    const edges = [makeEdge('user', 'svc-s1')]
     const result = calculateHealthScore(services, nodes, edges)
     expect(result.graphCompleteness).toBe(100)
   })
