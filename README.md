@@ -77,6 +77,7 @@ npm run dev
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
 | `npm test` | Run unit tests (355 tests across 24 suites) |
+| `npm run release` | Validate, tag current version, push tag (triggers CI release) |
 
 ### CLI (no Electron required)
 
@@ -414,7 +415,7 @@ StackWatch/
 │   └── validate-build.js    # 29-point production build checker
 ├── build/                   # icon.svg, entitlements.mac.plist, Linux icons
 ├── .github/workflows/
-│   ├── build.yml            # CI: test → build → validate → artifacts (3 platforms)
+│   ├── build.yml            # CI: test → build → validate → artifacts → release on v* tags
 │   └── stackwatch-scan.yml  # Self-scan on PRs
 ├── SPEC.md                  # Full technical specification
 ├── CONTEXT.md               # AI agent context (keep updated)
@@ -530,6 +531,7 @@ StackWatch/
 - [x] Evidence info popover: "Why was this detected?" button on service cards with score breakdown
 - [x] Graph diff visual: green highlight for new nodes, grey strikethrough for removed (3s after re-scan)
 - [x] 355 tests across 24 suites (+9 scanDiff and evidence popover tests)
+- [x] Release automation: GitHub Release with platform binaries on version tags (v*), `npm run release` convenience script
 
 ---
 

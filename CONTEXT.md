@@ -185,7 +185,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron-builder.yml` | macOS dmg+zip, Windows nsis+portable, Linux AppImage+deb |
 | `build/` | icon.svg, entitlements.mac.plist, Linux icon dir |
 | `scripts/validate-build.js` | 29-point production build checker |
-| `.github/workflows/build.yml` | CI: test → build → validate → upload artifacts (3 platforms) |
+| `.github/workflows/build.yml` | CI: test → build → validate → upload artifacts (3 platforms). On version tags (v*): also creates GitHub Release with all platform assets. |
 
 ---
 
@@ -199,6 +199,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
+| `npm run release` | Validate build, create git tag from package.json version, push tag (triggers CI release) |
 | `npm test` | vitest (355 tests, 24 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
@@ -206,6 +207,15 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 - Stale `dist-electron/tsconfig.node.tsbuildinfo` → delete and rebuild
 - Stale `shared/types.js` in repo root → delete (gitignored, breaks Vite)
 - `dist-cli/` must be excluded from vitest config
+
+### Release flow
+
+1. Update `version` in `package.json` (e.g., `0.4.0` → `0.5.0`)
+2. Commit: `chore: bump version to v0.5.0`
+3. Run `npm run release` — validates build, creates git tag `v0.5.0`, pushes tag
+4. CI workflow detects the `v*` tag → runs test → build (3 platforms) → creates GitHub Release with all platform binaries attached
+
+The `release` job uses `softprops/action-gh-release@v2` with `generate_release_notes: true` (auto-generates changelog from commits since the previous tag).
 
 ---
 

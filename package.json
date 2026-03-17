@@ -24,7 +24,8 @@
     "lint": "eslint src/ electron/ shared/",
     "build:cli": "tsc -p cli/tsconfig.json",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"electron/**/*.ts\" \"shared/**/*.ts\"",
-    "validate": "node scripts/validate-build.js"
+    "validate": "node scripts/validate-build.js",
+    "release": "npm run validate && git tag v$(node -p \"require('./package.json').version\") && git push origin --tags"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",

@@ -1,18 +1,19 @@
-# StackWatch CI/CD — build & test on push/PR
+# StackWatch CI/CD — build, test, and release
 #
 # Code signing secrets (add in GitHub repo Settings > Secrets):
 #   Windows:  CSC_LINK (base64 .pfx), CSC_KEY_PASSWORD
 #   macOS:    APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID, CSC_LINK, CSC_KEY_PASSWORD
 #   Linux:    (none required for unsigned AppImage)
 #
-# Auto-publish to GitHub Releases is NOT enabled yet — requires
-# GH_TOKEN secret and electron-builder publish config.
+# Release: push a tag like v0.5.0 to trigger the release job.
 
 name: Build & Test
 
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
 
@@ -79,3 +80,35 @@ jobs:
             out/*.snap
           if-no-files-found: warn
           retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "StackWatch ${{ github.ref_name }}"
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: release-assets/*

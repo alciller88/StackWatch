@@ -678,6 +678,18 @@ interface StackWatchAPI {
 
 CI builds on push to main and PRs. 29-point validation script checks production builds.
 
+### Release automation
+
+Pushing a version tag (`v*`) triggers the `release` job in the CI workflow:
+1. `test` job runs all 355 tests
+2. `build` job produces artifacts for macOS, Windows, and Linux
+3. `release` job downloads all artifacts and creates a GitHub Release with:
+   - Release name: "StackWatch v0.5.0"
+   - Auto-generated release notes (commits since previous tag)
+   - Attached assets: `.dmg`, `.zip` (macOS), `.exe` (Windows NSIS + portable), `.AppImage`, `.deb` (Linux)
+
+Convenience script: `npm run release` validates the build, creates a git tag from `package.json` version, and pushes it.
+
 ---
 
 ## 12. Stack Score
@@ -793,3 +805,5 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Graph diff visual: new nodes highlighted green (3s), removed nodes grey with strikethrough (3s fade-out) after re-scan
 - [x] EvidenceSummary type: best evidence per type with scores, populated in deduplicator
 - [x] 9 new tests: scanDiff (7), ServiceCard evidence popover (2)
+- [x] Release automation: CI creates GitHub Release with platform binaries on version tag push (v*)
+- [x] `npm run release` convenience script: validate → git tag → push tag
