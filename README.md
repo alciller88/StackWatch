@@ -9,20 +9,7 @@ StackWatch scans your codebase and automatically maps every service, API, databa
 
 **Zero config. Works offline. 10 seconds to your first scan.**
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="StackWatch Dashboard" width="800" />
-</p>
-
-<details>
-<summary>More screenshots</summary>
-
-| Services Panel | Flow Graph | Costs Panel |
-|---|---|---|
-| <img src="docs/screenshots/services.png" alt="Services" width="260" /> | <img src="docs/screenshots/flow.png" alt="Flow Graph" width="260" /> | <img src="docs/screenshots/costs.png" alt="Costs" width="260" /> |
-
-</details>
-
-> **Note:** To generate screenshots, run `npm run dev` and use your OS screenshot tool. Place images in `docs/screenshots/`.
+> Screenshots coming soon. To generate them, run `npm run dev` and place images in `docs/screenshots/`.
 
 ---
 
