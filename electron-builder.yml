@@ -1,17 +1,72 @@
 appId: com.stackwatch.app
 productName: StackWatch
+copyright: Copyright © 2026 StackWatch
+
 directories:
   output: out
   buildResources: build
+
 files:
   - dist/**/*
   - dist-electron/**/*
+  - "!dist-electron/tsconfig.node.tsbuildinfo"
   - package.json
+
+extraMetadata:
+  main: dist-electron/main.js
+
+asar: true
+
 mac:
-  target: dmg
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
   category: public.app-category.developer-tools
+  icon: build/icon.icns
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
 win:
-  target: nsis
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: build/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
 linux:
-  target: AppImage
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
   category: Development
+  icon: build/icons
+  desktop:
+    StartupWMClass: StackWatch
+
+publish:
+  provider: github
+  owner: alciller88
+  repo: StackWatch
+  releaseType: draft

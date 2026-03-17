@@ -13,12 +13,15 @@
   ],
   "scripts": {
     "dev": "concurrently \"vite\" \"tsc -p tsconfig.node.json && wait-on http://localhost:5173 && node scripts/launch-electron.js\"",
-    "build": "tsc -p tsconfig.node.json && vite build && electron-builder",
+    "build": "npm run build:dist",
+    "build:prod": "tsc -p tsconfig.node.json && vite build",
+    "build:dist": "npm run build:prod && electron-builder",
     "test": "vitest",
     "preview": "vite preview",
     "lint": "eslint src/ electron/ shared/",
     "build:cli": "tsc -p cli/tsconfig.json",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"electron/**/*.ts\" \"shared/**/*.ts\""
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"electron/**/*.ts\" \"shared/**/*.ts\"",
+    "validate": "node scripts/validate-build.js"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",

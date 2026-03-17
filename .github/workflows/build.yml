@@ -63,15 +63,19 @@ jobs:
           # Prevent electron-builder from publishing
           EP_PRE_RELEASE: true
 
+      - name: Validate build
+        run: npm run validate
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.snap
-            dist/*.deb
+            out/*.exe
+            out/*.dmg
+            out/*.zip
+            out/*.AppImage
+            out/*.deb
+            out/*.snap
           if-no-files-found: warn
           retention-days: 14

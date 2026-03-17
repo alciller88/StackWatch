@@ -63,6 +63,10 @@ export interface AnalysisResult {
   flowEdges: FlowEdge[];
   deepAnalysis?: DeepAnalysisResult;
   aiError?: string;
+  monorepo?: {
+    type: string;
+    packages: string[];
+  };
 }
 
 export interface GraphNodeData {

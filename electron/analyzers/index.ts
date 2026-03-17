@@ -1,17 +1,85 @@
+import path from 'path'
 import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices, confidenceRank } from './deduplicator'
 import { inferFlowGraph } from './flowInference'
 import { runDeepAnalysis, refineServicesWithAI } from '../ai/deepAnalyzer'
+import { detectMonorepo } from './monorepo'
 
 export async function analyzeLocalRepo(
   folderPath: string,
   aiSettings?: AISettings,
   excludedServices?: string[],
 ): Promise<AnalysisResult> {
+  // Check for monorepo structure
+  const mono = await detectMonorepo(folderPath)
+
+  if (mono.type && mono.packages.length > 1) {
+    // Monorepo: scan root + each package, merge results
+    return analyzeMonorepo(folderPath, mono.packages, mono.type, aiSettings, excludedServices)
+  }
+
+  // Single repo
   const { evidences, dependencies, projectName } = await extractEvidences(folderPath)
   return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath)
+}
+
+async function analyzeMonorepo(
+  rootPath: string,
+  packagePaths: string[],
+  monoType: string,
+  aiSettings?: AISettings,
+  excludedServices?: string[],
+): Promise<AnalysisResult> {
+  const rootName = path.basename(rootPath)
+
+  // Scan root first (for shared config, CI, docker-compose, etc.)
+  const rootResult = await extractEvidences(rootPath)
+
+  // Scan each package
+  const allEvidences: Evidence[] = [...rootResult.evidences]
+  const allDeps: Dependency[] = [...rootResult.dependencies]
+
+  for (const pkgPath of packagePaths) {
+    try {
+      const pkgResult = await extractEvidences(pkgPath)
+      // Tag evidences with package name
+      const pkgName = path.basename(pkgPath)
+      for (const ev of pkgResult.evidences) {
+        ev.file = `${pkgName}/${ev.file}`
+      }
+      allEvidences.push(...pkgResult.evidences)
+      allDeps.push(...pkgResult.dependencies)
+    } catch {
+      // Skip packages that fail to scan
+    }
+  }
+
+  // Deduplicate dependencies (same name+ecosystem across packages)
+  const uniqueDeps = deduplicateDeps(allDeps)
+
+  const result = await runPipeline(allEvidences, uniqueDeps, aiSettings, rootName, excludedServices, rootPath)
+  result.monorepo = {
+    type: monoType,
+    packages: packagePaths.map(p => path.basename(p)),
+  }
+  return result
+}
+
+function deduplicateDeps(deps: Dependency[]): Dependency[] {
+  const seen = new Map<string, Dependency>()
+  for (const d of deps) {
+    const key = `${d.ecosystem}:${d.name}`
+    const existing = seen.get(key)
+    if (!existing) {
+      seen.set(key, d)
+    } else if (d.type === 'production' && existing.type !== 'production') {
+      // Prefer production over dev
+      seen.set(key, d)
+    }
+  }
+  return Array.from(seen.values())
 }
 
 export async function analyzeGitHubRepo(
