@@ -16,10 +16,13 @@ import { ToastContainer } from './components/Toast'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
+import { ScoreHistoryPanel } from './components/ScoreHistory/ScoreHistoryPanel'
 import { ServicesPanelSkeleton, DepsPanelSkeleton, FlowGraphSkeleton, CostsPanelSkeleton } from './components/Skeleton'
+import { useTheme } from './hooks/useTheme'
 
 export default function App() {
-  const { repoPath, activePanel, showTutorial, services, config, isAnalyzing } = useStore()
+  const { repoPath, activePanel, showTutorial, showScoreHistory, services, config, isAnalyzing } = useStore()
+  useTheme()
   const dialog = useDialogStore()
 
   const handleUndoRedo = useCallback((e: KeyboardEvent) => {
@@ -93,6 +96,7 @@ export default function App() {
           </main>
         </div>
         {showTutorial && <OnboardingTutorial />}
+        {showScoreHistory && <ScoreHistoryPanel />}
         {dialog.current && (
           <ConfirmDialog
             title={dialog.current.title}

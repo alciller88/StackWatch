@@ -123,6 +123,11 @@ export interface UserConfig {
   }[];
   graph?: GraphConfig;
   confidenceOverrides?: Record<string, 'high' | 'medium' | 'low'>;
+  budget?: {
+    monthly: number;
+    currency: string;
+    alertThreshold?: number;
+  };
 }
 
 export interface Evidence {

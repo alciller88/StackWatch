@@ -100,7 +100,7 @@ export const FlowGraphSkeleton: React.FC = () => (
     className="flex-1 flex items-center justify-center"
     style={{
       background: 'var(--color-bg-primary)',
-      backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
+      backgroundImage: 'linear-gradient(var(--color-grid) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid) 1px, transparent 1px)',
       backgroundSize: '32px 32px',
     }}
   >

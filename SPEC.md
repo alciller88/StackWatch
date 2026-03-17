@@ -380,6 +380,7 @@ interface UserConfig {
   services: Service[]
   accounts?: { service: string; email?: string; notes?: string }[]
   graph?: GraphConfig
+  budget?: { monthly: number; currency: string; alertThreshold?: number }  // default threshold: 80%
 }
 ```
 
@@ -389,7 +390,7 @@ interface UserConfig {
 
 ### 5.1 Design system
 
-- **Theme**: dark only (`#0a0c0f` primary, `#0d1017` secondary, `#e2b04a` accent)
+- **Theme**: dark/light toggle via CSS custom properties (`src/themes.ts`). Dark: `#0a0c0f` primary, `#0d1017` secondary, `#e2b04a` accent. Light: `#f5f6f8` primary, `#ffffff` secondary, `#c4962e` accent. Persisted in `localStorage('stackwatch-theme')`. Applied via `useTheme` hook on `document.documentElement`.
 - **Typography**: IBM Plex Mono (primary), IBM Plex Sans (headings) — bundled locally
 - **Minimum font size**: 10px
 - **Border radius**: `rounded-none` (industrial aesthetic)
@@ -404,8 +405,8 @@ interface UserConfig {
 | **Services** | `ServicesPanel/` | Card grid (responsive), search, filters (19 categories, 4 plans), add/edit form, "Needs Review" section, confidence badges |
 | **Dependencies** | `DepsPanel/` | Virtualized table, sort by name/type, group by ecosystem, vulnerability scanning button |
 | **Flow** | `FlowGraph/` | React Flow canvas, minimap, controls, legend, context menus (node/edge/pane), inline node edit panel, dagre layout |
-| **Costs** | `CostsPanel/` | Monthly/yearly totals, breakdown by category, horizontal bar chart (Recharts), renewal alerts with days countdown |
-| **Settings** | `Settings/` | AI provider selector (3 presets), API key field, model/URL config, test connection, scan mode toggle, share section, about section |
+| **Costs** | `CostsPanel/` | Monthly/yearly totals, breakdown by category, horizontal bar chart (Recharts), renewal alerts with days countdown, budget mode with progress bar |
+| **Settings** | `Settings/` | AI provider selector (3 presets), API key field, model/URL config, test connection, scan mode toggle, theme toggle (dark/light), share section, about section |
 
 ### 5.3 Shared components
 
@@ -413,7 +414,8 @@ interface UserConfig {
 |---|---|
 | `TitleBar` | Custom frameless titlebar with window controls (min/max/close) |
 | `TopBar` | Import/export/share, repo path, link status, GitHub connect, re-analyze |
-| `Sidebar` | Panel navigation (5 items), Stack Score display, version, collapsible |
+| `Sidebar` | Panel navigation (5 items), Stack Score display (clickable → history), theme toggle, version, collapsible |
+| `ScoreHistoryPanel` | Modal with Recharts line chart showing score history, trend stats, min/max/average |
 | `ConfirmDialog` | Promise-based modal with focus trap, ARIA roles |
 | `Toast` | Auto-dismiss notifications (success/error/info), 4s timeout |
 | `Skeleton` | Skeleton loaders for all panels during analysis |
@@ -676,3 +678,6 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Zombie service detection via git log (active/stale/zombie classification)
 - [x] Stack Score history with trend tracking (.stackwatch/score-history.json)
 - [x] `stackwatch doctor` CLI command (config, services, costs, vulns, score checklist)
+- [x] Budget mode in CostsPanel (monthly budget, progress bar, threshold alerts)
+- [x] Score history UI (Recharts line chart modal, trend stats, min/max/average)
+- [x] Light/dark theme toggle (CSS variables, localStorage persistence, Settings + Sidebar controls)

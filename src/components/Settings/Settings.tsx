@@ -13,7 +13,7 @@ const LEGACY_PRESET_MAP: Record<string, string> = {
 };
 
 export const Settings: React.FC = () => {
-  const { aiSettings, loadAISettings, saveAISettings, testAIConnection } = useStore();
+  const { aiSettings, loadAISettings, saveAISettings, testAIConnection, theme, setTheme } = useStore();
   const [presets, setPresets] = useState<AIProvider[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState('Cloud (Groq)');
@@ -106,6 +106,40 @@ export const Settings: React.FC = () => {
         <div>
           <h2 className="font-mono uppercase tracking-widest text-sm font-medium text-[var(--color-text-primary)] mb-1">Settings</h2>
           <p className="font-mono text-[11px] text-[var(--color-text-muted)]">Configure optional AI enhancement for service detection.</p>
+        </div>
+
+        {/* Theme */}
+        <div className="border rounded-sm p-5 space-y-3" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+          <div>
+            <h3 className="font-sans text-[13px] font-medium text-[var(--color-text-primary)]">Theme</h3>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              Choose between dark and light mode.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTheme('dark')}
+              className={`px-4 py-2 font-mono text-[11px] uppercase tracking-widest rounded-none transition-colors border ${
+                theme === 'dark'
+                  ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
+              style={{ background: theme === 'dark' ? 'var(--color-bg-hover)' : 'transparent' }}
+            >
+              Dark
+            </button>
+            <button
+              onClick={() => setTheme('light')}
+              className={`px-4 py-2 font-mono text-[11px] uppercase tracking-widest rounded-none transition-colors border ${
+                theme === 'light'
+                  ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
+                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+              }`}
+              style={{ background: theme === 'light' ? 'var(--color-bg-hover)' : 'transparent' }}
+            >
+              Light
+            </button>
+          </div>
         </div>
 
         {/* AI Enhancement Toggle */}

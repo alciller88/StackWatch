@@ -79,6 +79,8 @@ Never filter services out of the graph. Never create services without nodes.
 │  ├── Stores: useStore, graphStore,          │
 │  │   dialogStore, toastStore, historyStore  │
 │  ├── 4 panels: Services, Deps, Flow, Costs │
+│  ├── Score history modal (Recharts line)   │
+│  ├── Theme system (dark/light via CSS vars)│
 │  ├── Skeleton loaders during analysis       │
 │  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)     │
 └─────────────────────────────────────────────┘
@@ -88,7 +90,7 @@ Never filter services out of the graph. Never create services without nodes.
 
 | Store | Purpose | Key details |
 |-------|---------|-------------|
-| `useStore` | Global state: services, deps, config, AI settings, analysis state | Merged services = inferred + manual + confidence overrides |
+| `useStore` | Global state: services, deps, config, AI settings, analysis state, theme, score history, budget | Merged services = inferred + manual + confidence overrides. Theme persisted in localStorage. |
 | `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. |
 | `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
 | `dialogStore` | Promise-based confirm dialogs | Returns button value string |
@@ -140,8 +142,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### Renderer (src/)
 | File | Purpose |
 |------|---------|
-| `src/App.tsx` | Layout, panel routing, undo/redo keyboard handler, skeleton switching |
-| `src/store/useStore.ts` | Global state, analysis flow, service CRUD, import/export |
+| `src/App.tsx` | Layout, panel routing, undo/redo keyboard handler, skeleton switching, score history modal |
+| `src/store/useStore.ts` | Global state, analysis flow, service CRUD, import/export, theme, budget, score history |
 | `src/store/graphStore.ts` | React Flow state, debounced persist, history integration |
 | `src/store/historyStore.ts` | Undo/redo snapshot stacks (50 max) |
 | `src/store/toastStore.ts` | Toast notifications (4s auto-dismiss) |
@@ -150,10 +152,13 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/utils/badge.ts` | SVG badge + shields.io URLs: score, services, vulns, deps, scanned date |
 | `src/utils/dates.ts` | Shared `daysUntil()` utility |
 | `src/hooks/useDebounce.ts` | Generic debounce hook |
+| `src/hooks/useTheme.ts` | Applies theme CSS variables to document root |
+| `src/themes.ts` | Dark/light theme CSS variable definitions |
 | `src/components/Skeleton.tsx` | Skeleton loaders for all 4 panels |
 | `src/components/Toast.tsx` | Toast notification container |
 | `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
-| `src/components/CostsPanel/` | Cost breakdown by category, renewal alerts, bar chart (Recharts) |
+| `src/components/CostsPanel/` | Cost breakdown by category, renewal alerts, bar chart (Recharts), budget mode |
+| `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
 | `src/components/ServicesPanel/` | Service cards, form with htmlFor labels (all fields incl. currency/period), confidence badges |
 | `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
@@ -271,6 +276,10 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Doctor as CLI subcommand | Reuses existing pipeline + vuln scanner, no new deps |
 | SBOM without external deps | CycloneDX/SPDX JSON generated directly, no library overhead |
 | Recharts for cost visualization | Lightweight, React-native, good dark theme support |
+| CSS variables for theming | Least invasive approach, swap vars at root, no component rewrites |
+| Theme in localStorage, not config | User preference, not project-level setting |
+| Budget in UserConfig | Project-level setting, shared via config file |
+| Score history as modal, not panel | Secondary content, doesn't justify a full panel slot |
 
 ---
 
@@ -302,5 +311,5 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ## Open questions
 
 - Multi-project dashboard (multiple repos at once)?
-- Light theme / dark mode toggle?
+- ~~Light theme?~~ ✔ Implemented (dark/light toggle via CSS variables)
 - Encrypt sensitive fields in `stackwatch.config.json`?

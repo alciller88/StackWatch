@@ -10,8 +10,11 @@ import type {
   AIProvider,
   DeepAnalysisResult,
   LinkStatus,
+  ScoreHistoryEntry,
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
+import { themes } from '../themes';
+import type { ThemeName } from '../themes';
 
 type ActivePanel = 'services' | 'dependencies' | 'flow' | 'costs' | 'settings';
 
@@ -31,6 +34,9 @@ interface StoreState {
   analysisPhase: string | null;
   hasSeenTutorial: boolean;
   showTutorial: boolean;
+  showScoreHistory: boolean;
+  scoreHistory: ScoreHistoryEntry[];
+  theme: ThemeName;
 
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
@@ -49,9 +55,15 @@ interface StoreState {
   updateManualService: (service: Service) => Promise<void>;
   deleteManualService: (serviceId: string) => Promise<void>;
   updateServiceConfidence: (serviceId: string, confidence: 'high' | 'medium' | 'low') => Promise<void>;
+  setBudget: (budget: { monthly: number; currency: string; alertThreshold?: number } | null) => Promise<void>;
   importStandalone: () => Promise<void>;
   loadDemo: () => void;
   dismissTutorial: () => void;
+  loadScoreHistory: () => Promise<void>;
+  openScoreHistory: () => void;
+  closeScoreHistory: () => void;
+  setTheme: (theme: ThemeName) => void;
+  toggleTheme: () => void;
 }
 
 export function mergeServices(
@@ -127,6 +139,9 @@ export const useStore = create<StoreState>((set, get) => ({
   analysisPhase: null,
   hasSeenTutorial: localStorage.getItem('stackwatch-tutorial-seen') === 'true',
   showTutorial: false,
+  showScoreHistory: false,
+  scoreHistory: [],
+  theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
 
   analyzeLocal: async (path: string) => {
     if (!window.stackwatch) {
@@ -182,6 +197,9 @@ export const useStore = create<StoreState>((set, get) => ({
       } else {
         set({ linkStatus: 'linked' });
       }
+
+      // Load score history after analysis completes
+      get().loadScoreHistory();
     } catch (err) {
       set({
         isAnalyzing: false,
@@ -424,6 +442,15 @@ export const useStore = create<StoreState>((set, get) => ({
     }));
   },
 
+  setBudget: async (budget) => {
+    const currentConfig = ensureConfig(get().config);
+    const updatedConfig = {
+      ...currentConfig,
+      budget: budget ?? undefined,
+    };
+    await get().saveConfig(updatedConfig);
+  },
+
   importStandalone: async () => {
     if (!window.stackwatch) return;
     try {
@@ -512,5 +539,40 @@ export const useStore = create<StoreState>((set, get) => ({
   dismissTutorial: () => {
     localStorage.setItem('stackwatch-tutorial-seen', 'true');
     set({ hasSeenTutorial: true, showTutorial: false });
+  },
+
+  loadScoreHistory: async () => {
+    const repoPath = get().repoPath;
+    if (!repoPath || !window.stackwatch) return;
+    try {
+      const history = await window.stackwatch.getScoreHistory(repoPath);
+      set({ scoreHistory: history });
+    } catch {
+      // Score history may not exist yet
+    }
+  },
+
+  openScoreHistory: () => {
+    set({ showScoreHistory: true });
+    get().loadScoreHistory();
+  },
+
+  closeScoreHistory: () => {
+    set({ showScoreHistory: false });
+  },
+
+  setTheme: (theme: ThemeName) => {
+    localStorage.setItem('stackwatch-theme', theme);
+    const vars = themes[theme];
+    const root = document.documentElement;
+    for (const [key, value] of Object.entries(vars)) {
+      root.style.setProperty(key, value);
+    }
+    set({ theme });
+  },
+
+  toggleTheme: () => {
+    const current = get().theme;
+    get().setTheme(current === 'dark' ? 'light' : 'dark');
   },
 }));

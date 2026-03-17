@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useStore } from '../../store/useStore';
 import type { Service } from '../../types';
@@ -22,8 +22,25 @@ function formatCurrency(amount: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
 }
 
+function getBudgetColor(percentage: number, threshold: number): string {
+  if (percentage > 100) return '#ef4444';
+  if (percentage >= threshold) return '#eab308';
+  return '#10b981';
+}
+
+function getBudgetBgClass(percentage: number, threshold: number): string {
+  if (percentage > 100) return 'bg-red-500';
+  if (percentage >= threshold) return 'bg-yellow-500';
+  return 'bg-emerald-500';
+}
+
 export const CostsPanel: React.FC = () => {
-  const { services } = useStore();
+  const { services, config, setBudget } = useStore();
+
+  const budget = config?.budget ?? null;
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [budgetAmount, setBudgetAmount] = useState(budget?.monthly?.toString() ?? '');
+  const [budgetCurrency, setBudgetCurrency] = useState(budget?.currency ?? 'USD');
 
   const paidServices = useMemo(
     () => services.filter((s) => s.cost && s.cost.amount > 0),
@@ -61,7 +78,27 @@ export const CostsPanel: React.FC = () => {
 
   const hasCostData = paidServices.length > 0;
 
-  if (!hasCostData && renewals.length === 0) {
+  const budgetPercentage = budget ? (totalMonthly / budget.monthly) * 100 : 0;
+  const budgetThreshold = budget?.alertThreshold ?? 80;
+  const budgetRemaining = budget ? budget.monthly - totalMonthly : 0;
+  const budgetColor = budget ? getBudgetColor(budgetPercentage, budgetThreshold) : '#10b981';
+  const budgetBgClass = budget ? getBudgetBgClass(budgetPercentage, budgetThreshold) : 'bg-emerald-500';
+
+  const handleSetBudget = () => {
+    const amount = parseFloat(budgetAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    setBudget({ monthly: amount, currency: budgetCurrency, alertThreshold: 80 });
+    setBudgetOpen(false);
+  };
+
+  const handleClearBudget = () => {
+    setBudget(null);
+    setBudgetAmount('');
+    setBudgetCurrency('USD');
+    setBudgetOpen(false);
+  };
+
+  if (!hasCostData && renewals.length === 0 && !budget) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
@@ -69,7 +106,7 @@ export const CostsPanel: React.FC = () => {
             className="font-mono text-[11px] tracking-wide"
             style={{ color: 'var(--color-text-muted)' }}
           >
-            No cost data yet — edit services to add pricing information
+            No cost data yet -- edit services to add pricing information
           </p>
         </div>
       </div>
@@ -88,8 +125,11 @@ export const CostsPanel: React.FC = () => {
 
       {/* Summary Cards */}
       <div
-        className="grid grid-cols-3 gap-px mb-6"
-        style={{ background: 'var(--color-border)' }}
+        className="grid gap-px mb-6"
+        style={{
+          background: 'var(--color-border)',
+          gridTemplateColumns: budget ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
+        }}
       >
         <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
           <div
@@ -133,7 +173,192 @@ export const CostsPanel: React.FC = () => {
             {paidServices.length}
           </div>
         </div>
+        {budget && (
+          <div
+            className="p-4"
+            style={{
+              background: 'var(--color-bg-secondary)',
+              borderLeft: `2px solid ${budgetColor}`,
+            }}
+          >
+            <div
+              className="font-mono text-[10px] uppercase tracking-widest mb-1"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              {budgetRemaining >= 0 ? 'Remaining' : 'Over Budget'}
+            </div>
+            <div
+              className="font-mono text-lg font-medium"
+              style={{ color: budgetColor }}
+            >
+              {formatCurrency(Math.abs(budgetRemaining), budget.currency)}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Budget Progress Bar */}
+      {budget && (
+        <div
+          className="mb-6 p-4"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span
+              className="font-mono text-[10px] uppercase tracking-widest"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              Budget
+            </span>
+            <span
+              className="font-mono text-[11px]"
+              style={{ color: budgetColor }}
+            >
+              {budgetPercentage > 100
+                ? `${formatCurrency(totalMonthly - budget.monthly, budget.currency)} over budget!`
+                : `${formatCurrency(totalMonthly, budget.currency)} / ${formatCurrency(budget.monthly, budget.currency)} used (${Math.round(budgetPercentage)}%)`}
+            </span>
+          </div>
+          <div
+            className="w-full h-2 rounded-none"
+            style={{ background: 'var(--color-border)' }}
+          >
+            <div
+              className={`h-2 rounded-none transition-all ${budgetBgClass}`}
+              style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <span
+              className="font-mono text-[10px]"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              {budgetRemaining >= 0
+                ? `${formatCurrency(budgetRemaining, budget.currency)} remaining`
+                : `${formatCurrency(Math.abs(budgetRemaining), budget.currency)} over budget`}
+            </span>
+            <span
+              className="font-mono text-[10px]"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              Alert at {budgetThreshold}%
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Setup / Edit */}
+      {!budget && !budgetOpen && (
+        <div className="mb-6">
+          <button
+            onClick={() => setBudgetOpen(true)}
+            className="font-mono text-[11px] tracking-wide cursor-pointer hover:underline"
+            style={{ color: 'var(--color-accent)', background: 'none', border: 'none', padding: 0 }}
+          >
+            Set monthly budget
+          </button>
+        </div>
+      )}
+
+      {budget && !budgetOpen && (
+        <div className="mb-6">
+          <button
+            onClick={() => {
+              setBudgetAmount(budget.monthly.toString());
+              setBudgetCurrency(budget.currency);
+              setBudgetOpen(true);
+            }}
+            className="font-mono text-[10px] tracking-wide cursor-pointer hover:underline"
+            style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', padding: 0 }}
+          >
+            Edit budget
+          </button>
+        </div>
+      )}
+
+      {budgetOpen && (
+        <div
+          className="mb-6 p-4"
+          style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
+        >
+          <div
+            className="font-mono text-[10px] uppercase tracking-widest mb-3"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            Monthly Budget
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Amount"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+              className="font-mono text-[11px] px-2 py-1.5 rounded-none w-32 outline-none"
+              style={{
+                background: 'var(--color-bg-primary)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-primary)',
+              }}
+            />
+            <input
+              type="text"
+              placeholder="USD"
+              value={budgetCurrency}
+              onChange={(e) => setBudgetCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+              className="font-mono text-[11px] px-2 py-1.5 rounded-none w-16 uppercase outline-none"
+              style={{
+                background: 'var(--color-bg-primary)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-primary)',
+              }}
+            />
+            <button
+              onClick={handleSetBudget}
+              className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-none cursor-pointer hover:opacity-80"
+              style={{
+                background: 'var(--color-accent)',
+                color: 'var(--color-bg-primary)',
+                border: 'none',
+              }}
+            >
+              Set
+            </button>
+            {budget && (
+              <button
+                onClick={handleClearBudget}
+                className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-none cursor-pointer hover:opacity-80"
+                style={{
+                  background: 'transparent',
+                  color: '#ef4444',
+                  border: '1px solid #ef4444',
+                }}
+              >
+                Clear
+              </button>
+            )}
+            <button
+              onClick={() => setBudgetOpen(false)}
+              className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-none cursor-pointer hover:opacity-80"
+              style={{
+                background: 'transparent',
+                color: 'var(--color-text-muted)',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          <div
+            className="font-mono text-[10px] mt-2"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            Alert threshold: 80% of budget
+          </div>
+        </div>
+      )}
 
       {/* Cost by Category Chart */}
       {costByCategory.length > 0 && (
@@ -171,11 +396,11 @@ export const CostsPanel: React.FC = () => {
                 <Tooltip
                   cursor={false}
                   contentStyle={{
-                    background: '#1a1f2e',
-                    border: '1px solid #2a3040',
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--color-border)',
                     fontFamily: 'IBM Plex Mono',
                     fontSize: 10,
-                    color: '#7a8da6',
+                    color: 'var(--color-text-secondary)',
                   }}
                   formatter={(value) => [formatCurrency(Number(value)), 'Monthly']}
                 />

@@ -106,7 +106,7 @@ const sectionLabel = (text: string, collapsed: boolean) =>
   ) : null;
 
 export const Sidebar: React.FC = () => {
-  const { activePanel, setActivePanel, services } = useStore();
+  const { activePanel, setActivePanel, services, openScoreHistory, theme, toggleTheme } = useStore();
   const graphNodes = useGraphStore(s => s.nodes);
   const graphEdges = useGraphStore(s => s.edges);
   const [collapsed, setCollapsed] = useState(false);
@@ -167,10 +167,11 @@ export const Sidebar: React.FC = () => {
 
       {/* Stack Health Score */}
       {services.length > 0 && (
-        <div
-          className="flex flex-col items-center py-3 border-b"
+        <button
+          onClick={openScoreHistory}
+          className="w-full flex flex-col items-center py-3 border-b cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
           style={{ borderColor: 'var(--color-border)' }}
-          title={`Cost: ${breakdown.servicesWithCost}% | Owner: ${breakdown.servicesWithOwner}% | Reviewed: ${breakdown.servicesReviewed}% | Graph: ${breakdown.graphCompleteness}%`}
+          title={collapsed ? `Score: ${breakdown.score} — Click for history` : `Cost: ${breakdown.servicesWithCost}% | Owner: ${breakdown.servicesWithOwner}% | Reviewed: ${breakdown.servicesReviewed}% | Graph: ${breakdown.graphCompleteness}% — Click for history`}
         >
           <span
             className={`font-mono font-bold ${collapsed ? 'text-sm' : 'text-lg'} ${
@@ -184,11 +185,14 @@ export const Sidebar: React.FC = () => {
             {breakdown.score}
           </span>
           {!collapsed && (
-            <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>
+            <span className="font-mono text-[10px] tracking-widest uppercase flex items-center gap-1.5" style={{ color: 'var(--color-text-muted)' }}>
               Stack Score
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+              </svg>
             </span>
           )}
-        </div>
+        </button>
       )}
 
       {/* Navigation */}
@@ -239,10 +243,25 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="px-3 py-3 border-t flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
         {!collapsed && (
           <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>v{APP_VERSION}</span>
         )}
+        <button
+          onClick={toggleTheme}
+          className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
+        </button>
       </div>
     </div>
   );

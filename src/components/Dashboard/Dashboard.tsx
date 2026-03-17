@@ -9,7 +9,7 @@ export const Dashboard: React.FC = () => {
     <div
       className="flex-1 flex items-start justify-center p-8 overflow-y-auto"
       style={{
-        backgroundImage: 'linear-gradient(#1a2130 1px, transparent 1px), linear-gradient(90deg, #1a2130 1px, transparent 1px)',
+        backgroundImage: 'linear-gradient(var(--color-grid) 1px, transparent 1px), linear-gradient(90deg, var(--color-grid) 1px, transparent 1px)',
         backgroundSize: '32px 32px',
       }}
     >

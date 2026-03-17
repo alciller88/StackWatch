@@ -35,8 +35,8 @@ Four panels:
 | **Services** | Every external service: inferred + manual, with cost and renewal alerts, confidence badges, and AI-generated usage context |
 | **Dependencies** | Full dependency tree (npm, pip, cargo, go, composer, dart, maven, gradle, gem) with vulnerability scanning |
 | **Flow graph** | Interactive node graph of your app's architecture with drag-and-drop editing, custom connections, and context menus |
-| **Costs** | Cost breakdown by category with bar chart, monthly/yearly totals, and renewal alerts |
-| **Settings** | AI provider configuration (Local / Cloud / Custom) with connection testing |
+| **Costs** | Cost breakdown by category with bar chart, monthly/yearly totals, renewal alerts, and budget mode with progress bar |
+| **Settings** | AI provider configuration (Local / Cloud / Custom) with connection testing, theme toggle (dark/light) |
 
 ---
 
@@ -377,9 +377,10 @@ StackWatch/
 │   │   ├── Sidebar/         # Panel navigation (5 panels + Stack Score)
 │   │   ├── ServicesPanel/   # Service cards, filters, add/edit form, confidence badges
 │   │   ├── DepsPanel/       # Virtualized dependencies table, vuln scanning
-│   │   ├── CostsPanel/      # Cost breakdown, bar chart (Recharts), renewal alerts
+│   │   ├── CostsPanel/      # Cost breakdown, bar chart (Recharts), renewal alerts, budget mode
 │   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
-│   │   ├── Settings/        # AI provider config (3 presets), scan mode, share, about
+│   │   ├── ScoreHistory/    # Score history modal (Recharts line chart, trend stats)
+│   │   ├── Settings/        # AI provider config (3 presets), scan mode, theme toggle, share, about
 │   │   ├── TitleBar.tsx     # Custom frameless titlebar (minimize/maximize/close)
 │   │   ├── ConfirmDialog.tsx # Promise-based confirm modal with focus trap
 │   │   ├── ErrorBoundary.tsx # React error boundary with fallback UI
@@ -397,8 +398,10 @@ StackWatch/
 │   │   ├── badge.ts         # Badge generators (score, services, vulns, deps, scanned)
 │   │   ├── healthScore.ts   # Stack Score 0-100 calculation
 │   │   └── dates.ts         # daysUntil() utility
+│   ├── themes.ts            # Dark/light theme CSS variable definitions
 │   └── hooks/
-│       └── useDebounce.ts   # Generic debounce hook
+│       ├── useDebounce.ts   # Generic debounce hook
+│       └── useTheme.ts      # Applies theme CSS variables to document root
 ├── scripts/
 │   ├── launch-electron.js   # WSL-aware Electron launcher
 │   └── validate-build.js    # 29-point production build checker
@@ -499,6 +502,9 @@ StackWatch/
 - [x] Zombie service detection (git log cross-reference, 6+ months = zombie)
 - [x] Stack Score history with trend tracking (up/down/unchanged per scan)
 - [x] `stackwatch doctor` CLI command (actionable health checklist: config, ownership, costs, vulns, score)
+- [x] Budget mode in Costs panel (monthly budget, progress bar, threshold alerts, persisted in config)
+- [x] Score history UI (line chart modal, trend indicators, min/max/average stats)
+- [x] Light/dark theme toggle (CSS variables, Settings + Sidebar, localStorage persistence)
 
 ---
 

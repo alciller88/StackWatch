@@ -50,6 +50,7 @@
   --color-accent-hover:  #f0c060;
   --color-border:        #1e2430;
   --color-border-light:  #1a2130;
+  --color-grid:          #1a2130;
 
   color-scheme: dark;
 }
@@ -104,7 +105,7 @@ body {
 }
 .react-flow__background pattern circle,
 .react-flow__background pattern rect {
-  fill: #1e2430 !important;
+  fill: var(--color-border) !important;
 }
 .react-flow__node {
   font-family: 'IBM Plex Mono', monospace !important;
