@@ -230,14 +230,17 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       const svc = services.find((s) => s.id === n.data.serviceId)
       const svcConfidence = svc?.confidence ?? 'high'
       if (saved) {
+        // Layer nodes from analysis always keep type: 'layer' — saved config may have stale old types
+        const isAnalysisLayer = n.data.nodeType === 'layer'
+        const nodeType = isAnalysisLayer ? 'layer' : (saved.nodeType ?? n.data.nodeType)
         const confidence = saved.confidence ?? svcConfidence
-        const layerColor = saved.layerColor ?? n.data.layerColor
+        const layerColor = isAnalysisLayer ? (n.data.layerColor ?? saved.layerColor) : (saved.layerColor ?? n.data.layerColor)
         return {
           ...n,
           data: {
             ...n.data,
             label: saved.label ?? n.data.label,
-            nodeType: saved.nodeType ?? n.data.nodeType,
+            nodeType,
             category: saved.category ?? n.data.category,
             plan: saved.plan ?? n.data.plan,
             confidence,
@@ -246,7 +249,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
             source: saved.source ?? n.data.source,
             layerColor,
           },
-          style: buildNodeStyle(saved.nodeType ?? n.data.nodeType, confidence, layerColor),
+          style: buildNodeStyle(nodeType, confidence, layerColor),
         }
       }
       // Enrich with service data
@@ -272,12 +275,17 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     if (graphConfig) {
       for (const gn of graphConfig.nodes) {
         if (!rfNodes.find((n) => n.id === gn.id)) {
+          // Migrate old node types (user/frontend/api) to layer
+          const oldLayerIds = new Set(['user', 'frontend', 'api'])
+          const isOldLayer = oldLayerIds.has(gn.id) && !gn.data.nodeType?.includes('layer')
+          const nodeType = isOldLayer ? 'layer' as const : (gn.data.nodeType ?? 'external')
+          const layerColor = isOldLayer ? (gn.id === 'user' ? '#e2b04a' : gn.id === 'frontend' ? '#4a8ab0' : '#6b4ab0') : gn.data.layerColor
           rfNodes.push({
             id: gn.id,
             position: gn.position,
             data: {
               label: gn.data.label,
-              nodeType: gn.data.nodeType ?? 'external',
+              nodeType,
               serviceId: undefined,
               category: gn.data.category,
               plan: gn.data.plan ?? 'unknown',
@@ -285,8 +293,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
               url: gn.data.url,
               note: gn.data.note,
               source: gn.data.source ?? 'manual',
+              layerColor,
             },
-            style: buildNodeStyle(gn.data.nodeType ?? 'external', gn.data.confidence),
+            style: buildNodeStyle(nodeType, gn.data.confidence, layerColor),
           })
         }
       }
