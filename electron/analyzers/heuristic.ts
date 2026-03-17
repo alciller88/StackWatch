@@ -44,16 +44,28 @@ export function classifyEvidences(evidences: Evidence[], projectName?: string): 
     }
 
     if (result) {
-      // Filter out the project's own name from detected services
+      // Penalty: name contains the project name → -10
       if (projectAliases.length > 0) {
         const normalizedService = result.serviceName.toLowerCase().replace(/[^a-z0-9]/g, '')
         if (projectAliases.some(alias =>
           alias.length >= 4
             ? (normalizedService === alias || normalizedService.includes(alias))
             : normalizedService === alias
-        )) continue
+        )) {
+          result.score -= 10
+        }
       }
-      results.push(result)
+
+      // Penalty: name is a descriptive phrase (more than 2 words) → -3
+      const wordCount = result.serviceName.trim().split(/\s+/).length
+      if (wordCount > 2) {
+        result.score -= 3
+      }
+
+      // Only include results with positive score
+      if (result.score > 0) {
+        results.push(result)
+      }
     }
   }
 
@@ -85,34 +97,34 @@ const GENERIC_NAMES = new Set([
   'connection', 'socket', 'channel', 'pipe', 'stdio',
   'timeout', 'interval', 'timer', 'delay', 'retry',
   'options', 'settings', 'preferences', 'constants',
-  // CI/script action verbs and artifacts (Problem 2 & 4)
+  // CI/script action verbs and artifacts
   'run', 'deploy', 'release', 'trigger', 'exit', 'merge', 'branch',
   'head', 'last', 'full', 'seed', 'ci', 'project', 'team', 'single',
   'directory', 'sender', 'sink', 'edge',
-  // Generic names that are not external services (Problem 4)
+  // Generic names that are not external services
   'api v2', 'auth bearer', 'last day', 'http code', 'exit code',
   'full prompt', 'original files', 'merge files', 'html report',
 ])
 
-// Suffixes that indicate configuration parameters, not services (Problem 1)
+// Config suffixes that indicate internal parameters, not services — penalty -5
 const CONFIG_SUFFIXES = [
   '_ENABLED', '_DISABLED', '_INTERVAL', '_DELAY_MS', '_DELAY', '_MINUTES',
   '_SECONDS', '_TIMEOUT', '_LIMIT', '_MAX', '_MIN', '_SIZE', '_COUNT',
   '_RATE', '_PRICE', '_COST', '_POLICY', '_ROLLOUT', '_REPORT', '_REPORTS',
   '_DIR', '_PATH', '_MODE', '_LEVEL', '_SCHEDULE', '_THRESHOLD', '_RETRIES',
-  '_BATCH', '_TTL', '_CACHE', '_QUOTA',
+  '_BATCH', '_TTL', '_CACHE', '_QUOTA', '_SEATS',
   // CI artifacts
   '_ARTIFACT', '_ARTIFACTS',
 ]
 
-// CI variable patterns to discard (Problem 2)
+// CI variable patterns — penalty -5
 const CI_VARIABLE_PATTERNS = [
   /^EXIT_CODE$/i, /^HTTP_CODE$/i, /^HEAD_REF$/i, /^HEAD_BRANCH$/i,
   /^BRANCH_NAME$/i, /^LAST_DAY$/i, /^HTML_REPORT$/i,
   /^DEVIN_/i, /^COPILOT_/i,
 ]
 
-// Feature flag / app config patterns to discard (Problem 3)
+// Feature flag / app config patterns — penalty -5
 const FEATURE_FLAG_PATTERNS = [
   /^IS_/i,                    // IS_E2E, IS_PREMIUM, IS_SELF_HOSTED
   /^DISABLE_/i,               // DISABLE_SIGNUP, etc. (further checked below)
@@ -126,22 +138,23 @@ const FEATURE_FLAG_PATTERNS = [
   /^MINUTES_TO_BOOK$/i,
 ]
 
-// Browser APIs / polyfills to discard (Problem 5)
+// Browser APIs / polyfills — penalty -5
 const BROWSER_API_PATTERNS = [
   /_POLYFILL$/i, /_OBSERVER$/i, /_LOGIN_ENABLED$/i,
 ]
 
-/** Check if an env var name ends in a config suffix */
-function hasConfigSuffix(upper: string): boolean {
-  return CONFIG_SUFFIXES.some(suffix => upper.endsWith(suffix))
+/** Check if an env var name ends in a config suffix — returns penalty */
+function configSuffixPenalty(upper: string): number {
+  if (CONFIG_SUFFIXES.some(suffix => upper.endsWith(suffix))) return -5
+  return 0
 }
 
-/** Check if the env var matches CI variable patterns */
+/** Check if the env var matches CI variable patterns — hard filter */
 function isCIVariable(upper: string): boolean {
   return CI_VARIABLE_PATTERNS.some(p => p.test(upper))
 }
 
-/** Check if the env var matches feature flag / app config patterns */
+/** Check if the env var matches feature flag / app config patterns — hard filter */
 function isFeatureFlag(upper: string): boolean {
   if (FEATURE_FLAG_PATTERNS.some(p => p.test(upper))) {
     // Exception: DISABLE_/ENABLE_ + known service name should still pass
@@ -167,60 +180,6 @@ function isKnownServiceToken(token: string): boolean {
   return known.some(k => t.includes(k))
 }
 
-// Allowlist: npm packages that ARE external service SDKs
-// Only these pass classifyNpmPackage — everything else is rejected
-const SERVICE_SDK_PATTERNS = [
-  // Payments
-  /^stripe/, /^@stripe/, /^chargebee/, /^recurly/, /^paddle/, /^@lemonsqueezy/,
-  // Email
-  /^@sendgrid/, /^sendgrid/, /^resend/, /^postmark/, /^@mailchimp/, /^mailgun/, /^nodemailer/,
-  // Monitoring / error tracking
-  /^@sentry/, /^sentry/, /^datadog/, /^newrelic/, /^@newrelic/,
-  /^@bugsnag/, /^rollbar/, /^honeybadger/, /^@grafana/,
-  // Analytics
-  /^posthog/, /^mixpanel/, /^amplitude/, /^@segment/, /^rudder-sdk/, /^@rudderstack/,
-  // Auth
-  /^@auth0/, /^auth0/, /^@clerk/, /^@okta/, /^next-auth/, /^@supertokens/,
-  // Cloud infra / BaaS
-  /^@supabase/, /^supabase/, /^@planetscale/, /^@neon/, /^@upstash/,
-  /^aws-sdk/, /^@aws-sdk/, /^@google-cloud/, /^firebase/, /^@firebase/,
-  /^@azure/, /^azure-/, /^@vercel\//, /^@netlify/, /^@railway/,
-  // Databases (client SDKs)
-  /^pg$/, /^mysql2?$/, /^mongodb/, /^mongoose/, /^redis$/, /^ioredis/,
-  /^@prisma\/client/, /^drizzle-orm/, /^knex/, /^typeorm/,
-  // Messaging / communications
-  /^twilio/, /^@slack\//, /^pusher/, /^@vonage/, /^@sendbird/,
-  /^onesignal/, /^@onesignal/,
-  // Support / CRM
-  /^intercom/, /^zendesk/, /^@freshdesk/, /^crisp/, /^@helpscout/,
-  /^hubspot/, /^@hubspot/, /^salesforce/, /^jsforce/,
-  // Search / data
-  /^algoliasearch/, /^@algolia/, /^@elastic\/elasticsearch/, /^meilisearch/,
-  /^@typesense/, /^@pinecone/,
-  // CMS / headless
-  /^@sanity/, /^contentful/, /^@contentful/, /^@strapi/,
-  // Video / real-time
-  /^@daily-co/, /^daily-js/, /^twilio-video/, /^@livekit/, /^@100mslive/,
-  // Webhooks
-  /^svix/, /^@svix/,
-  // Project management
-  /^@linear\/sdk/, /^jira-client/,
-  // AI
-  /^openai/, /^@anthropic/, /^cohere/, /^@mistralai/, /^@huggingface/,
-  /^replicate/, /^@together/, /^@perplexity/,
-  // Feature flags
-  /^launchdarkly/, /^@launchdarkly/, /^@growthbook/, /^@happykit/,
-  // CDN / edge
-  /^cloudflare/, /^@cloudflare/, /^fastly/,
-  // CI / deployment (action SDKs)
-  /^@octokit/, /^@actions\//,
-  // Storage / media
-  /^@cloudinary/, /^cloudinary/, /^@uploadthing/, /^@imagekit/,
-  // Misc known services
-  /^@retell-ai/, /^retell/, /^@formbricks/, /^@dub\//, /^dub$/,
-  /^@deploysentinel/, /^@k6\//, /^k6/,
-]
-
 function isGenericName(name: string): boolean {
   return GENERIC_NAMES.has(name.toLowerCase().trim())
 }
@@ -231,23 +190,17 @@ function classifyEnvVar(name: string): HeuristicResult | null {
 
   const upper = name.toUpperCase()
 
-  // Ignore system and framework variables
+  // Ignore system and framework variables (not evidence at all)
   const ignorePattern = /^(NODE_ENV|PORT|HOST|DEBUG|LOG_LEVEL|TZ|LANG|PATH|HOME|PWD|NEXT_PUBLIC_URL|VITE_APP_URL|PUBLIC_URL|HOSTNAME|SHELL|USER|TERM|EDITOR|CI|npm_\w+)$/
   if (ignorePattern.test(upper)) return null
 
-  // Problem 2: Filter CI variable patterns
-  if (isCIVariable(upper)) return null
-
-  // Problem 3: Filter feature flags and app config patterns
-  // (applied to raw name before prefix stripping)
+  // Hard filter: CI variable patterns (not services)
   const stripped = upper
     .replace(/^(NEXT_PUBLIC_|VITE_|REACT_APP_|EXPO_PUBLIC_|NUXT_PUBLIC_|GATSBY_)/, '')
-  if (isFeatureFlag(stripped)) return null
+  if (isCIVariable(stripped)) return null
 
-  // Problem 1: Filter config suffixes (on the stripped name, before service extraction)
-  if (hasConfigSuffix(stripped)) {
-    return null
-  }
+  // Hard filter: feature flags and app config patterns (not services)
+  if (isFeatureFlag(stripped)) return null
 
   // Extract service candidate by removing generic prefixes and suffixes
   const serviceCandidate = stripped
@@ -260,14 +213,32 @@ function classifyEnvVar(name: string): HeuristicResult | null {
   if (!serviceCandidate || serviceCandidate.length < 2) return null
   if (isGenericName(serviceCandidate)) return null
 
+  // Calculate base score by suffix type
   const isCredential = /_KEY$|_SECRET$|_TOKEN$|_PASSWORD$|_DSN$|_API_KEY$/.test(upper)
   const isEndpoint = /_URL$|_HOST$|_ENDPOINT$|_URI$/.test(upper)
+
+  let score: number
+  if (isCredential) {
+    score = 7
+  } else if (isEndpoint) {
+    score = 6
+  } else {
+    score = 2
+  }
+
+  // Score penalty: config suffix → -5
+  score += configSuffixPenalty(stripped)
+
+  // Derive confidence from individual score
+  const confidence = score >= 7 ? 'high' : score >= 5 ? 'medium' : 'low'
 
   return {
     serviceName: toTitleCase(serviceCandidate),
     category: inferCategory(serviceCandidate),
-    confidence: isCredential || isEndpoint ? 'high' : 'medium',
+    confidence,
     reason: `Environment variable "${name}" suggests external service`,
+    score,
+    evidenceType: 'env_var',
   }
 }
 
@@ -283,21 +254,21 @@ function classifyUrl(url: string): HeuristicResult | null {
   if (!serviceName || serviceName.length < 2) return null
   if (isGenericName(serviceName)) return null
 
+  const score = 5
+
   return {
     serviceName: toTitleCase(serviceName),
     category: inferCategory(serviceName),
-    confidence: url.includes('/api/') || url.includes('api.') ? 'high' : 'medium',
+    confidence: 'medium',
     reason: `External URL "${url}" found in source code`,
+    score,
+    evidenceType: 'url',
   }
 }
 
 function classifyNpmPackage(pkg: string): HeuristicResult | null {
   // Ignore Node.js built-in modules
   if (NODE_BUILTINS.has(pkg)) return null
-
-  // Allowlist: only known service SDKs pass through
-  const lowerPkg = pkg.toLowerCase()
-  if (!SERVICE_SDK_PATTERNS.some(p => p.test(lowerPkg))) return null
 
   // Extract service name from package name
   const name = pkg
@@ -306,12 +277,15 @@ function classifyNpmPackage(pkg: string): HeuristicResult | null {
     .replace(/[-_](js|sdk|client|node|api|react|vue|next|browser|web|server|core|utils|helpers|lib|plugin)$/i, '')
 
   if (name.length < 2) return null
+  if (isGenericName(name.replace(/[-_]/g, ' '))) return null
 
   return {
     serviceName: toTitleCase(name.replace(/[-_]/g, ' ')),
     category: inferCategory(name),
-    confidence: 'medium',
+    confidence: 'low',
     reason: `npm package "${pkg}" suggests external service dependency`,
+    score: 1,
+    evidenceType: 'npm_package',
   }
 }
 
@@ -338,7 +312,11 @@ function classifyImport(importPath: string): HeuristicResult | null {
     ? importPath.split('/').slice(0, 2).join('/')
     : importPath.split('/')[0]
 
-  return classifyNpmPackage(basePkg)
+  const result = classifyNpmPackage(basePkg)
+  if (result) {
+    result.evidenceType = 'import'
+  }
+  return result
 }
 
 function classifyConfigFile(value: string): HeuristicResult | null {
@@ -350,6 +328,8 @@ function classifyConfigFile(value: string): HeuristicResult | null {
       category: inferCategory(svcName),
       confidence: 'high',
       reason: `Docker Compose service "${svcName}"`,
+      score: 10,
+      evidenceType: 'config_file',
     }
   }
 
@@ -360,6 +340,8 @@ function classifyConfigFile(value: string): HeuristicResult | null {
       category: 'cicd',
       confidence: 'high',
       reason: 'GitHub Actions workflow found',
+      score: 10,
+      evidenceType: 'config_file',
     }
   }
 
@@ -367,12 +349,12 @@ function classifyConfigFile(value: string): HeuristicResult | null {
   if (value.startsWith('action:')) {
     const action = value.replace('action:', '')
     const org = action.split('/')[0]
-    if (org === 'aws-actions') return { serviceName: 'AWS', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"` }
-    if (org === 'google-github-actions') return { serviceName: 'Google Cloud', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"` }
-    if (org === 'azure') return { serviceName: 'Azure', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"` }
-    if (org === 'docker') return { serviceName: 'Docker Hub', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"` }
-    if (org === 'codecov') return { serviceName: 'Codecov', category: 'cicd', confidence: 'high', reason: `GitHub Action "${action}"` }
-    if (org === 'sonarsource') return { serviceName: 'SonarQube', category: 'monitoring', confidence: 'high', reason: `GitHub Action "${action}"` }
+    if (org === 'aws-actions') return { serviceName: 'AWS', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
+    if (org === 'google-github-actions') return { serviceName: 'Google Cloud', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
+    if (org === 'azure') return { serviceName: 'Azure', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
+    if (org === 'docker') return { serviceName: 'Docker Hub', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
+    if (org === 'codecov') return { serviceName: 'Codecov', category: 'cicd', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
+    if (org === 'sonarsource') return { serviceName: 'SonarQube', category: 'monitoring', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
     return null
   }
 
@@ -384,6 +366,8 @@ function classifyConfigFile(value: string): HeuristicResult | null {
       category: inferCategory(provider),
       confidence: 'high',
       reason: `Terraform provider "${provider}"`,
+      score: 10,
+      evidenceType: 'config_file',
     }
   }
 
@@ -410,6 +394,8 @@ function classifyConfigFile(value: string): HeuristicResult | null {
       category: mapped.category,
       confidence: 'high',
       reason: `Config file "${value}" found`,
+      score: 10,
+      evidenceType: 'config_file',
     }
   }
 
@@ -417,8 +403,50 @@ function classifyConfigFile(value: string): HeuristicResult | null {
 }
 
 function classifyCISecret(name: string): HeuristicResult | null {
-  // CI secrets are basically env vars — reuse the env var classifier
-  return classifyEnvVar(name)
+  // Filter out template/placeholder variables
+  if (name.startsWith('$') || name.startsWith('{') || name.includes('${')) return null
+
+  const upper = name.toUpperCase()
+
+  // Ignore system variables
+  const ignorePattern = /^(NODE_ENV|PORT|HOST|DEBUG|LOG_LEVEL|TZ|LANG|PATH|HOME|PWD|NEXT_PUBLIC_URL|VITE_APP_URL|PUBLIC_URL|HOSTNAME|SHELL|USER|TERM|EDITOR|CI|npm_\w+)$/
+  if (ignorePattern.test(upper)) return null
+
+  // Strip framework prefixes
+  const stripped = upper
+    .replace(/^(NEXT_PUBLIC_|VITE_|REACT_APP_|EXPO_PUBLIC_|NUXT_PUBLIC_|GATSBY_)/, '')
+
+  // Hard filters
+  if (isCIVariable(stripped)) return null
+  if (isFeatureFlag(stripped)) return null
+
+  // Extract service candidate
+  const serviceCandidate = stripped
+    .replace(/^[^A-Z]+/, '')
+    .replace(/_(SECRET|KEY|TOKEN|URL|HOST|PORT|USER|PASSWORD|API|ID|ENDPOINT|DSN|URI|BASE|REGION|BUCKET|PROJECT|APP|CLIENT|ACCESS|PRIVATE|PUBLIC|CONFIG|DOMAIN|ACCOUNT|ORG|WEBHOOK|CALLBACK|REDIRECT|VERSION|DATABASE|SIGNATURE|ENCRYPTION).*$/, '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .trim()
+
+  if (!serviceCandidate || serviceCandidate.length < 2) return null
+  if (isGenericName(serviceCandidate)) return null
+
+  // CI secrets have a base score of 8
+  let score = 8
+
+  // Score penalty: config suffix → -5
+  score += configSuffixPenalty(stripped)
+
+  const confidence = score >= 7 ? 'high' : score >= 5 ? 'medium' : 'low'
+
+  return {
+    serviceName: toTitleCase(serviceCandidate),
+    category: inferCategory(serviceCandidate),
+    confidence,
+    reason: `CI secret "${name}" suggests external service`,
+    score,
+    evidenceType: 'ci_secret',
+  }
 }
 
 function classifyDomain(value: string): HeuristicResult | null {
@@ -426,34 +454,34 @@ function classifyDomain(value: string): HeuristicResult | null {
   const n = value.toLowerCase()
 
   if (n === 'postgresql' || n === 'postgres') {
-    return { serviceName: 'PostgreSQL', category: 'database', confidence: 'high', reason: 'PostgreSQL detected from connection string' }
+    return { serviceName: 'PostgreSQL', category: 'database', confidence: 'high', reason: 'PostgreSQL detected from connection string', score: 10, evidenceType: 'domain' }
   }
   if (n === 'mysql' || n === 'mariadb') {
-    return { serviceName: 'MySQL', category: 'database', confidence: 'high', reason: 'MySQL detected from connection string' }
+    return { serviceName: 'MySQL', category: 'database', confidence: 'high', reason: 'MySQL detected from connection string', score: 10, evidenceType: 'domain' }
   }
   if (n === 'mongodb' || n === 'mongo') {
-    return { serviceName: 'MongoDB', category: 'database', confidence: 'high', reason: 'MongoDB detected from connection string' }
+    return { serviceName: 'MongoDB', category: 'database', confidence: 'high', reason: 'MongoDB detected from connection string', score: 10, evidenceType: 'domain' }
   }
   if (n === 'redis') {
-    return { serviceName: 'Redis', category: 'database', confidence: 'high', reason: 'Redis detected' }
+    return { serviceName: 'Redis', category: 'database', confidence: 'high', reason: 'Redis detected', score: 10, evidenceType: 'domain' }
   }
   if (n === 'nginx') {
-    return { serviceName: 'Nginx', category: 'cdn', confidence: 'high', reason: 'Nginx reverse proxy detected' }
+    return { serviceName: 'Nginx', category: 'cdn', confidence: 'high', reason: 'Nginx reverse proxy detected', score: 10, evidenceType: 'domain' }
   }
   if (n === 'rabbitmq') {
-    return { serviceName: 'RabbitMQ', category: 'messaging', confidence: 'high', reason: 'RabbitMQ detected' }
+    return { serviceName: 'RabbitMQ', category: 'messaging', confidence: 'high', reason: 'RabbitMQ detected', score: 10, evidenceType: 'domain' }
   }
   if (n === 'elasticsearch') {
-    return { serviceName: 'Elasticsearch', category: 'data', confidence: 'high', reason: 'Elasticsearch detected' }
+    return { serviceName: 'Elasticsearch', category: 'data', confidence: 'high', reason: 'Elasticsearch detected', score: 10, evidenceType: 'domain' }
   }
   if (n === 'memcached') {
-    return { serviceName: 'Memcached', category: 'database', confidence: 'high', reason: 'Memcached detected' }
+    return { serviceName: 'Memcached', category: 'database', confidence: 'high', reason: 'Memcached detected', score: 10, evidenceType: 'domain' }
   }
   if (n === 'minio') {
-    return { serviceName: 'MinIO', category: 'storage', confidence: 'high', reason: 'MinIO S3-compatible storage detected' }
+    return { serviceName: 'MinIO', category: 'storage', confidence: 'high', reason: 'MinIO S3-compatible storage detected', score: 10, evidenceType: 'domain' }
   }
   if (n === 'mailhog') {
-    return { serviceName: 'MailHog', category: 'email', confidence: 'medium', reason: 'MailHog dev email server detected' }
+    return { serviceName: 'MailHog', category: 'email', confidence: 'medium', reason: 'MailHog dev email server detected', score: 5, evidenceType: 'domain' }
   }
 
   // Domain from URL — classify by domain name
@@ -466,6 +494,8 @@ function classifyDomain(value: string): HeuristicResult | null {
         category,
         confidence: 'medium',
         reason: `Domain "${value}" suggests external service`,
+        score: 5,
+        evidenceType: 'domain',
       }
     }
   }
@@ -481,7 +511,7 @@ export function inferCategory(name: string): ServiceCategory {
   if (/sentry|datadog|newrelic|monitor|observ|log|error|trace|grafana|pagerduty|bugsnag|rollbar|honeybadger/.test(n)) return 'monitoring'
   if (/analytic|gtm|segment|mixpanel|amplitude|posthog|plausible|fathom|ga|google.analytics|hotjar|heap/.test(n)) return 'analytics'
   if (/s3|storage|blob|cloudinary|upload|bucket|media|imagekit|bunny|backblaze|minio|uploadthing/.test(n)) return 'storage'
-  // Auth: includes SAML and Outlook (OAuth provider) — Problem 5
+  // Auth: includes SAML and Outlook (OAuth provider)
   if (/auth|oauth|jwt|clerk|okta|cognito|auth0|keycloak|passport|supertokens|saml|outlook/.test(n)) return 'auth'
   if (/vercel|netlify|railway|render|fly|heroku|deploy|hosting|surge|pages/.test(n)) return 'hosting'
   if (/github|gitlab|bitbucket|ci|cd|pipeline|action|jenkins|circleci|travis|codecov|sonar/.test(n)) return 'cicd'

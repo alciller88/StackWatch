@@ -86,7 +86,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (284 tests across 22 suites) |
+| `npm test` | Run unit tests (319 tests across 22 suites) |
 
 ### CLI (no Electron required)
 
@@ -178,7 +178,7 @@ Both sources support re-linking: if a project moves or goes offline, StackWatch 
 
 ## Service detection
 
-StackWatch uses **semantic heuristics** — not hardcoded service maps — to detect services from your codebase. It recognises services by environment variable patterns, dependencies, config files, source code imports, API URLs, and CI/CD secrets.
+StackWatch uses **semantic evidence scoring** — not hardcoded service maps — to detect services from your codebase. Each evidence type (config files, CI secrets, env vars, URLs, npm packages) receives a quality score. The deduplicator sums scores and applies confidence thresholds, ensuring only well-evidenced services appear in results.
 
 ### Ecosystems supported
 
@@ -200,13 +200,15 @@ domain, hosting, CI/CD, database, auth, payments, email, analytics, monitoring, 
 
 ### Confidence levels
 
-Each detected service is assigned a confidence level:
+Each detected service is assigned a confidence level based on summed evidence scores:
 
-| Level | Meaning | Card border |
-|---|---|---|
-| **High** | Confirmed service — strong evidence (credentials, config files, Docker services) | Green |
-| **Medium** | Likely service — moderate evidence (npm packages, generic URLs) | Yellow |
-| **Low** | Uncertain — weak evidence, needs user confirmation | Orange dashed |
+| Level | Score range | Meaning | Card border |
+|---|---|---|---|
+| **High** | ≥ 15 | Confirmed service — multiple strong evidence types | Green |
+| **Medium** | 9–14 | Likely service — moderate evidence | Yellow |
+| **Low** | 6–8 | Uncertain — weak evidence, needs user confirmation | Orange dashed |
+
+Evidence scores: config files (10), CI secrets (8), credential env vars (7), endpoint env vars (6), URLs (5), generic env vars (2), npm packages/imports (1). Services scoring below 6 are automatically discarded.
 
 Services with low confidence appear in a "Needs Review" section at the top of the panel.
 
@@ -428,7 +430,7 @@ StackWatch/
 
 ### Test suites
 
-284 tests across 22 suites:
+319 tests across 22 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -439,7 +441,7 @@ StackWatch/
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
-| Heuristic | 13 | Category mapping, confidence, name extraction |
+| Heuristic | 32 | Category mapping, semantic scoring, name extraction, penalties |
 | TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
 | zombieDetector | 12 | Classification thresholds, caching, enrichment, git failure handling |
 | monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
@@ -451,8 +453,8 @@ StackWatch/
 | Flow inference | 9 | Node types, edge routing, layout |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 6 | Grouping, merging, confidence upgrades |
-| Pipeline | 6 | End-to-end, AI checkpoint/restore |
+| Deduplicator | 18 | Grouping, merging, score summing, thresholds, brand collapse |
+| Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | daysUntil | 3 | Today, future, past |
 
 ---
@@ -493,7 +495,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 284 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
+- [x] 319 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
@@ -524,7 +526,7 @@ StackWatch/
 - [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
 - [x] Zombie UI badges and activity status filter in Services panel
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
-- [x] 284 tests across 22 suites (+43 tests for new modules)
+- [x] 319 tests across 22 suites (+43 tests for new modules)
 
 ---
 

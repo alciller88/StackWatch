@@ -59,7 +59,7 @@ repo (local or GitHub)
     ↓
 Evidence extractor  →  Evidence[]  (deterministic, fast)
     ↓
-Heuristic classifier  →  HeuristicResult[]  (semantic, no fixed lists)
+Heuristic classifier  →  HeuristicResult[]  (semantic scoring, no fixed lists)
     ↓
 Deduplicator  →  DetectedService[]  (grouped, no duplicates)
     ↓ (if AI configured)
@@ -107,26 +107,51 @@ Walks the repo recursively (max 15 levels, respects .gitignore) and extracts raw
 
 ### 3.2 Heuristic classifier (`heuristic.ts`)
 
-Classifies evidence using semantics, with no hardcoded lists:
+Classifies evidence using semantic scoring — no hardcoded service allowlists:
 
-- **Environment variables:** Extracts service name by removing common prefixes (NEXT_PUBLIC_, VITE_, REACT_APP_, etc.) and suffixes (_KEY, _SECRET, _URL, _TOKEN, _DATABASE, _SIGNATURE, _ENCRYPTION, etc.). High confidence if it's a credential or endpoint.
-- **Config suffix filtering:** Discards env vars ending in config-only suffixes (_ENABLED, _DISABLED, _INTERVAL, _DELAY, _TIMEOUT, _LIMIT, _MAX, _MIN, _SIZE, _COUNT, _RATE, _PRICE, _COST, _POLICY, _ROLLOUT, _REPORT, _DIR, _PATH, _MODE, _LEVEL, _SCHEDULE, _THRESHOLD, _RETRIES, _BATCH, _TTL, _CACHE, _QUOTA, etc.)
-- **CI/script variable filtering:** Discards pipeline artifacts (EXIT_CODE, HTTP_CODE, HEAD_REF, BRANCH_NAME, etc.) and AI agent prefixes (DEVIN_*, COPILOT_*)
-- **Feature flag filtering:** Discards IS_*, DISABLE_*/ENABLE_* (unless known service), BOOKER_*, AVAILABILITY_*, APP_NAME, COMPANY_NAME, WEBSITE_URL, WEBAPP_URL, *_SEATS, *_CREDITS, *_POLYFILL, *_OBSERVER, *_LOGIN_ENABLED
-- **External URLs:** Extracts domain, strips common subdomains (api., app., cdn.). High confidence if contains `/api/` or `/v[0-9]/`.
-- **npm packages:** Ignores utilities, frameworks and dev tools. Extracts service name from scoped/unscoped package names.
+**Evidence scoring (base score by type):**
+
+| Evidence type | Base score | Example |
+|---|---|---|
+| `config_file` | 10 | vercel.json, docker-service:postgres |
+| `ci_secret` | 8 | secrets.STRIPE_KEY in CI workflow |
+| `env_var` with credential suffix (_KEY, _SECRET, _TOKEN, _API_KEY) | 7 | STRIPE_SECRET_KEY |
+| `env_var` with endpoint suffix (_URL, _ENDPOINT, _HOST, _DSN) | 6 | REDIS_URL |
+| `url` (external domain) | 5 | https://api.stripe.com/v1 |
+| `env_var` (generic) | 2 | GA_MEASUREMENT_ID |
+| `import` / `npm_package` | 1 | stripe, @sentry/node |
+
+**Score penalties (applied per evidence):**
+
+| Condition | Penalty | Example |
+|---|---|---|
+| Config suffix (_ENABLED, _DISABLED, _INTERVAL, _SECONDS, _MINUTES, _POLICY, _ROLLOUT, _LIMIT, _COUNT, _PRICE, _SEATS) | -5 | FEATURE_ENABLED (score 2-5 = -3, discarded) |
+| Name is descriptive phrase (>2 words) | -3 | "Vercel Use Botid In Booker" |
+| Name contains project name | -10 | MYAPP_SECRET_KEY when project is "myapp" |
+
+**Hard filters (not evidence at all):**
+- System/framework variables (NODE_ENV, PORT, HOST, etc.)
+- CI/script variable patterns (EXIT_CODE, HEAD_REF, DEVIN_*, COPILOT_*)
+- Feature flag patterns (IS_*, DISABLE_*, ENABLE_*, BOOKER_*, *_POLYFILL, *_OBSERVER, *_LOGIN_ENABLED)
+- Node.js built-in modules
+- Generic names (admin, api, config, etc.)
+
+**Classification details:**
+- **Environment variables:** Extracts service name by removing common prefixes (NEXT_PUBLIC_, VITE_, REACT_APP_, etc.) and suffixes
+- **External URLs:** Extracts domain, strips common subdomains (api., app., cdn.)
+- **npm packages:** Any package passes with score 1 (no allowlist). Deduplicator discards npm-only services via threshold
 - **Config files:** Direct file-to-service mapping (vercel.json → Vercel, firebase.json → Firebase, etc.)
-- **Category inference:** Semantic regex against normalized name for 19 categories. SAML → auth, Outlook → auth.
-- **Generic name filtering:** Filters out false positives (Admin, Config, API, CI verbs, action words, $Domain patterns, etc.)
-- **Project name exclusion:** Filters out services whose name matches or contains the project name (including common variants)
+- **Category inference:** Semantic regex against normalized name for 19 categories. SAML → auth, Outlook → auth
+- **Project name exclusion:** Score penalty -10 for services matching the project name
 
 ### 3.3 Deduplicator (`deduplicator.ts`)
 
-Groups related detections of the same service:
+Groups related detections of the same service and applies score-based confidence:
 - Name-based grouping (case-insensitive, prefix matching)
-- Highest confidence wins
+- **Score summing:** Merges evidence scores when grouping the same service
+- **npm-only penalty:** Services with only import/npm_package evidence receive -4 penalty
+- **Score thresholds:** `< 6` → discard, `6-8` → low confidence + needsReview, `9-14` → medium, `≥ 15` → high
 - Preferred category from strongest evidence
-- `needsReview` flag for ambiguous cases
 - **Brand collapse:** "BrandName + descriptor" entries collapse into "BrandName" (e.g., "Cloudflare Sitekey" + "Cloudflare Turnstile" → "Cloudflare"). Handles variant spellings (Dockerhub → Docker Hub).
 - **Generic entry removal:** Removes generic entries (Database, Email From, Email Server, etc.) when a specific service exists in the same category
 
@@ -668,7 +693,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-308 tests across 22 suites. Vitest + @testing-library/react + jsdom.
+319 tests across 22 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -679,7 +704,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | badge | 17 | `src/utils/__tests__/` |
 | htmlExporter | 13 | `electron/exporters/__tests__/` |
 | Deep Analyzer (runDeep) | 13 | `electron/ai/__tests__/` |
-| Heuristic | 34 | `electron/analyzers/__tests__/` |
+| Heuristic | 32 | `electron/analyzers/__tests__/` |
 | TopBar | 13 | `src/components/TopBar/__tests__/` |
 | zombieDetector | 12 | `electron/analyzers/__tests__/` |
 | monorepo | 12 | `electron/analyzers/__tests__/` |
@@ -691,8 +716,8 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
 | scoreHistory | 8 | `electron/analyzers/__tests__/` |
 | ContextMenu | 7 | `src/components/FlowGraph/__tests__/` |
-| Deduplicator | 11 | `electron/analyzers/__tests__/` |
-| Pipeline | 6 | `electron/analyzers/__tests__/` |
+| Deduplicator | 18 | `electron/analyzers/__tests__/` |
+| Pipeline | 7 | `electron/analyzers/__tests__/` |
 | daysUntil | 3 | `src/utils/__tests__/` |
 
 ---
@@ -729,9 +754,9 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Zombie UI badges and activity filter in ServicesPanel
 - [x] Doctor modal in desktop app (health checklist with live vuln scan)
 - [x] 43 new tests: zombieDetector (12), scoreHistory (8), htmlExporter (13), alternativeSuggester (10)
-- [x] Aggressive false-positive filtering: config suffixes, CI vars, feature flags, browser APIs, project-name exclusion
+- [x] Semantic evidence scoring system: base scores by evidence type, score penalties, score-based confidence thresholds
 - [x] Brand collapse deduplication: multi-evidence per brand → single entry
 - [x] CLI `--all` flag to show low-confidence and needs-review services
-- [x] 21 new tests: heuristic filtering (16) + deduplicator brand collapse (5)
+- [x] npm packages pass through without allowlist — deduplicator discards npm-only via score threshold
 - [x] AI false-positive filter (Step 0): semantic validation before AI refine, silent fallback, aiFilteredCount metric
 - [x] 3 new tests for filterFalsePositivesWithAI (valid response, malformed JSON, network error)

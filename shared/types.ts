@@ -150,6 +150,8 @@ export interface HeuristicResult {
   category: ServiceCategory;
   confidence: 'high' | 'medium' | 'low';
   reason: string;
+  score: number;
+  evidenceType: Evidence['type'];
 }
 
 export interface AIProvider {

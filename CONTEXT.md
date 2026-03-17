@@ -38,7 +38,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
-- **Heuristic mode** (default): fast, offline, ~80% coverage, aggressive false-positive filtering (config suffixes, CI vars, feature flags, browser APIs, project-name exclusion)
+- **Heuristic mode** (default): fast, offline, ~80% coverage, semantic evidence scoring (score per evidence type, penalties for config suffixes/descriptive names/project name), score-based confidence thresholds at dedup
 - **Hybrid mode**: heuristics → AI filter (false-positive removal) → AI validates/refines → AI deep analysis (~95% coverage)
 - AI is always optional — silent fallback to heuristic results on failure
 
@@ -129,8 +129,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/preload.ts` | IPC bridge via contextBridge (StackWatchAPI) |
 | `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. |
 | `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
-| `electron/analyzers/heuristic.ts` | Semantic classification into 19 categories + false-positive filtering (config suffixes, CI vars, feature flags, browser APIs) |
-| `electron/analyzers/deduplicator.ts` | Service grouping, merge, confidence upgrade, brand collapse, generic entry removal |
+| `electron/analyzers/heuristic.ts` | Semantic scoring classification into 19 categories (config_file: 10, ci_secret: 8, env_var credential: 7, env_var endpoint: 6, url: 5, env_var generic: 2, npm/import: 1) + hard filters (CI vars, feature flags, browser APIs) + score penalties (config suffixes: -5, descriptive phrases: -3, project name: -10) |
+| `electron/analyzers/deduplicator.ts` | Service grouping, score summing, score-based confidence thresholds (<6: discard, 6-8: low/needsReview, 9-14: medium, ≥15: high), brand collapse, generic entry removal, npm-only penalty (-4) |
 | `electron/analyzers/flowInference.ts` | Node/edge generation from services + deps |
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
@@ -194,7 +194,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (305 tests, 22 suites) |
+| `npm test` | vitest (319 tests, 22 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -206,7 +206,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-308 tests across 22 suites. vitest + @testing-library/react + jsdom.
+319 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -217,7 +217,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
-| Heuristic | 34 | Category mapping, confidence, name extraction, config suffix filtering, CI var filtering, feature flag filtering, generic names, project name exclusion |
+| Heuristic | 32 | Category mapping, semantic scoring (base scores + penalties), name extraction, config suffix penalty, CI var filtering, feature flag filtering, generic names, project name exclusion |
 | TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
 | zombieDetector | 12 | Classification thresholds, caching, enrichment, git failure handling |
 | monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
@@ -229,8 +229,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Flow inference | 9 | Node types, edge routing, layout |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| Deduplicator | 11 | Grouping, merging, confidence upgrades, brand collapse, generic entry removal |
-| Pipeline | 6 | End-to-end, AI checkpoint/restore |
+| Deduplicator | 18 | Grouping, merging, score summing, score-based confidence thresholds, brand collapse, generic entry removal, npm-only penalty |
+| Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | daysUntil | 3 | Today, future, past |
 
 ---
@@ -265,7 +265,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 | Decision | Reason |
 |----------|--------|
-| Semantic heuristics, not fixed maps | Detects new services without code changes |
+| Semantic scoring heuristics, not fixed maps | Detects new services without code changes; evidence quality scoring determines confidence |
 | Optional AI with silent fallback | Must work 100% offline |
 | OpenAI-compatible API format | One format covers all providers |
 | Separate graphStore from useStore | Different lifecycle, interactive state |

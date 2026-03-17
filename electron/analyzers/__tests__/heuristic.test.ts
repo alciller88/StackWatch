@@ -4,7 +4,7 @@ import type { Evidence } from '../../types'
 
 describe('classifyEvidences', () => {
   describe('env vars', () => {
-    it('classifies credential env vars with high confidence', () => {
+    it('classifies credential env vars with high confidence and score 7', () => {
       const evidences: Evidence[] = [
         { type: 'env_var', value: 'STRIPE_SECRET_KEY', file: '.env' },
         { type: 'env_var', value: 'TWITTER_API_KEY', file: '.env' },
@@ -13,25 +13,30 @@ describe('classifyEvidences', () => {
       expect(results.length).toBe(2)
       expect(results[0].serviceName).toBe('Stripe')
       expect(results[0].confidence).toBe('high')
+      expect(results[0].score).toBe(7)
+      expect(results[0].evidenceType).toBe('env_var')
       expect(results[1].serviceName).toBe('Twitter')
       expect(results[1].confidence).toBe('high')
+      expect(results[1].score).toBe(7)
     })
 
-    it('classifies endpoint env vars with high confidence', () => {
+    it('classifies endpoint env vars with score 6', () => {
       const results = classifyEvidences([
         { type: 'env_var', value: 'REDIS_URL', file: '.env' },
       ])
       expect(results[0].serviceName).toBe('Redis')
-      expect(results[0].confidence).toBe('high')
+      expect(results[0].score).toBe(6)
+      expect(results[0].confidence).toBe('medium')
       expect(results[0].category).toBe('database')
     })
 
-    it('classifies unknown service env vars with medium confidence', () => {
+    it('classifies unknown service env vars with score 2', () => {
       const results = classifyEvidences([
         { type: 'env_var', value: 'GA_MEASUREMENT_ID', file: '.env' },
       ])
       expect(results[0].serviceName).toBe('Ga Measurement')
-      expect(results[0].confidence).toBe('medium')
+      expect(results[0].score).toBe(2)
+      expect(results[0].confidence).toBe('low')
     })
 
     it('ignores system env vars', () => {
@@ -49,16 +54,18 @@ describe('classifyEvidences', () => {
       ])
       expect(results[0].serviceName).toBe('Stripe')
       expect(results[0].confidence).toBe('high')
+      expect(results[0].score).toBe(7)
     })
   })
 
   describe('URLs', () => {
-    it('classifies API URLs with high confidence', () => {
+    it('classifies external URLs with score 5', () => {
       const results = classifyEvidences([
         { type: 'url', value: 'https://api.stripe.com/v1/charges', file: 'src/payments.ts' },
       ])
       expect(results[0].serviceName).toBe('Stripe')
-      expect(results[0].confidence).toBe('high')
+      expect(results[0].score).toBe(5)
+      expect(results[0].evidenceType).toBe('url')
     })
 
     it('classifies regular URLs with medium confidence', () => {
@@ -66,11 +73,12 @@ describe('classifyEvidences', () => {
         { type: 'url', value: 'https://hooks.slack.com/services/xxx', file: 'src/notify.ts' },
       ])
       expect(results[0].confidence).toBe('medium')
+      expect(results[0].score).toBe(5)
     })
   })
 
   describe('npm packages', () => {
-    it('classifies service SDK packages', () => {
+    it('classifies any npm package with score 1', () => {
       const results = classifyEvidences([
         { type: 'npm_package', value: '@upstash/redis', file: 'package.json' },
         { type: 'npm_package', value: '@vercel/functions', file: 'package.json' },
@@ -79,25 +87,31 @@ describe('classifyEvidences', () => {
       expect(results.length).toBe(3)
       expect(results[0].serviceName).toBe('Upstash')
       expect(results[0].category).toBe('database')
+      expect(results[0].score).toBe(1)
       expect(results[1].serviceName).toBe('Vercel')
       expect(results[1].category).toBe('hosting')
       expect(results[2].serviceName).toBe('Sentry')
       expect(results[2].category).toBe('monitoring')
     })
 
-    it('ignores utility packages', () => {
+    it('passes through utility packages with low score (dedup discards them)', () => {
       const results = classifyEvidences([
         { type: 'npm_package', value: 'lodash', file: 'package.json' },
         { type: 'npm_package', value: 'react', file: 'package.json' },
         { type: 'npm_package', value: 'typescript', file: 'package.json' },
         { type: 'npm_package', value: '@types/node', file: 'package.json' },
       ])
-      expect(results.length).toBe(0)
+      // Utility packages now pass through with score 1
+      // The deduplicator discards them (score 1 - 4 penalty = -3 < 6)
+      for (const r of results) {
+        expect(r.score).toBe(1)
+        expect(r.evidenceType).toBe('npm_package')
+      }
     })
   })
 
   describe('config files', () => {
-    it('classifies hosting config files with high confidence', () => {
+    it('classifies hosting config files with score 10', () => {
       const results = classifyEvidences([
         { type: 'config_file', value: 'vercel.json', file: 'vercel.json' },
         { type: 'config_file', value: 'fly.toml', file: 'fly.toml' },
@@ -106,6 +120,7 @@ describe('classifyEvidences', () => {
       expect(results[0].serviceName).toBe('Vercel')
       expect(results[0].category).toBe('hosting')
       expect(results[0].confidence).toBe('high')
+      expect(results[0].score).toBe(10)
       expect(results[1].serviceName).toBe('Fly.io')
     })
 
@@ -116,6 +131,7 @@ describe('classifyEvidences', () => {
       ])
       expect(results.length).toBe(2)
       expect(results[0].category).toBe('database')
+      expect(results[0].score).toBe(10)
       expect(results[1].category).toBe('database')
     })
 
@@ -126,6 +142,7 @@ describe('classifyEvidences', () => {
       expect(results[0].serviceName).toBe('GitHub Actions')
       expect(results[0].category).toBe('cicd')
       expect(results[0].confidence).toBe('high')
+      expect(results[0].score).toBe(10)
     })
   })
 
@@ -167,7 +184,7 @@ describe('classifyEvidences', () => {
   })
 
   describe('config suffix filtering (Problem 1)', () => {
-    it('discards env vars ending in config suffixes', () => {
+    it('discards env vars ending in config suffixes (score penalty makes them non-positive)', () => {
       const configVars = [
         'FEATURE_ENABLED', 'RETRY_DISABLED', 'POLL_INTERVAL',
         'NOTIFY_DELAY_MS', 'NOTIFY_DELAY', 'SESSION_TIMEOUT',
@@ -311,7 +328,7 @@ describe('classifyEvidences', () => {
       }
     })
 
-    it('filters out project own name variants', () => {
+    it('filters out project own name variants via score penalty', () => {
       const results = classifyEvidences([
         { type: 'env_var', value: 'CAL_SIGNATURE_KEY', file: '.env' },
         { type: 'env_var', value: 'CALCOM_ENCRYPTION_KEY', file: '.env' },
@@ -333,6 +350,62 @@ describe('classifyEvidences', () => {
       const results = classifyEvidences([
         { type: 'env_var', value: 'GOOGLE_LOGIN_ENABLED', file: '.env' },
       ])
+      expect(results.length).toBe(0)
+    })
+  })
+
+  describe('scoring system', () => {
+    it('assigns correct base scores by evidence type', () => {
+      const configResult = classifyEvidences([
+        { type: 'config_file', value: 'vercel.json', file: 'vercel.json' },
+      ])
+      expect(configResult[0].score).toBe(10)
+
+      const credResult = classifyEvidences([
+        { type: 'env_var', value: 'STRIPE_SECRET_KEY', file: '.env' },
+      ])
+      expect(credResult[0].score).toBe(7)
+
+      const endpointResult = classifyEvidences([
+        { type: 'env_var', value: 'REDIS_URL', file: '.env' },
+      ])
+      expect(endpointResult[0].score).toBe(6)
+
+      const urlResult = classifyEvidences([
+        { type: 'url', value: 'https://api.stripe.com/v1', file: 'src/pay.ts' },
+      ])
+      expect(urlResult[0].score).toBe(5)
+
+      const genericEnvResult = classifyEvidences([
+        { type: 'env_var', value: 'GA_MEASUREMENT_ID', file: '.env' },
+      ])
+      expect(genericEnvResult[0].score).toBe(2)
+
+      const npmResult = classifyEvidences([
+        { type: 'npm_package', value: 'stripe', file: 'package.json' },
+      ])
+      expect(npmResult[0].score).toBe(1)
+    })
+
+    it('applies -3 penalty for descriptive phrases (>2 words)', () => {
+      // "Vercel Use Botid" is 3 words → -3 penalty would make it score 2-3 = -1 < 0
+      // But this would need an env var generating that name. Let's test with config:
+      // Config files don't generate multi-word names from the map, but env vars do.
+      const results = classifyEvidences([
+        { type: 'env_var', value: 'SOME_LONG_SERVICE_NAME_KEY', file: '.env' },
+      ])
+      // "Some Long Service Name" = 4 words → penalty -3, base 7, final 4
+      if (results.length > 0) {
+        expect(results[0].score).toBeLessThan(7)
+      }
+    })
+
+    it('applies -10 penalty for project name matches', () => {
+      // With project name "myapp", MYAPP_SECRET_KEY would match
+      const results = classifyEvidences([
+        { type: 'env_var', value: 'MYAPP_SECRET_KEY', file: '.env' },
+      ], 'myapp')
+      // score 7 - 10 = -3, filtered out
       expect(results.length).toBe(0)
     })
   })

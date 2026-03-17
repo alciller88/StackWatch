@@ -29,7 +29,32 @@ describe('analyzeGitHubRepo pipeline', () => {
     expect(result.flowEdges).toHaveLength(0)
   })
 
-  it('analyzes a minimal repo with package.json containing stripe and react', async () => {
+  it('analyzes a repo with stripe npm + env var (multi-evidence detection)', async () => {
+    const result = await analyzeGitHubRepo(
+      mockFetchFile({
+        'package.json': JSON.stringify({
+          dependencies: { 'stripe': '^12.0.0', 'react': '^18.2.0' },
+        }),
+        '.env.example': 'STRIPE_SECRET_KEY=sk_test_xxx',
+      }),
+      mockListDir({}),
+    )
+
+    expect(result.dependencies).toHaveLength(2)
+    expect(result.dependencies.map(d => d.name)).toContain('stripe')
+    expect(result.dependencies.map(d => d.name)).toContain('react')
+
+    // Stripe should be detected as a service (npm score 1 + env_var score 7 = 8)
+    const stripeSvc = result.services.find(s => s.name === 'Stripe')
+    expect(stripeSvc).toBeDefined()
+    expect(stripeSvc!.category).toBe('payments')
+
+    // Frontend node should exist
+    const frontendNode = result.flowNodes.find(n => n.type === 'frontend')
+    expect(frontendNode).toBeDefined()
+  })
+
+  it('discards npm-only packages without additional evidence', async () => {
     const result = await analyzeGitHubRepo(
       mockFetchFile({
         'package.json': JSON.stringify({
@@ -39,18 +64,9 @@ describe('analyzeGitHubRepo pipeline', () => {
       mockListDir({}),
     )
 
-    expect(result.dependencies).toHaveLength(2)
-    expect(result.dependencies.map(d => d.name)).toContain('stripe')
-    expect(result.dependencies.map(d => d.name)).toContain('react')
-
-    // Stripe should be detected as a service
+    // Without env vars, stripe (score 1 - 4 npm-only penalty = -3) is below threshold
     const stripeSvc = result.services.find(s => s.name === 'Stripe')
-    expect(stripeSvc).toBeDefined()
-    expect(stripeSvc!.category).toBe('payments')
-
-    // Frontend node should exist
-    const frontendNode = result.flowNodes.find(n => n.type === 'frontend')
-    expect(frontendNode).toBeDefined()
+    expect(stripeSvc).toBeUndefined()
   })
 
   it('returns services and dependencies from a repo with package.json and .env', async () => {
@@ -82,6 +98,7 @@ describe('analyzeGitHubRepo pipeline', () => {
             'stripe': '^12.0.0',
           },
         }),
+        '.env.example': 'STRIPE_SECRET_KEY=sk_test_xxx',
       }),
       mockListDir({}),
     )
@@ -142,6 +159,7 @@ describe('hybrid pipeline checkpoint behavior', () => {
         'package.json': JSON.stringify({
           dependencies: { 'stripe': '^12.0.0', 'redis': '^4.0.0' },
         }),
+        '.env.example': 'STRIPE_SECRET_KEY=sk_test_xxx\nREDIS_URL=redis://localhost:6379',
       }),
       mockListDir({}),
       hybridSettings,
@@ -167,7 +185,7 @@ describe('hybrid pipeline checkpoint behavior', () => {
         'package.json': JSON.stringify({
           dependencies: { 'stripe': '^12.0.0', 'express': '^4.18.0' },
         }),
-        '.env.example': 'REDIS_URL=redis://localhost:6379',
+        '.env.example': 'REDIS_URL=redis://localhost:6379\nSTRIPE_SECRET_KEY=sk_test_xxx',
       }),
       mockListDir({}),
       hybridSettings,

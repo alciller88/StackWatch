@@ -5,6 +5,8 @@ interface ServiceGroup {
   category: ServiceCategory
   confidence: 'high' | 'medium' | 'low'
   reasons: string[]
+  score: number
+  evidenceTypes: Set<string>
   needsReview?: boolean
 }
 
@@ -32,10 +34,9 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
 
     const existing = groups.get(key)
     if (existing) {
-      // Use highest confidence
-      if (confidenceRank(result.confidence) > confidenceRank(existing.confidence)) {
-        existing.confidence = result.confidence
-      }
+      // Sum scores
+      existing.score += result.score
+
       // Prefer more specific category over 'other'
       if (existing.category === 'other' && result.category !== 'other') {
         existing.category = result.category
@@ -44,6 +45,8 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
       if (!existing.reasons.includes(result.reason)) {
         existing.reasons.push(result.reason)
       }
+      // Track evidence types
+      existing.evidenceTypes.add(result.evidenceType)
       // Use better name (longer, more specific)
       if (result.serviceName.length > existing.name.length) {
         existing.name = result.serviceName
@@ -54,6 +57,8 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
         category: result.category,
         confidence: result.confidence,
         reasons: [result.reason],
+        score: result.score,
+        evidenceTypes: new Set([result.evidenceType]),
       })
     }
   }
@@ -61,22 +66,49 @@ export function deduplicateServices(results: HeuristicResult[]): Service[] {
   // Merge related groups (e.g. "Upstash Redis" + "Upstash Ratelimit" → "Upstash")
   mergeRelatedGroups(groups)
 
-  // Problem 6: Collapse brand + descriptor entries into brand root
+  // Collapse brand + descriptor entries into brand root
   collapseBrandEntries(groups)
 
-  // Problem 6: Remove generic entries when a specific one exists in the same category
+  // Remove generic entries when a specific one exists in the same category
   removeGenericEntries(groups)
 
+  // Apply dedup-time penalties and score thresholds
   const services: Service[] = []
   for (const [key, group] of groups) {
+    let finalScore = group.score
+
+    // Penalty: only has import/npm_package evidence without anything stronger → -4
+    const weakOnly = Array.from(group.evidenceTypes).every(t => t === 'import' || t === 'npm_package')
+    if (weakOnly) {
+      finalScore -= 4
+    }
+
+    // Score threshold: discard if below 6
+    if (finalScore < 6) continue
+
+    // Derive confidence from summed score
+    let confidence: 'high' | 'medium' | 'low'
+    let needsReview: boolean
+    if (finalScore >= 15) {
+      confidence = 'high'
+      needsReview = false
+    } else if (finalScore >= 9) {
+      confidence = 'medium'
+      needsReview = false
+    } else {
+      // score 6-8
+      confidence = 'low'
+      needsReview = true
+    }
+
     services.push({
       id: key,
       name: group.name,
       category: group.category,
       plan: 'unknown',
       source: 'inferred',
-      confidence: group.confidence,
-      needsReview: group.needsReview ?? group.confidence === 'low',
+      confidence,
+      needsReview,
       confidenceReasons: group.reasons,
       inferredFrom: group.reasons[0],
     })
@@ -124,9 +156,14 @@ function mergeInto(groups: Map<string, ServiceGroup>, into: string, from: string
   const gFrom = groups.get(from)
   if (!gInto || !gFrom) return
 
-  if (confidenceRank(gFrom.confidence) > confidenceRank(gInto.confidence)) {
-    gInto.confidence = gFrom.confidence
+  // Sum scores
+  gInto.score += gFrom.score
+
+  // Merge evidence types
+  for (const t of gFrom.evidenceTypes) {
+    gInto.evidenceTypes.add(t)
   }
+
   if (gInto.category === 'other' && gFrom.category !== 'other') {
     gInto.category = gFrom.category
   }
@@ -139,7 +176,7 @@ function mergeInto(groups: Map<string, ServiceGroup>, into: string, from: string
 }
 
 /**
- * Problem 6: Collapse "BrandName Descriptor" entries into "BrandName"
+ * Collapse "BrandName Descriptor" entries into "BrandName"
  * e.g., "Cloudflare Sitekey" + "Cloudflare Use Turnstile" → "Cloudflare"
  *       "Docker Hub" + "Dockerhub" → "Docker Hub"
  *       "Vercel Use Botid In Booker" → "Vercel"
@@ -200,6 +237,8 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
         category: g.category,
         confidence: g.confidence,
         reasons: [...g.reasons],
+        score: g.score,
+        evidenceTypes: new Set(g.evidenceTypes),
       }
       groups.set(brandKey, brandGroup)
       groups.delete(first)
@@ -212,7 +251,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
 }
 
 /**
- * Problem 6: Remove generic entries when a specific one exists.
+ * Remove generic entries when a specific one exists.
  * e.g., "Database" removed if "PostgreSQL" exists (both category 'database')
  *        "Email From" removed if "SendGrid" exists (both category 'email')
  */
