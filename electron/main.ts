@@ -199,10 +199,26 @@ ipcMain.handle(
     }
 
     const { Octokit } = await import('@octokit/rest')
-    const octokit = new Octokit({ auth: token })
     const [owner, repoName] = repo.split('/')
 
+    // Only pass auth if token is non-empty; empty auth header causes 403
+    const hasToken = typeof token === 'string' && token.trim().length > 0
+    let octokit = hasToken ? new Octokit({ auth: token.trim() }) : new Octokit()
+
+    // Test auth with a lightweight request; if 403/401, retry unauthenticated (public repo fallback)
+    try {
+      await octokit.repos.get({ owner, repo: repoName })
+    } catch (authErr: any) {
+      if (authErr?.status === 403 || authErr?.status === 401) {
+        octokit = new Octokit()
+      }
+    }
+
+    // Track rate limiting to stop wasting requests
+    let rateLimited = false
+
     async function fetchFile(filePath: string): Promise<string | null> {
+      if (rateLimited) return null
       try {
         const { data } = await octokit.repos.getContent({
           owner,
@@ -213,12 +229,14 @@ ipcMain.handle(
           return Buffer.from(data.content, 'base64').toString('utf-8')
         }
         return null
-      } catch {
+      } catch (err: any) {
+        if (err?.status === 403) rateLimited = true
         return null
       }
     }
 
     async function listDir(dirPath: string): Promise<string[]> {
+      if (rateLimited) return []
       try {
         const { data } = await octokit.repos.getContent({
           owner,
@@ -231,7 +249,8 @@ ipcMain.handle(
             .map((f) => f.name)
         }
         return []
-      } catch {
+      } catch (err: any) {
+        if (err?.status === 403) rateLimited = true
         return []
       }
     }

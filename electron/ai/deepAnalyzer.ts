@@ -451,6 +451,9 @@ export async function filterFalsePositivesWithAI(
 ): Promise<Service[]> {
   if (services.length === 0) return services
 
+  // Skip AI filter for large lists to avoid 429 rate limits
+  if (services.length > 50) return services
+
   const payload = services.map(s => ({
     id: s.id,
     name: s.name,

@@ -13,9 +13,25 @@ export interface ZombieResult {
   status: ZombieStatus
 }
 
+// Threshold: skip per-file zombie detection for repos with many evidence files
+const MAX_EVIDENCE_FILES = 50
+
 async function getLastCommitDate(repoPath: string, filePath: string): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%aI', '--', filePath], {
+      cwd: repoPath,
+      timeout: 10000,
+    })
+    const date = stdout.trim()
+    return date || null
+  } catch {
+    return null
+  }
+}
+
+async function getRepoLastCommitDate(repoPath: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%aI'], {
       cwd: repoPath,
       timeout: 10000,
     })
@@ -65,6 +81,28 @@ export async function detectZombieServices(
 ): Promise<ZombieResult[]> {
   const inferredServices = services.filter(s => s.source === 'inferred')
 
+  // Collect all unique evidence files across all services
+  const allFiles = new Set<string>()
+  for (const service of inferredServices) {
+    for (const f of getServiceFiles(service, evidences)) {
+      allFiles.add(f)
+    }
+  }
+
+  // Large repo shortcut: use single repo-level last commit date for all services
+  if (allFiles.size > MAX_EVIDENCE_FILES) {
+    const repoDate = await getRepoLastCommitDate(repoPath)
+    const days = repoDate ? daysBetween(new Date(repoDate), new Date()) : null
+
+    return inferredServices.map(service => ({
+      serviceId: service.id,
+      lastActivityDate: repoDate,
+      daysSinceActivity: days,
+      status: getZombieStatus(days),
+    }))
+  }
+
+  // Small repo: per-file detection (original approach with caching)
   const fileDateCache = new Map<string, string | null>()
 
   async function getCachedDate(file: string): Promise<string | null> {

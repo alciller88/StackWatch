@@ -271,7 +271,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   loadConfig: async () => {
     const repoPath = get().repoPath;
-    if (!repoPath) return;
+    if (!repoPath || repoPath.startsWith('github:')) return;
     try {
       const config = await window.stackwatch.loadConfig(repoPath);
       set({ config });
@@ -282,7 +282,11 @@ export const useStore = create<StoreState>((set, get) => ({
 
   saveConfig: async (config: UserConfig) => {
     const repoPath = get().repoPath;
-    if (!repoPath) return;
+    if (!repoPath || repoPath.startsWith('github:')) {
+      // GitHub repos: keep config in memory only, don't write to disk
+      if (config) set({ config });
+      return;
+    }
     try {
       await window.stackwatch.saveConfig(repoPath, config);
       set({ config });

@@ -13,7 +13,7 @@ files:
   - package.json
 
 extraMetadata:
-  main: dist-electron/main.js
+  main: dist-electron/electron/main.js
 
 asar: true
 

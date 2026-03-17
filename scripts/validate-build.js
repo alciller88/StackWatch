@@ -85,8 +85,8 @@ if (jsFiles.length > 0) {
 
 // 2. Electron main process
 console.log('\n  --- Electron (main process) ---')
-check(fileExists('dist-electron/main.js'), 'dist-electron/main.js exists')
-check(fileExists('dist-electron/preload.js'), 'dist-electron/preload.js exists')
+check(fileExists('dist-electron/electron/main.js'), 'dist-electron/electron/main.js exists')
+check(fileExists('dist-electron/electron/preload.js'), 'dist-electron/electron/preload.js exists')
 check(fileExists('dist-electron/shared/types.js'), 'dist-electron/shared/types.js compiled')
 
 // Check analyzers are compiled (rootDir is "." so electron/ maps to dist-electron/electron/)
@@ -128,7 +128,7 @@ check(!fileExists('dist-electron/.env'), 'No .env in dist-electron/')
 // 4. Package.json
 console.log('\n  --- Package metadata ---')
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'))
-check(pkg.main === 'dist-electron/main.js', `main points to dist-electron/main.js`)
+check(pkg.main === 'dist-electron/electron/main.js', `main points to dist-electron/electron/main.js`)
 check(pkg.name && pkg.name.length > 0, `name: ${pkg.name}`)
 check(pkg.version && /^\d+\.\d+\.\d+/.test(pkg.version), `version: ${pkg.version}`)
 check(pkg.license === 'MIT', `license: ${pkg.license}`)

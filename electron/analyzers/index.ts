@@ -109,12 +109,25 @@ async function runPipeline(
   // Note: excludedServices only affects the graph (filtered in graphStore.initFromAnalysis),
   // NOT the services list — users should see all detected services in the Services panel.
 
+  // Helper: race a promise against a timeout
+  function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+      ),
+    ])
+  }
+
   // Step 2.5: AI false-positive filter (hybrid mode, before full refinement)
   let aiFilteredCount: number | undefined
   if (useAI) {
     const preFilterCount = services.length
     try {
-      services = await filterFalsePositivesWithAI(services, aiSettings!.provider)
+      services = await withTimeout(
+        filterFalsePositivesWithAI(services, aiSettings!.provider),
+        30000, 'AI filter'
+      )
       const removed = preFilterCount - services.length
       if (removed > 0) aiFilteredCount = removed
     } catch {
@@ -128,15 +141,16 @@ async function runPipeline(
   if (useAI) {
     const originalServices = [...services]
     try {
-      // Step 3a: AI validates/refines heuristic results (remove false positives, fix categories, merge dupes)
-      services = await refineServicesWithAI(services, aiSettings!.provider)
+      // Step 3a: AI validates/refines heuristic results
+      services = await withTimeout(
+        refineServicesWithAI(services, aiSettings!.provider),
+        30000, 'AI refine'
+      )
 
       // Step 3b: Deep analysis (service context, hidden services, edge types)
-      deepAnalysis = await runDeepAnalysis(
-        services,
-        evidences,
-        repoPath ?? null,
-        aiSettings!.provider,
+      deepAnalysis = await withTimeout(
+        runDeepAnalysis(services, evidences, repoPath ?? null, aiSettings!.provider),
+        30000, 'AI deep analysis'
       )
 
       // Merge hidden services discovered by AI
@@ -155,12 +169,9 @@ async function runPipeline(
   // Final sanity filter: remove obviously wrong results that slipped through
   services = services.filter(s => {
     const name = s.name.toLowerCase()
-    // Filter single-character or too-short names
     if (name.length < 3) return false
-    // Filter Node.js builtins that somehow made it through
     const builtins = new Set(['child process', 'child_process', 'file system', 'event emitter', 'buffer', 'stream', 'crypto'])
     if (builtins.has(name)) return false
-    // Filter names starting with $ (template vars)
     if (s.name.startsWith('$')) return false
     return true
   })
@@ -168,10 +179,13 @@ async function runPipeline(
   // Step 3.5: Zombie detection (local repos only)
   if (repoPath && !repoPath.startsWith('github:')) {
     try {
-      const zombieResults = await detectZombieServices(services, evidences, repoPath)
+      const zombieResults = await withTimeout(
+        detectZombieServices(services, evidences, repoPath),
+        30000, 'Zombie detection'
+      )
       services = enrichServicesWithZombieData(services, zombieResults)
     } catch {
-      // Silently skip if git is unavailable or repo is not a git repo
+      // Silently skip if git is unavailable, repo is not git, or timeout
     }
   }
 

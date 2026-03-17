@@ -47,9 +47,10 @@ export function classifyEvidences(evidences: Evidence[], projectName?: string): 
       // Filter out the project's own name from detected services
       if (projectAliases.length > 0) {
         const normalizedService = result.serviceName.toLowerCase().replace(/[^a-z0-9]/g, '')
-        // Discard if the service name equals or contains the project name
         if (projectAliases.some(alias =>
-          normalizedService === alias || normalizedService.includes(alias)
+          alias.length >= 4
+            ? (normalizedService === alias || normalizedService.includes(alias))
+            : normalizedService === alias
         )) continue
       }
       results.push(result)
@@ -166,6 +167,60 @@ function isKnownServiceToken(token: string): boolean {
   return known.some(k => t.includes(k))
 }
 
+// Allowlist: npm packages that ARE external service SDKs
+// Only these pass classifyNpmPackage — everything else is rejected
+const SERVICE_SDK_PATTERNS = [
+  // Payments
+  /^stripe/, /^@stripe/, /^chargebee/, /^recurly/, /^paddle/, /^@lemonsqueezy/,
+  // Email
+  /^@sendgrid/, /^sendgrid/, /^resend/, /^postmark/, /^@mailchimp/, /^mailgun/, /^nodemailer/,
+  // Monitoring / error tracking
+  /^@sentry/, /^sentry/, /^datadog/, /^newrelic/, /^@newrelic/,
+  /^@bugsnag/, /^rollbar/, /^honeybadger/, /^@grafana/,
+  // Analytics
+  /^posthog/, /^mixpanel/, /^amplitude/, /^@segment/, /^rudder-sdk/, /^@rudderstack/,
+  // Auth
+  /^@auth0/, /^auth0/, /^@clerk/, /^@okta/, /^next-auth/, /^@supertokens/,
+  // Cloud infra / BaaS
+  /^@supabase/, /^supabase/, /^@planetscale/, /^@neon/, /^@upstash/,
+  /^aws-sdk/, /^@aws-sdk/, /^@google-cloud/, /^firebase/, /^@firebase/,
+  /^@azure/, /^azure-/, /^@vercel\//, /^@netlify/, /^@railway/,
+  // Databases (client SDKs)
+  /^pg$/, /^mysql2?$/, /^mongodb/, /^mongoose/, /^redis$/, /^ioredis/,
+  /^@prisma\/client/, /^drizzle-orm/, /^knex/, /^typeorm/,
+  // Messaging / communications
+  /^twilio/, /^@slack\//, /^pusher/, /^@vonage/, /^@sendbird/,
+  /^onesignal/, /^@onesignal/,
+  // Support / CRM
+  /^intercom/, /^zendesk/, /^@freshdesk/, /^crisp/, /^@helpscout/,
+  /^hubspot/, /^@hubspot/, /^salesforce/, /^jsforce/,
+  // Search / data
+  /^algoliasearch/, /^@algolia/, /^@elastic\/elasticsearch/, /^meilisearch/,
+  /^@typesense/, /^@pinecone/,
+  // CMS / headless
+  /^@sanity/, /^contentful/, /^@contentful/, /^@strapi/,
+  // Video / real-time
+  /^@daily-co/, /^daily-js/, /^twilio-video/, /^@livekit/, /^@100mslive/,
+  // Webhooks
+  /^svix/, /^@svix/,
+  // Project management
+  /^@linear\/sdk/, /^jira-client/,
+  // AI
+  /^openai/, /^@anthropic/, /^cohere/, /^@mistralai/, /^@huggingface/,
+  /^replicate/, /^@together/, /^@perplexity/,
+  // Feature flags
+  /^launchdarkly/, /^@launchdarkly/, /^@growthbook/, /^@happykit/,
+  // CDN / edge
+  /^cloudflare/, /^@cloudflare/, /^fastly/,
+  // CI / deployment (action SDKs)
+  /^@octokit/, /^@actions\//,
+  // Storage / media
+  /^@cloudinary/, /^cloudinary/, /^@uploadthing/, /^@imagekit/,
+  // Misc known services
+  /^@retell-ai/, /^retell/, /^@formbricks/, /^@dub\//, /^dub$/,
+  /^@deploysentinel/, /^@k6\//, /^k6/,
+]
+
 function isGenericName(name: string): boolean {
   return GENERIC_NAMES.has(name.toLowerCase().trim())
 }
@@ -240,33 +295,9 @@ function classifyNpmPackage(pkg: string): HeuristicResult | null {
   // Ignore Node.js built-in modules
   if (NODE_BUILTINS.has(pkg)) return null
 
-  // Ignore packages that are clearly not external services
-  const ignorePatterns = [
-    /^@types\//,
-    /^eslint/, /^prettier/, /^typescript$/, /^ts-node$/,
-    /^tailwind/, /^postcss/, /^autoprefixer$/,
-    /^@tailwindcss\//,
-    /^babel/, /^webpack/, /^vite$/, /^@vitejs\//, /^rollup/, /^esbuild/,
-    /^jest$/, /^vitest$/, /^mocha$/, /^chai$/, /^@testing-library\//,
-    /^react$/, /^react-dom$/, /^react-router/,
-    /^vue$/, /^svelte$/, /^@angular\//,
-    /^lodash/, /^moment$/, /^date-fns$/, /^dayjs$/,
-    /^zod$/, /^yup$/, /^joi$/,
-    /^axios$/, /^node-fetch$/, /^cross-fetch$/,
-    /^uuid$/, /^nanoid$/, /^clsx$/, /^classnames$/,
-    /^lucide/, /^heroicons/, /^@radix-ui\//,
-    /^concurrently$/, /^wait-on$/,
-    /^@dagrejs\//, /^reactflow$/,
-    /^zustand$/, /^redux$/, /^@reduxjs\//,
-    /^next$/, /^nuxt$/, /^gatsby$/,
-    /^dotenv$/, /^js-yaml$/,
-    /^path$/, /^fs$/, /^crypto$/,
-    /^glob$/, /^minimatch$/, /^ignore$/,
-    /^chalk$/, /^commander$/, /^yargs$/,
-    /^express$/, /^fastify$/, /^koa$/,
-    /^electron$/, /^electron-builder$/, /^electron-store$/,
-  ]
-  if (ignorePatterns.some(p => p.test(pkg))) return null
+  // Allowlist: only known service SDKs pass through
+  const lowerPkg = pkg.toLowerCase()
+  if (!SERVICE_SDK_PATTERNS.some(p => p.test(lowerPkg))) return null
 
   // Extract service name from package name
   const name = pkg
