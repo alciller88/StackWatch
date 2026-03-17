@@ -3,12 +3,21 @@
   "version": "0.4.0",
   "description": "Know your stack, own your stack. Visualize every service, dependency, and account your project depends on.",
   "main": "dist-electron/main.js",
+  "bin": {
+    "stackwatch": "./dist-cli/cli/index.js"
+  },
+  "files": [
+    "dist-cli/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "concurrently \"vite\" \"tsc -p tsconfig.node.json && wait-on http://localhost:5173 && node scripts/launch-electron.js\"",
     "build": "tsc -p tsconfig.node.json && vite build && electron-builder",
     "test": "vitest",
     "preview": "vite preview",
     "lint": "eslint src/ electron/ shared/",
+    "build:cli": "tsc -p cli/tsconfig.json",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"electron/**/*.ts\" \"shared/**/*.ts\""
   },
   "dependencies": {

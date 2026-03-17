@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-electron/
+dist-cli/
 shared/*.js
 shared/*.d.ts
 out/

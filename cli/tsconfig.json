@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "../dist-cli",
+    "rootDir": "..",
+    "declaration": false,
+    "composite": false
+  },
+  "include": ["./**/*.ts", "../electron/**/*.ts", "../shared/**/*.ts"]
+}

@@ -9,7 +9,20 @@ StackWatch scans your codebase and automatically maps every service, API, databa
 
 **Zero config. Works offline. 10 seconds to your first scan.**
 
-> Screenshots coming soon — run the app locally to see StackWatch in action!
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="StackWatch Dashboard" width="800" />
+</p>
+
+<details>
+<summary>More screenshots</summary>
+
+| Services Panel | Flow Graph | Costs Panel |
+|---|---|---|
+| <img src="docs/screenshots/services.png" alt="Services" width="260" /> | <img src="docs/screenshots/flow.png" alt="Flow Graph" width="260" /> | <img src="docs/screenshots/costs.png" alt="Costs" width="260" /> |
+
+</details>
+
+> **Note:** To generate screenshots, run `npm run dev` and use your OS screenshot tool. Place images in `docs/screenshots/`.
 
 ---
 
@@ -73,6 +86,54 @@ npm run dev
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
 | `npm test` | Run unit tests (135 tests across 12 suites) |
+
+### CLI (no Electron required)
+
+Scan any project from the command line:
+
+```bash
+# Scan current directory
+npx stackwatch
+
+# Scan a specific project
+npx stackwatch ./my-project
+
+# JSON output (for piping to other tools)
+npx stackwatch --json
+
+# Generate Markdown report
+npx stackwatch --md > SERVICES.md
+```
+
+The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results.
+
+### GitHub Action
+
+Add StackWatch to your CI pipeline to scan on every PR:
+
+```yaml
+# .github/workflows/stackwatch.yml
+name: StackWatch Scan
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: alciller88/StackWatch@main
+        with:
+          path: '.'
+          comment: 'true'
+```
+
+The action posts a comment on the PR with detected services and dependencies.
 
 ---
 
@@ -276,6 +337,9 @@ StackWatch/
 ├── scripts/
 │   ├── launch-electron.js   # WSL-aware Electron launcher
 │   └── setup.js             # Postinstall: system deps on WSL
+├── cli/
+│   ├── index.ts             # CLI entry point (npx stackwatch)
+│   └── tsconfig.json        # CLI-specific TypeScript config
 ├── src/
 │   ├── components/
 │   │   ├── TitleBar.tsx     # Custom frameless titlebar (minimize/maximize/close)
@@ -289,11 +353,14 @@ StackWatch/
 │   │   └── Settings/        # AI provider config, scan mode selector, connection testing
 │   ├── store/
 │   │   ├── useStore.ts      # Global Zustand state (services, deps, config, AI)
-│   │   ├── graphStore.ts    # Graph-specific state (nodes, edges, excluded)
-│   │   └── dialogStore.ts   # Promise-based confirm dialog state
+│   │   ├── graphStore.ts    # Graph-specific state (nodes, edges, undo/redo history)
+│   │   ├── dialogStore.ts   # Promise-based confirm dialog state
+│   │   ├── toastStore.ts    # Toast notification state
+│   │   └── historyStore.ts  # Undo/redo snapshot stacks
 │   └── types.ts             # Renderer-side type definitions
 ├── SPEC.md                  # Full technical specification
 ├── CONTEXT.md               # AI agent context (keep updated)
+├── action.yml               # GitHub Action definition
 └── stackwatch.config.json   # Example config for analysed projects
 ```
 
@@ -310,6 +377,9 @@ StackWatch/
 | Store (useStore) | 9 | mergeServices, ensureConfig, ensureFlowNodes, store actions |
 | AI Deep Analyzer (runDeep) | 14 | Deep analysis phases, usage context, hidden services |
 | daysUntil utility | 3 | Today, future dates, past dates |
+| ServiceCard | 10 | Rendering, interactions, confidence, accessibility |
+| TopBar | 13 | Buttons, repo path, error banner, link status |
+| ContextMenu | 7 | ARIA roles, click handlers, keyboard navigation |
 
 ---
 
@@ -355,7 +425,13 @@ StackWatch/
 - [x] Service ownership + comments fields
 - [x] Badge generator + About section in Settings
 - [ ] Production build validation
-- [ ] UI component tests
+- [x] UI component tests (ServiceCard, TopBar, ContextMenu)
+- [x] Undo/redo with Ctrl+Z/Ctrl+Shift+Z (50-entry history)
+- [x] Skeleton loaders during analysis
+- [x] Toast notification system
+- [x] List virtualization (DepsPanel with @tanstack/react-virtual)
+- [x] CLI tool: `npx stackwatch` (scan, --json, --md output)
+- [x] GitHub Action for PR scanning with auto-comments
 - [ ] macOS / Windows / Linux distributable builds
 - [ ] Monorepo support
 

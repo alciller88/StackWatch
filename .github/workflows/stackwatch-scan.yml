@@ -1,0 +1,21 @@
+name: StackWatch Scan
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run StackWatch
+        uses: alciller88/StackWatch@main
+        with:
+          path: '.'
+          comment: 'true'

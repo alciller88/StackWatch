@@ -1,0 +1,114 @@
+name: 'StackWatch Scan'
+description: 'Scan your codebase and detect all services, dependencies, and architecture'
+author: 'alciller88'
+
+inputs:
+  path:
+    description: 'Path to scan (relative to workspace root)'
+    required: false
+    default: '.'
+  comment:
+    description: 'Post results as a PR comment (true/false)'
+    required: false
+    default: 'true'
+
+outputs:
+  services:
+    description: 'Number of services detected'
+  dependencies:
+    description: 'Number of dependencies found'
+  json:
+    description: 'Full analysis result as JSON'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install StackWatch
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        npm ci --ignore-scripts
+
+    - name: Build CLI
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        npx tsc -p cli/tsconfig.json
+
+    - name: Run scan
+      id: scan
+      shell: bash
+      run: |
+        SCAN_PATH="${{ github.workspace }}/${{ inputs.path }}"
+        RESULT=$(node ${{ github.action_path }}/dist-cli/cli/index.js "$SCAN_PATH" --json)
+
+        # Extract counts
+        SERVICES=$(echo "$RESULT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const r=JSON.parse(d);console.log(r.services.length)")
+        DEPS=$(echo "$RESULT" | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const r=JSON.parse(d);console.log(r.dependencies.length)")
+
+        echo "services=$SERVICES" >> $GITHUB_OUTPUT
+        echo "dependencies=$DEPS" >> $GITHUB_OUTPUT
+
+        # Save JSON to file (too large for output)
+        echo "$RESULT" > /tmp/stackwatch-result.json
+        echo "json_file=/tmp/stackwatch-result.json" >> $GITHUB_OUTPUT
+
+    - name: Generate Markdown summary
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      id: summary
+      shell: bash
+      run: |
+        SCAN_PATH="${{ github.workspace }}/${{ inputs.path }}"
+        SUMMARY=$(node ${{ github.action_path }}/dist-cli/cli/index.js "$SCAN_PATH" --md)
+
+        # Write to file for the comment step
+        {
+          echo "## StackWatch Scan Results"
+          echo ""
+          echo "$SUMMARY"
+          echo ""
+          echo "---"
+          echo "*Scanned by [StackWatch](https://github.com/alciller88/StackWatch) GitHub Action*"
+        } > /tmp/stackwatch-comment.md
+
+    - name: Post PR comment
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const body = fs.readFileSync('/tmp/stackwatch-comment.md', 'utf-8');
+
+          // Find existing StackWatch comment to update
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existing = comments.find(c => c.body?.includes('StackWatch Scan Results'));
+
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+branding:
+  icon: 'layers'
+  color: 'yellow'
