@@ -1,3 +1,6 @@
+export const SENSITIVE_FIELDS = ['accountEmail', 'owner', 'notes'] as const;
+export type SensitiveField = (typeof SENSITIVE_FIELDS)[number];
+
 export const SERVICE_CATEGORIES = [
   'domain', 'hosting', 'cicd', 'database', 'auth', 'payments',
   'email', 'analytics', 'monitoring', 'cdn', 'storage', 'infra',

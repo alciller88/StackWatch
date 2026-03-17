@@ -9,6 +9,7 @@ import { saveScanSnapshot, loadPreviousScan, computeStackDiff } from './analyzer
 import { appendScoreEntry, loadScoreHistory } from './analyzers/scoreHistory'
 import { calculateHealthScore } from '../src/utils/healthScore'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
+import { SENSITIVE_FIELDS } from '../shared/types'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
 let store: any
@@ -126,6 +127,49 @@ function validateRepoPath(repoPath: string): string {
   if (/(?:^|[\\/])\.\.(?:[\\/]|$)/.test(repoPath)) throw new Error('Invalid repository path: must not contain ".."')
   const resolved = path.resolve(repoPath)
   return resolved
+}
+
+// --- Sensitive Field Encryption ---
+
+function encryptServiceField(serviceId: string, fieldName: string, value: string): string {
+  const ref = `$encrypted:${serviceId}_${fieldName}`
+  store.set(`encrypted.${serviceId}_${fieldName}`, value)
+  return ref
+}
+
+function decryptServiceField(reference: string): string | undefined {
+  if (!reference.startsWith('$encrypted:')) return undefined
+  const key = reference.slice('$encrypted:'.length)
+  return store.get(`encrypted.${key}`) as string | undefined
+}
+
+function encryptConfig(config: UserConfig): UserConfig {
+  const encrypted = JSON.parse(JSON.stringify(config)) as UserConfig
+  for (const svc of encrypted.services) {
+    for (const field of SENSITIVE_FIELDS) {
+      const value = svc[field as keyof typeof svc]
+      if (typeof value === 'string' && value && !value.startsWith('$encrypted:')) {
+        (svc as any)[field] = encryptServiceField(svc.id, field, value)
+      }
+    }
+  }
+  return encrypted
+}
+
+function decryptConfig(config: UserConfig): UserConfig {
+  const decrypted = JSON.parse(JSON.stringify(config)) as UserConfig
+  for (const svc of decrypted.services) {
+    for (const field of SENSITIVE_FIELDS) {
+      const value = svc[field as keyof typeof svc]
+      if (typeof value === 'string' && value.startsWith('$encrypted:')) {
+        const real = decryptServiceField(value)
+        if (real !== undefined) {
+          (svc as any)[field] = real
+        }
+      }
+    }
+  }
+  return decrypted
 }
 
 // --- IPC Handlers ---
@@ -290,7 +334,8 @@ ipcMain.handle('load-config', async (_event, repoPath: string) => {
     const safePath = validateRepoPath(repoPath)
     const configPath = path.join(safePath, 'stackwatch.config.json')
     const content = await fs.readFile(configPath, 'utf-8')
-    return JSON.parse(content) as UserConfig
+    const config = JSON.parse(content) as UserConfig
+    return decryptConfig(config)
   } catch {
     return null
   }
@@ -304,7 +349,8 @@ ipcMain.handle(
   ) => {
     const safePath = validateRepoPath(repoPath)
     const configPath = path.join(safePath, 'stackwatch.config.json')
-    await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+    const encrypted = encryptConfig(config)
+    await fs.writeFile(configPath, JSON.stringify(encrypted, null, 2), 'utf-8')
   }
 )
 

@@ -108,6 +108,7 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 - **External URLs**: all opened via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only). No `window.open()`.
 - **Path validation**: `validateRepoPath()` checks raw input for `..` traversal via regex before resolving.
 - **Secrets**: GitHub tokens and AI API keys stored in encrypted electron-store, never in config JSON.
+- **Sensitive config fields**: `accountEmail`, `owner`, `notes` are replaced with `$encrypted:` references in `stackwatch.config.json`. Real values stored in electron-store. Transparent to the renderer — `loadConfig` decrypts, `saveConfig` encrypts.
 
 ### Type system
 
@@ -200,7 +201,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
 | `npm run release` | Validate build, create git tag from package.json version, push tag (triggers CI release) |
-| `npm test` | vitest (355 tests, 24 suites) |
+| `npm test` | vitest (359 tests, 25 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -221,7 +222,7 @@ The `release` job uses `softprops/action-gh-release@v2` with `generate_release_n
 
 ## Tests
 
-355 tests across 24 suites. vitest + @testing-library/react + jsdom.
+359 tests across 25 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -248,6 +249,7 @@ The `release` job uses `softprops/action-gh-release@v2` with `generate_release_n
 | DiscardedPanel | 7 | Rendering, reason badges, restore button, scores, empty state |
 | Deduplicator | 23 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal, discarded tracking |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
+| Pipeline Integration | 4 | Fixture repo: Stripe/Sentry/PostgreSQL detection, no false positives, flow graph, evidenceSummary |
 | daysUntil | 3 | Today, future, past |
 
 ---
@@ -340,4 +342,4 @@ The `release` job uses `softprops/action-gh-release@v2` with `generate_release_n
 
 - Multi-project dashboard (multiple repos at once)?
 - ~~Light theme?~~ ✔ Implemented (dark/light toggle via CSS variables)
-- Encrypt sensitive fields in `stackwatch.config.json`?
+- ~~Encrypt sensitive fields in `stackwatch.config.json`?~~ ✔ Implemented ($encrypted: references in JSON, real values in electron-store)

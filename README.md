@@ -76,8 +76,27 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (355 tests across 24 suites) |
+| `npm test` | Run unit tests (359 tests across 25 suites) |
 | `npm run release` | Validate, tag current version, push tag (triggers CI release) |
+
+### Your first scan in 4 steps
+
+1. **Open a folder or connect a GitHub repo** — click "Open folder" in the top bar or use the GitHub icon to enter `owner/repo`
+2. **Review detected services** — StackWatch scans automatically and shows every service it found, with confidence levels. Click the `?` button on any card to see the evidence breakdown (which env vars, imports, and config files contributed to the detection)
+3. **Add what's missing** — manually add services that have no code footprint (domains, SaaS accounts, billing). Fill in cost, renewal date, and owner for each service
+4. **Re-analyze anytime** — click the re-analyze button when your stack changes. Choose Merge to keep your manual edits, or Fresh Scan to start over
+
+### AI setup (optional)
+
+StackWatch works 100% offline with heuristic detection. For deeper analysis, configure an AI provider in **Settings**:
+
+| Provider | Setup | Cost |
+|---|---|---|
+| **Local** (Ollama / LM Studio) | Install Ollama, pull a model (`ollama pull llama3.2`), select "Local" preset | Free |
+| **Cloud** (Groq) | Sign up at groq.com, paste API key, select "Cloud (Groq)" preset | Free tier |
+| **Custom** | Any OpenAI-compatible endpoint — paste base URL, model name, and API key | Varies |
+
+With AI enabled, set scan mode to **Hybrid** in Settings. The AI will filter false positives, validate low-confidence detections, analyze usage context, detect hidden services, and suggest cheaper alternatives.
 
 ### CLI (no Electron required)
 
@@ -425,7 +444,7 @@ StackWatch/
 
 ### Test suites
 
-355 tests across 24 suites:
+359 tests across 25 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -452,6 +471,7 @@ StackWatch/
 | DiscardedPanel | 7 | Rendering, reason badges, restore, scores, empty state |
 | Deduplicator | 23 | Grouping, merging, best-per-type scoring, thresholds, brand collapse, discarded tracking |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
+| Pipeline Integration | 4 | Fixture repo: Stripe/Sentry/PostgreSQL detection, no false positives |
 | daysUntil | 3 | Today, future, past |
 
 ---
@@ -525,13 +545,18 @@ StackWatch/
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
 - [x] Scan mode dialog: merge (keep manual + positions) vs fresh scan on re-analyze
 - [x] Discarded panel: virtualized list of filtered items with search, reason filter, restore to manual service
-- [x] 355 tests across 24 suites (+10 DiscardedPanel and deduplicator tracking tests)
+- [x] 359 tests across 25 suites (+10 DiscardedPanel and deduplicator tracking tests)
 - [x] Layer node type: organizational nodes (User, Frontend, Backend) use type: 'layer' with custom colors and sizing
 - [x] "Add layer node" in canvas context menu, layer-specific icons, no confidence badges
 - [x] Evidence info popover: "Why was this detected?" button on service cards with score breakdown
 - [x] Graph diff visual: green highlight for new nodes, grey strikethrough for removed (3s after re-scan)
-- [x] 355 tests across 24 suites (+9 scanDiff and evidence popover tests)
+- [x] 359 tests across 25 suites (+9 scanDiff and evidence popover tests)
 - [x] Release automation: GitHub Release with platform binaries on version tags (v*), `npm run release` convenience script
+- [x] Sensitive field encryption: accountEmail/owner/notes stored as $encrypted: references in config JSON
+- [x] Error handling: configurable toast timeouts (8s for errors), AI/save/empty-scan toasts
+- [x] 29-point build validation: all checks passing
+- [x] Integration tests with fixture repo (Stripe, Sentry, PostgreSQL detection, no false positives)
+- [x] User docs: 4-step first scan guide, AI setup guide, CLI/GitHub Action examples
 
 ---
 

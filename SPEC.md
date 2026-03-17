@@ -664,6 +664,7 @@ interface StackWatchAPI {
 | **External URLs** | All via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only) |
 | **Path validation** | `validateRepoPath()` checks raw input for `..` traversal via regex before resolving |
 | **Secrets** | GitHub tokens and AI API keys in encrypted electron-store, never in config JSON |
+| **Config encryption** | Sensitive service fields (accountEmail, owner, notes) stored as `$encrypted:` references in JSON; real values in electron-store. Transparent to renderer. |
 | **Context isolation** | `contextIsolation: true`, `nodeIntegration: false`, all IPC via contextBridge |
 
 ---
@@ -725,7 +726,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-355 tests across 24 suites. Vitest + @testing-library/react + jsdom.
+359 tests across 25 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -752,6 +753,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | DiscardedPanel | 7 | `src/components/DiscardedPanel/__tests__/` |
 | Deduplicator | 23 | `electron/analyzers/__tests__/` |
 | Pipeline | 7 | `electron/analyzers/__tests__/` |
+| Pipeline Integration | 4 | `electron/analyzers/__tests__/` |
 | daysUntil | 3 | `src/utils/__tests__/` |
 
 ---
@@ -805,5 +807,10 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Graph diff visual: new nodes highlighted green (3s), removed nodes grey with strikethrough (3s fade-out) after re-scan
 - [x] EvidenceSummary type: best evidence per type with scores, populated in deduplicator
 - [x] 9 new tests: scanDiff (7), ServiceCard evidence popover (2)
+- [x] Sensitive field encryption: accountEmail, owner, notes stored as $encrypted: references in config JSON, real values in electron-store
+- [x] Error handling: configurable toast timeout (8s for errors), AI timeout/429 toast, no-services toast, saveConfig ENOENT toast
+- [x] 29-point build validation: all checks passing
+- [x] Integration tests: fixture repo with Stripe/Sentry/PostgreSQL detection, no utility false positives, flow graph validation, evidenceSummary population
+- [x] User documentation: 4-step first scan guide, AI setup guide (3 providers), CLI examples, GitHub Action example
 - [x] Release automation: CI creates GitHub Release with platform binaries on version tag push (v*)
 - [x] `npm run release` convenience script: validate → git tag → push tag

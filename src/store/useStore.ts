@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
 import { computeScanDiff } from '../utils/scanDiff';
+import { useToastStore } from './toastStore';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
@@ -241,6 +242,19 @@ export const useStore = create<StoreState>((set, get) => ({
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
 
+      // Toast for AI fallback
+      if (result.aiError) {
+        const msg = result.aiError.includes('timed out') || result.aiError.includes('429')
+          ? 'AI analysis unavailable, using heuristic results'
+          : `AI analysis failed: ${result.aiError}`;
+        useToastStore.getState().addToast(msg, 'error');
+      }
+
+      // Toast for no services
+      if (allServices.length === 0) {
+        useToastStore.getState().addToast('No services detected. Try adding services manually.', 'info', 8000);
+      }
+
       // Clear diff highlight after 3 seconds
       if (diff.added.size > 0 || diff.removed.size > 0) {
         setTimeout(() => {
@@ -408,9 +422,10 @@ export const useStore = create<StoreState>((set, get) => ({
       await window.stackwatch.saveConfig(repoPath, config);
       set({ config });
     } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : String(err),
-      });
+      const msg = err instanceof Error ? err.message : String(err);
+      const toast = msg.includes('ENOENT') ? 'Could not save config: path not found' : `Save failed: ${msg}`;
+      useToastStore.getState().addToast(toast, 'error');
+      set({ error: msg });
     }
   },
 
