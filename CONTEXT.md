@@ -1,320 +1,285 @@
 # CONTEXT.md — StackWatch
 
-> This file is living memory for AI agents (Claude, Copilot, Cursor, etc.).
-> Update it after each significant development session.
-> NOT user documentation — this is operational context for the agent.
+> Operational context for AI agents. NOT a changelog, NOT user documentation.
+> Read this before writing any code. Update after structural changes.
 
 ---
 
 ## What this project is
 
-Electron + React desktop app that analyzes any software project (local or GitHub) and infers all external services, dependencies and accounts the project uses. Supports web, Python, Rust, Go, Terraform ecosystems and more. Results are displayed in a dashboard with four panels: services, dependencies, flow graph, and costs.
+**StackWatch** scans codebases and maps every external service, dependency, and paid account. Electron desktop app + CLI + GitHub Action.
 
-Also available as:
-- **CLI**: `npx stackwatch` — scan any repo from the terminal (--json, --md, --help)
-- **GitHub Action**: `alciller88/StackWatch@main` — scan on every PR, post results as comment
+- **Desktop app**: Electron 35 + React 19 + Vite 6 + TypeScript 5.7 + Tailwind 4 + Zustand 5 + React Flow 11
+- **CLI**: `npx stackwatch [path] [--json|--md]` — same heuristic engine, no Electron dependency
+- **GitHub Action**: `alciller88/StackWatch@main` — posts PR comments with scan results
+- **Config file**: `stackwatch.config.json` in the scanned repo (not this repo)
 
-The user's manual configuration file is `stackwatch.config.json` in the root of the analyzed repo (not the app's repo).
-
-Full spec: `SPEC.md`
-
----
-
-## Current development state
-
-> ⚠️ Update this section at the start of each session.
-
-- **Phase**: v0.4.1 — quality sweep, new features, distribution preparation
-- **Latest session**: 2026-03-17
-
-### Changes implemented this session (8 commits)
-
-#### Security (commit a668e97)
-- **safeStorage encryption**: replaced hardcoded `encryptionKey` with machine-unique key derived from `safeStorage.encryptString()`, with fallback to `userData`-based seed. Store initialization moved into `app.whenReady()`.
-- **CSP headers**: added `Content-Security-Policy` via `session.webRequest.onHeadersReceived` — production only (disabled in dev for Vite HMR). Restricts scripts, styles, fonts, connections, images.
-- **shell.openExternal**: replaced all `window.open()` calls (DepsPanel, FlowGraph) with IPC handler `open-external-url` that validates protocol (http/https only) before calling `shell.openExternal`.
-
-#### Performance (commit a668e97)
-- **Local fonts**: replaced Google Fonts CDN `@import` with 5 local `@font-face` declarations (IBM Plex Mono 400/500, IBM Plex Sans 300/400/500) in `src/assets/fonts/`. App now works fully offline.
-- **Zustand selectors**: FlowGraph.tsx replaced `useGraphStore()` (subscribes to ALL state) with 17 individual selectors (`useGraphStore(s => s.nodes)`, etc.) to prevent unnecessary re-renders.
-- **Debounced persistToConfig**: added 500ms debounce timer to `graphStore.persistToConfig()` to reduce disk I/O during node dragging.
-
-#### Code Quality (commits a668e97, bf14d11)
-- **SERVICE_CATEGORIES**: extracted const array in `shared/types.ts`, derived `ServiceCategory` union type from it. Updated 4 consumers (ServicesPanel, NodeEditPanel, deepAnalyzer, shared). Eliminated 4 duplicated category arrays.
-- **Shared daysUntil()**: created `src/utils/dates.ts` with unified implementation (used `Math.ceil` with hour reset). Replaced two divergent implementations in ServiceCard.tsx and CostsPanel.tsx.
-- **Dead ternary**: fixed `(editPanel?.isCustom ? 'external' : 'external')` → `'external'` in FlowGraph.tsx.
-- **Unused import**: removed `LinkStatus` from TopBar.tsx imports.
-- **eslint-disable**: documented intentional dep exclusion in FlowGraph useEffect; added `checkLinkStatus` to TopBar useEffect deps.
-
-#### Accessibility (commits a668e97, bf14d11)
-- **Focus trap in GitHubModal**: Tab/Shift+Tab trapped within modal form, includes `a[href]` links.
-- **ARIA roles on ContextMenu**: `role="menu"` on container, `role="menuitem"` on each button.
-- **NodeEditPanel**: added `role="dialog"`, `aria-modal="false"`, `aria-label="Edit node"`, viewport clamping via `Math.min()`.
-- **htmlFor labels**: linked all 11 ServiceForm labels to inputs via `htmlFor`/`id` pairs (sf-name, sf-category, sf-plan, sf-confidence, sf-url, sf-cost, sf-renewal, sf-email, sf-notes, sf-owner, sf-comment).
-- **Table caption**: added visually-hidden `<caption>Project dependencies</caption>` to DepsPanel table.
-- **aria-hidden SVGs**: added `aria-hidden="true"` to all 6 decorative SVGs in Sidebar navItems.
-- **Color contrast**: boosted `--color-text-muted` from `#6a7a90` to `#8090a6` (~5.2:1 ratio on `#0a0c0f`, WCAG AA compliant).
-
-#### Tests (commits bf14d11, a668e97)
-- **135 tests across 12 suites** (was 102 in 8 suites before this session)
-- Installed `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jsdom`
-- Added `src/test-setup.ts` with jest-dom matchers, configured vitest with `environment: 'jsdom'`
-- **ServiceCard.test.tsx** (10 tests): rendering, cost, owner, renewal, click/keyboard, confidence, notes, inferred-from
-- **TopBar.test.tsx** (13 tests): buttons, repo path, error banner, analyzing state, link status, interactions
-- **ContextMenu.test.tsx** (7 tests): ARIA roles, click/Escape, dividers, active state
-- **dates.test.ts** (3 tests): today, future, past dates
-
-#### UI/UX (commit bf14d11)
-- **Toast notification system**: `toastStore` (Zustand, auto-dismiss 4s) + `ToastContainer` component with success/error/info styles. Rendered in App.tsx.
-- **useDebounce hook**: generic debounce hook in `src/hooks/useDebounce.ts`.
-- **CSS hover migration**: replaced JS `onMouseEnter`/`onMouseLeave` with Tailwind `hover:` classes in TitleBar (3 buttons), ConfirmDialog (all button variants), NodeEditPanel (Save/Cancel), DepsPanel (table rows).
-- **TopBar responsive**: reduced padding/gaps (`px-3 gap-2`) for narrow windows.
-
-#### Undo/Redo (commit 87464a9)
-- **historyStore**: Zustand store with past/future snapshot stacks, max 50 entries. Uses `structuredClone` for deep copies.
-- **Keyboard shortcuts**: Ctrl+Z (undo), Ctrl+Shift+Z (redo). Skips input/textarea/select focus.
-- **Tracked operations**: addNode, updateNode, deleteNode, onConnect, deleteEdge, updateEdgeType, resetLayout. Restores nodes, edges, and services.
-- NOT tracked (intentional): onNodesChange, onEdgesChange, saveNodePosition, initFromAnalysis (high-frequency or init).
-
-#### List Virtualization (commit 87464a9)
-- **@tanstack/react-virtual** for DepsPanel table rows in flat (non-grouped) mode.
-- `estimateSize: 41px`, `overscan: 20`. Spacer rows maintain scroll height.
-- ServicesPanel grid NOT virtualized (rarely exceeds ~50 items, variable card height).
-
-#### Skeleton Loaders (commit 87464a9)
-- `src/components/Skeleton.tsx`: `SkeletonBlock`, `SkeletonServiceCard`, `SkeletonTableRow`, plus full panel skeletons for Services, Deps, Flow, and Costs.
-- CSS `@keyframes pulse` animation (opacity 0.15–0.4, 1.5s).
-- Shown during initial analysis when `isAnalyzing && !hasData`.
-
-#### CLI Tool (commit cf33078)
-- `cli/index.ts`: standalone scanner using the same heuristic engine as the desktop app.
-- Outputs: human-readable summary (default), JSON (`--json`), Markdown table (`--md`).
-- `--help`, `--version` flags. `bin.stackwatch` in package.json for `npx stackwatch`.
-- Built with `npm run build:cli` to `dist-cli/` (gitignored). Separate `cli/tsconfig.json`.
-- `dist-cli/` excluded from vitest config to prevent test collection.
-
-#### GitHub Action (commit cf33078)
-- `action.yml`: composite action — installs deps, builds CLI, scans, posts/updates PR comment.
-- `.github/workflows/stackwatch-scan.yml`: example workflow triggered on PRs to main.
-- Updates existing StackWatch comment if found, creates new otherwise.
-
-#### Dynamic Stack Score Badge (commit a3c29a5)
-- `src/utils/badge.ts`: `generateScoreBadgeSvg()` (self-contained SVG), `getScoreBadgeUrl()` (shields.io), `getScoreBadgeMarkdown()`, `getScoreBadgeHtml()`.
-- TopBar Share menu: badges now include Stack Score (color-coded green/yellow/red) + service count. New "Copy Badge (SVG)" option.
-- Stack Summary includes `Stack Score: X/100` line.
-
-#### Vulnerability Detection (commit a3c29a5)
-- `electron/analyzers/vulnScanner.ts`: uses OSV.dev batch API (free, no key). Maps 8 ecosystems (npm→npm, pip→PyPI, cargo→crates.io, go→Go, gem→RubyGems, composer→Packagist, maven/gradle→Maven, dart→Pub).
-- Batches in groups of 100, 15s timeout, maps CVSS scores to severity levels.
-- IPC handler `scan-vulnerabilities` + preload bridge.
-- DepsPanel: "Scan vulns" button, red summary banner, per-dep vuln badges with tooltip details.
-- Types: `Vulnerability`, `DepVulnResult` in `shared/types.ts`.
-
-#### Monorepo Support (commit 4996729)
-- `electron/analyzers/monorepo.ts`: detects npm workspaces, pnpm-workspace.yaml, lerna.json, turbo.json, nx.json. Resolves glob patterns to package directories.
-- `analyzeLocalRepo` auto-detects monorepos (2+ packages), scans root + all packages.
-- Evidence files tagged with package name (`pkgName/file`), dependencies deduplicated (production preferred over dev).
-- `monorepo` field on `AnalysisResult` (`{ type, packages }`).
-
-#### Distributable Builds (commit 4996729)
-- `electron-builder.yml`: macOS (dmg+zip universal, hardened runtime, entitlements), Windows (nsis+portable x64), Linux (AppImage+deb x64). Asar packaging. GitHub draft releases.
-- `build/`: icon.svg source, entitlements.mac.plist, icons/ for Linux PNGs.
-- Scripts: `build:prod` (TSC+Vite, fast), `build:dist` (full electron-builder), `build` (alias for dist).
-- CI: `build.yml` runs test → build → validate → upload artifacts for 3 platforms.
-
-#### Production Build Validation (commit 4996729)
-- `scripts/validate-build.js`: 29-point checker covering Vite output (HTML, JS, CSS, fonts, no CDN refs), Electron compilation (all analyzers + AI + types + monorepo), security (no hardcoded keys, safeStorage present, CSP configured, no .env files), package metadata, electron-builder config.
-- `npm run validate` — runs locally and as CI step after build.
-
-### Bug fixes this session
-- CSP disabled in dev mode to allow Vite HMR scripts and WebSocket (commit 5beb749)
-- `VALID_CATEGORIES.has()` type cast fixed for readonly tuple (commit ee8d796)
-- Stale `shared/types.js` build artifact removed (was confusing Vite module resolution)
-- Stale `tsbuildinfo` causing empty `dist-electron/shared/` output
-
-- **Previous milestones** (full history):
-  - v0.4.0 (bba5ed6): Stack Health Score in sidebar, session restore ("Reopen" banner), demo mode, share dropdown (badge markdown/HTML, stack summary), ServiceForm validation, accessible ServiceCards (role=button, tabIndex), aria-current on sidebar, role=switch on AI toggle, store tests (mergeServices, ensureFlowNodes, loadDemo, CRUD), deepAnalyzer tests (runDeepAnalysis, hidden services, edge types)
-  - Pre-v0.4.0 fixes (2feca26): score reactivity (reads from graphStore), graph↔service sync (delete node removes service), expanded GENERIC_NAMES filter (60+ names), Node.js builtins blocklist, template variable ($var) rejection, post-AI sanity filter, cancel button styling
-  - Build infra (9f6ddb3, baa9f4b): gitignore shared/ build artifacts, widen rootDir in tsconfig.node.json to include shared/
-  - Import/export fixes (ffa3729–21f2a91): import restores service↔node linkage, standalone import without repo, no disk writes on import, versioned export filenames, 1:1 Services↔Graph mapping guaranteed, overlapping node prevention on import
-  - v0.3.10: unified types into shared/types.ts, extracted duplicated helpers, centralized APP_VERSION constant, flow legend color fix, import error handling, WCAG AA contrast fix
-  - Sprint 4 (05bf392): onboarding tutorial (5-step walkthrough), service ownership + comments fields, badge generator + About section, dashboard redesign with quick start guide
-  - Sprint 3 (b435000): CSP headers, encrypted electron-store, error boundary + Sentry scaffold, 58 tests
-  - Sprint 2 (24adf55): costs panel with category aggregation + renewal alerts, GitHub modal with format validation, empty states with CTAs, API key toggle, analysis progress phases
-  - Sprint 1 (b6da4fc): IPC path validation, GitHub input validation (regex), token sanitization, AI pipeline resilience (checkpoint/restore, category validation, timeout handling), ARIA dialog roles, focus trap, keyboard focus indicators, file traversal depth limit (15 levels)
-  - CI (1469559): GitHub Actions build workflow for multi-platform builds (test + build matrix for ubuntu/windows/macos)
-  - v0.3.5 (5d69d6a): AI validation & refinement of heuristic results (single compact call: remove false positives, fix categories, adjust confidence, merge dupes)
-  - v0.3.4 (19150e8, c41c0be): custom frameless titlebar, themed confirmation dialogs replacing native OS dialogs
-  - v0.3.3 (54da84d): editable confidence field, re-analyze UX fix
-  - v0.3.2 (3241a64): stack source reference, linked/unlinked status, rescan confirmation
-  - v0.3.1 (85056d8): deep AI analysis (usage context, hidden service detection, smart graph edge inference)
-  - v0.3.0 (c9c045e): interactive flow graph (context menus, node editing, custom connections, graphStore)
-  - v0.2.x: semantic heuristic detection, recommended AI providers (Groq/Ollama), manual service form, extractor improvements (API call detection, IGNORED_DOMAINS, env URL patterns), code deduplication, 25+ tests
-  - v0.1 (71b9910): complete scaffolding, 11 analyzers, full React UI, WSL2 support, auto-download Electron binary
-  - Pre-v0.1: multi-ecosystem expansion (Python, Rust, Go, Terraform), CommonJS fix for Electron, WSL2 auto-detect
+Full spec: `SPEC.md` · User docs: `README.md`
 
 ---
 
-## Architecture decisions (do not reopen without reason)
+## How the app works
 
-| Decision | Rejected alternative | Reason |
-|---|---|---|
-| Semantic heuristics without fixed maps | Hardcoded per-service maps | Scalability — detects new services without code changes |
-| Optional AI with silent fallback | AI required | App must work 100% offline without config |
-| OpenAI-compatible API for AI | Provider-specific SDKs | One format covers Ollama, LM Studio, Groq, OpenAI, Mistral, Custom |
-| electron-store for AI settings | Manual JSON file | Integrated with Electron, no manual I/O |
-| `ignore` (npm) for .gitignore | Manual regex | Edge cases handled, it's the standard |
-| React Flow for the graph | D3.js | Better DX with React, native React nodes |
-| Zustand for global state | Redux / Context | Less boilerplate, sufficient for the scale |
-| Separate graphStore from main store | Single store | Graph has its own state lifecycle |
-| Node positions in config.graph | electron-store | Positions should be versioned with the repo |
-| Inline panel over modal/drawer | Modal | Doesn't interrupt graph visual flow |
-| Deep AI enriches, doesn't replace | AI replaces heuristics | Heuristics are fast and offline |
-| Stack Health Score in sidebar | Full panel | Quick-glance metric, not a destination |
-| safeStorage for encryption key | Hardcoded string | Machine-unique, no exposed key in source |
-| CSP production-only | CSP always | Vite HMR requires inline scripts + WS |
-| shell.openExternal via IPC | window.open | Protocol validation, Electron security best practice |
-| Local fonts, no CDN | Google Fonts @import | Works offline, no FOUC, no external dependency |
-| Zustand selectors in FlowGraph | Full store subscription | Prevents re-renders on every node drag |
-| Debounced persistToConfig | Immediate writes | Reduces disk I/O during drag-and-drop |
-| History snapshots for undo | Zustand middleware | Simpler, captures both graph + services state |
-| OSV.dev for vuln scanning | npm audit / Snyk | Free, no API key, supports 8 ecosystems |
-| @tanstack/react-virtual | Full render | Handles 500+ dependency rows efficiently |
-| Composite GitHub Action | Docker-based | Faster, no container overhead, reuses CLI |
+### Three ways to use it
 
----
+| Mode | What happens |
+|------|-------------|
+| **Scan (Open folder / GitHub)** | Fresh analysis from code. Previous edits NOT carried over. Detects monorepos automatically. |
+| **Import config** | Full restore from exported JSON. All services, graph layout, positions, edges restored exactly. Works without a repo. |
+| **CLI / GitHub Action** | Headless scan, outputs JSON or Markdown. No GUI, no config persistence. |
 
-## Project conventions
-
-- **Strict TypeScript** across the entire codebase (`strict: true`)
-- **Naming**: camelCase for variables/functions, PascalCase for components and types
-- **Imports**: absolute paths from `src/` configured in `tsconfig.json`
-- **IPC**: all channels defined in `electron/preload.ts`, never expose `ipcRenderer` directly
-- **Analysis**: pipeline flow extract → classify → dedup → (AI) → flow. Each step is pure and testable.
-- **No secrets in the repo**: GitHub token and AI API key stored with `electron-store` (safeStorage encrypted)
-- **Types**: canonical definitions in `shared/types.ts`, re-exported via `src/types.ts` and `electron/types.ts`
-- **SERVICE_CATEGORIES**: single source of truth in `shared/types.ts`, consumed everywhere via import
-- **Hover effects**: use Tailwind `hover:` classes, NOT JavaScript `onMouseEnter`/`onMouseLeave`
-- **Build artifacts**: `dist-electron/` generated by `tsc -p tsconfig.node.json`. Delete `tsbuildinfo` if stale. NEVER keep `shared/types.js` or `shared/types.d.ts` in repo root (gitignored, confuses Vite resolution).
-- **Tests**: vitest + @testing-library/react + jsdom. Exclude `dist-cli/` in vitest config.
-
----
-
-## Key files the agent must know
+### Analysis pipeline
 
 ```
-SPEC.md                              ← full specification
-CONTEXT.md                           ← this file (living memory)
-shared/types.ts                      ← canonical types + SERVICE_CATEGORIES const
-electron/types.ts                    ← re-exports shared/types
-electron/main.ts                     ← entry point + IPC handlers + safeStorage + CSP
-electron/preload.ts                  ← IPC bridge
-electron/analyzers/extractor.ts      ← evidence extraction from repo
-electron/analyzers/heuristic.ts      ← semantic classification
-electron/analyzers/deduplicator.ts   ← grouping and deduplication
-electron/analyzers/index.ts          ← pipeline orchestrator (monorepo-aware)
-electron/analyzers/flowInference.ts  ← flow graph inference
-electron/analyzers/vulnScanner.ts    ← vulnerability scanning (OSV.dev)
-electron/analyzers/monorepo.ts       ← monorepo detection (workspaces, pnpm, lerna, turbo, nx)
-electron/ai/provider.ts              ← OpenAI-compatible AI client + presets
-electron/ai/deepAnalyzer.ts          ← deep analysis: context, hidden detection, edge inference
-cli/index.ts                         ← CLI entry point (npx stackwatch)
-action.yml                           ← GitHub Action definition
-src/store/useStore.ts                ← global Zustand state
-src/store/graphStore.ts              ← graph state (debounced persist, history snapshots)
-src/store/historyStore.ts            ← undo/redo snapshot stacks
-src/store/toastStore.ts              ← toast notification state
-src/store/dialogStore.ts             ← promise-based confirm dialog
-src/utils/dates.ts                   ← shared daysUntil utility
-src/utils/healthScore.ts             ← Stack Health Score calculation
-src/utils/badge.ts                   ← SVG badge generator + shields.io URLs
-src/hooks/useDebounce.ts             ← generic debounce hook
-src/components/Skeleton.tsx          ← skeleton loaders for all panels
-src/components/Toast.tsx             ← toast notification container
-src/components/TopBar/TopBar.tsx     ← toolbar with share/badge, responsive layout
-src/components/FlowGraph/            ← interactive graph with selectors, undo support
-src/components/DepsPanel/            ← virtualized table, vuln scanning
-src/components/ServicesPanel/        ← cards with htmlFor labels, confidence badges
-scripts/validate-build.js            ← 29-point production build validator
-electron-builder.yml                 ← multi-platform build config
-build/                               ← icons, entitlements, build resources
-.github/workflows/build.yml          ← CI: test → build → validate → artifacts
-.github/workflows/stackwatch-scan.yml ← PR scanning workflow
+extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep analysis] → flowInference.ts
+     │                                                                                      │
+     ├── Evidences (env vars, imports, URLs, configs)                                       ├── FlowNodes
+     ├── Dependencies (npm, pip, cargo, go, etc.)                                           └── FlowEdges
+     └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
+
+- **Heuristic mode** (default): fast, offline, ~80% coverage
+- **Hybrid mode**: heuristics → AI validates/refines → AI deep analysis (~95% coverage)
+- AI is always optional — silent fallback to heuristic results on failure
+
+### Critical invariant: Service ↔ Graph Node 1:1
+
+Every service MUST have a corresponding graph node. This is enforced by:
+1. `flowInference.ts` creates a node per service
+2. `useStore.ensureFlowNodes()` adds extra nodes for manual services missing from pipeline
+3. Deleting a graph node also removes the linked service from useStore and config
+
+Never filter services out of the graph. Never create services without nodes.
+
+---
+
+## Architecture
+
+### Process model
+
+```
+┌─────────────────────────────────────────────┐
+│ Main Process (electron/main.ts)             │
+│  ├── IPC handlers (17 channels)             │
+│  ├── electron-store (safeStorage encrypted) │
+│  ├── Analyzers (pure Node.js)               │
+│  ├── AI client (OpenAI-compatible)          │
+│  ├── Vuln scanner (OSV.dev API)             │
+│  └── CSP headers (production only)          │
+├─────────────────────────────────────────────┤
+│ Preload (electron/preload.ts)               │
+│  └── contextBridge — exposes StackWatchAPI  │
+├─────────────────────────────────────────────┤
+│ Renderer (src/)                             │
+│  ├── Stores: useStore, graphStore,          │
+│  │   dialogStore, toastStore, historyStore  │
+│  ├── 4 panels: Services, Deps, Flow, Costs │
+│  ├── Skeleton loaders during analysis       │
+│  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)     │
+└─────────────────────────────────────────────┘
+```
+
+### Stores
+
+| Store | Purpose | Key details |
+|-------|---------|-------------|
+| `useStore` | Global state: services, deps, config, AI settings, analysis state | Merged services = inferred + manual + confidence overrides |
+| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. |
+| `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
+| `dialogStore` | Promise-based confirm dialogs | Returns button value string |
+| `toastStore` | Notifications | Auto-dismiss after 4s |
+
+### Security model
+
+- **Encryption**: `safeStorage.encryptString()` derives machine-unique key for `electron-store`. Fallback: `userData`-based seed.
+- **CSP**: `Content-Security-Policy` via `session.webRequest.onHeadersReceived`. Production only (disabled in dev for Vite HMR).
+- **External URLs**: all opened via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only). No `window.open()`.
+- **Path validation**: `validateRepoPath()` resolves and rejects `..` traversal.
+- **Secrets**: GitHub tokens and AI API keys stored in encrypted electron-store, never in config JSON.
+
+### Type system
+
+```
+shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all interfaces
+  ↗ src/types.ts         ← re-exports + declares Window.stackwatch
+  ↗ electron/types.ts    ← re-exports
+```
+
+`SERVICE_CATEGORIES` is a `const` array — the `ServiceCategory` union type is derived from it. All consumers import from `shared/types.ts` (or its re-exports). There is NO duplicated category list anywhere.
+
+**Build artifact warning**: Vite resolves `shared/types.ts` directly. If a stale `shared/types.js` exists in the repo root, Vite will pick it up instead → app breaks. This file is gitignored. If it appears, delete it.
+
+---
+
+## Key files
+
+### Electron (main process)
+| File | Purpose |
+|------|---------|
+| `electron/main.ts` | Entry point, IPC handlers, safeStorage, CSP, window management |
+| `electron/preload.ts` | IPC bridge via contextBridge (StackWatchAPI) |
+| `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. |
+| `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
+| `electron/analyzers/heuristic.ts` | Semantic classification into 19 categories |
+| `electron/analyzers/deduplicator.ts` | Service grouping, merge, confidence upgrade |
+| `electron/analyzers/flowInference.ts` | Node/edge generation from services + deps |
+| `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
+| `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
+| `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types |
+| `electron/ai/provider.ts` | OpenAI-compatible client + 6 provider presets |
+
+### Renderer (src/)
+| File | Purpose |
+|------|---------|
+| `src/App.tsx` | Layout, panel routing, undo/redo keyboard handler, skeleton switching |
+| `src/store/useStore.ts` | Global state, analysis flow, service CRUD, import/export |
+| `src/store/graphStore.ts` | React Flow state, debounced persist, history integration |
+| `src/store/historyStore.ts` | Undo/redo snapshot stacks (50 max) |
+| `src/store/toastStore.ts` | Toast notifications (4s auto-dismiss) |
+| `src/store/dialogStore.ts` | Promise-based confirm dialog |
+| `src/utils/healthScore.ts` | Stack Score 0-100 (cost 30%, owner 25%, reviewed 25%, graph 20%) |
+| `src/utils/badge.ts` | SVG badge generator + shields.io URLs for Stack Score |
+| `src/utils/dates.ts` | Shared `daysUntil()` utility |
+| `src/hooks/useDebounce.ts` | Generic debounce hook |
+| `src/components/Skeleton.tsx` | Skeleton loaders for all 4 panels |
+| `src/components/Toast.tsx` | Toast notification container |
+| `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
+| `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
+| `src/components/ServicesPanel/` | Service cards, form with htmlFor labels, confidence badges |
+| `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
+
+### CLI & CI
+| File | Purpose |
+|------|---------|
+| `cli/index.ts` | CLI entry point. Built to `dist-cli/` via `npm run build:cli` |
+| `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
+
+### Build & validation
+| File | Purpose |
+|------|---------|
+| `electron-builder.yml` | macOS dmg+zip, Windows nsis+portable, Linux AppImage+deb |
+| `build/` | icon.svg, entitlements.mac.plist, Linux icon dir |
+| `scripts/validate-build.js` | 29-point production build checker |
+| `.github/workflows/build.yml` | CI: test → build → validate → upload artifacts (3 platforms) |
+
+---
+
+## Build & run
+
+| Command | What it does |
+|---------|-------------|
+| `npm run dev` | Vite + Electron in dev mode with HMR |
+| `npm run build:prod` | TSC + Vite only (fast, no packaging) |
+| `npm run build:dist` | Full electron-builder (distributable) |
+| `npm run build` | Alias for `build:dist` |
+| `npm run build:cli` | Build CLI to `dist-cli/` |
+| `npm run validate` | 29-point build validation |
+| `npm test` | vitest (135 tests, 12 suites) |
+
+**Common pitfalls**:
+- Stale `dist-electron/tsconfig.node.tsbuildinfo` → delete and rebuild
+- Stale `shared/types.js` in repo root → delete (gitignored, breaks Vite)
+- `dist-cli/` must be excluded from vitest config
+
+---
+
+## Tests
+
+135 tests across 12 suites. vitest + @testing-library/react + jsdom.
+
+| Suite | Count | Coverage |
+|-------|-------|----------|
+| Extractor | 26 | File types, URL/env/import patterns |
+| Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
+| Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
+| Heuristic | 13 | Category mapping, confidence, name extraction |
+| ServiceCard | 10 | Rendering, interactions, confidence, a11y |
+| TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
+| useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
+| Flow inference | 9 | Node types, edge routing, layout |
+| ContextMenu | 7 | ARIA roles, click/Escape, dividers |
+| Deduplicator | 6 | Grouping, merging, confidence upgrades |
+| Pipeline | 6 | End-to-end, AI checkpoint/restore |
+| daysUntil | 3 | Today, future, past |
 
 ---
 
 ## Patterns to follow
 
 ### Adding a new analyzer
-1. Add extraction logic in `electron/analyzers/extractor.ts` (new file type or pattern)
-2. Add classification rules in `electron/analyzers/heuristic.ts` if needed
+1. Add extraction in `electron/analyzers/extractor.ts`
+2. Add classification in `electron/analyzers/heuristic.ts` if needed
 3. Add tests in `electron/analyzers/__tests__/`
-4. The pipeline in `index.ts` picks up new evidence types automatically
-
-### Adding a new service to automatic detection
-Don't. The system uses semantic heuristics — it detects services by name patterns, not hardcoded lists. If a service isn't detected, improve the extraction patterns or heuristic rules.
-
-### Adding a new dashboard panel
-1. Create component in `src/components/NewPanel/`
-2. Add panel type to `ActivePanel` union in `src/store/useStore.ts`
-3. Add tab button in Sidebar navigation
-4. Add panel rendering in `App.tsx` `renderPanel()`
-5. Add skeleton loader in `src/components/Skeleton.tsx`
+4. Pipeline picks up new evidence automatically
 
 ### Adding a new IPC channel
-1. Add handler in `electron/main.ts`
-2. Add method in `electron/preload.ts` api object
-3. Add type to `StackWatchAPI` in `shared/types.ts`
-4. Build artifacts will be auto-generated on next `tsc -p tsconfig.node.json`
+1. Handler in `electron/main.ts`
+2. Method in `electron/preload.ts`
+3. Type in `StackWatchAPI` in `shared/types.ts`
 
-### Adding undo support to a new operation
-1. Call `useHistoryStore.getState().pushSnapshot(label, { nodes, edges, services })` BEFORE the mutation
-2. Do NOT add to high-frequency operations (drag, resize, init)
+### Adding a new panel
+1. Component in `src/components/NewPanel/`
+2. Panel type in `ActivePanel` union (`useStore.ts`)
+3. Tab in `Sidebar.tsx`
+4. Render in `App.tsx` `renderPanel()`
+5. Skeleton in `Skeleton.tsx`
 
----
-
-## What NOT to do (lessons learned)
-
-- **Do not use hardcoded service maps** — the heuristic system classifies by semantics
-- **Do not use `nodeIntegration: true`** in webPreferences — all IPC via `contextBridge`
-- **Do not parse `.env` with custom regex** — use line-by-line parsing with split on `=`
-- **Do not block the main process** with synchronous analysis — use `fs.promises`
-- **Do not hardcode paths** — always use `path.join`
-- **Do not assume AI is available** — always fallback to heuristic results
-- **Do not use `window.open()`** — use `shell.openExternal` via IPC for security
-- **Do not use Google Fonts CDN** — fonts are bundled locally in `src/assets/fonts/`
-- **Do not use JS hover handlers** — use Tailwind `hover:` classes instead
-- **Do not keep `shared/types.js` in repo root** — it's a build artifact that confuses Vite resolution. It's gitignored.
-- **Do not skip `tsbuildinfo` cleanup** — if electron build artifacts are stale, delete `dist-electron/tsconfig.node.tsbuildinfo` and rebuild
-- **Do not subscribe to full Zustand stores** in performance-critical components — use selectors
+### Adding undo support
+1. `useHistoryStore.getState().pushSnapshot(label, { nodes, edges, services })` BEFORE the mutation
+2. Skip high-frequency ops (drag, resize, init)
 
 ---
 
-## Product context (for UX decisions)
+## Architecture decisions (do not reopen without reason)
 
-- **Target user**: any developer or small team managing a software project
-- **Main pain point**: not knowing which services are active, which are paid, when they renew
-- **Primary use case**: open the app at the start of the day to see the project's status
-- **Secondary use case**: onboarding a new developer to the team
-- **Tertiary use case**: CI/CD scanning via CLI or GitHub Action
+| Decision | Reason |
+|----------|--------|
+| Semantic heuristics, not fixed maps | Detects new services without code changes |
+| Optional AI with silent fallback | Must work 100% offline |
+| OpenAI-compatible API format | One format covers all providers |
+| Separate graphStore from useStore | Different lifecycle, interactive state |
+| safeStorage for encryption | Machine-unique, no key in source |
+| CSP production-only | Vite HMR needs inline scripts |
+| shell.openExternal via IPC | Protocol validation, security |
+| Local fonts bundled | Works offline, no FOUC |
+| Zustand selectors in FlowGraph | Prevents re-renders on drag |
+| Debounced persistToConfig | Reduces disk I/O |
+| History snapshots for undo | Captures graph + services together |
+| OSV.dev for vulns | Free, no API key, 8 ecosystems |
+| @tanstack/react-virtual | Handles 500+ rows efficiently |
+| Composite GitHub Action | Faster than Docker, reuses CLI |
 
 ---
 
-## Open questions (for future sessions)
+## What NOT to do
 
-- Renewal alerts as OS notifications (Electron Notification API)?
-- Multi-project dashboard (open multiple repos simultaneously)?
-- Stack Diff between scans (track changes over time)?
-- Should `stackwatch.config.json` be encrypted for sensitive data?
-- Light theme option?
+- **No hardcoded service maps** — semantic heuristics only
+- **No `nodeIntegration: true`** — all IPC via contextBridge
+- **No `window.open()`** — use shell.openExternal via IPC
+- **No Google Fonts CDN** — fonts bundled in `src/assets/fonts/`
+- **No JS hover handlers** — use Tailwind `hover:` classes
+- **No `shared/types.js` in repo root** — delete if it appears (breaks Vite)
+- **No full Zustand store subscriptions** in perf-critical components — use selectors
+- **No synchronous fs** in main process — use `fs.promises`
+- **No assuming AI is available** — always fallback to heuristics
+- **No skipping tsbuildinfo cleanup** — stale cache breaks builds
 
 ---
 
-## How to use this file as an agent
+## Product context
 
-1. **Read this file first** at the start of every session to understand project state
-2. **Check "Current development state"** to know what was done last and what's next
-3. **Check "Architecture decisions"** before proposing structural changes
-4. **Check "What NOT to do"** to avoid known pitfalls
-5. **Update this file** after making significant changes — keep the living memory current
+- **Target user**: developer or small team managing a software project
+- **Pain point**: not knowing which services are active, paid, or expiring
+- **Primary use**: daily check on project infrastructure status
+- **Secondary use**: onboarding new developers to a codebase
+- **Tertiary use**: CI/CD scanning and PR reporting
+
+---
+
+## Open questions
+
+- Renewal alerts as OS desktop notifications?
+- Multi-project dashboard (multiple repos at once)?
+- Stack Diff between scans (change tracking over time)?
+- Light theme?
+- Encrypt sensitive fields in `stackwatch.config.json`?
