@@ -160,7 +160,11 @@ export const useStore = create<StoreState>((set, get) => ({
       let config: UserConfig | null = null;
       try {
         config = await window.stackwatch.loadConfig(path);
-        if (config) set({ config });
+        if (config) {
+          // Drop saved graph positions so dagre recalculates a fresh layout
+          const { graph: _discardGraph, ...configWithoutGraph } = config;
+          set({ config: configWithoutGraph as UserConfig });
+        }
       } catch {
         // Config may not exist yet
       }
@@ -223,6 +227,11 @@ export const useStore = create<StoreState>((set, get) => ({
       const result = await window.stackwatch.analyzeGitHub(repo, token);
       set({ analysisPhase: 'Loading configuration...' });
       const config = get().config;
+      // Drop saved graph positions so dagre recalculates a fresh layout
+      if (config?.graph) {
+        const { graph: _discardGraph, ...configWithoutGraph } = config;
+        set({ config: configWithoutGraph as UserConfig });
+      }
       const manualServices = config?.services ?? [];
       const allGhServices = mergeServices(result.services, manualServices, config?.confidenceOverrides);
 
