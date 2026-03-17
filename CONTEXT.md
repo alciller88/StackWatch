@@ -39,7 +39,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine
 ```
 
 - **Heuristic mode** (default): fast, offline, ~80% coverage, semantic evidence scoring (best score per unique evidence type, not additive per instance), thresholds: <6 discard, 6-10 low/AI-validated, >10 high
-- **Hybrid mode**: heuristics → AI filter (≤40 services, targets low/needsReview only; high confidence passes through) → AI refine (medium/low only) → AI deep analysis (~95% coverage)
+- **Hybrid mode**: heuristics → AI filter (≤40 services, reviews ALL — removes generic names even at high confidence) → AI refine (medium/low only) → AI deep analysis (~95% coverage)
 - AI is always optional — silent fallback to heuristic results on failure
 
 ### Critical invariant: Service ↔ Graph Node 1:1
@@ -138,7 +138,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
 | `electron/analyzers/zombieDetector.ts` | Zombie detection: git log activity per service, stale/zombie classification |
 | `electron/analyzers/scoreHistory.ts` | Score history: persist health scores to `.stackwatch/score-history.json` |
-| `electron/ai/deepAnalyzer.ts` | AI: false-positive filter (≤40 services, targets low/needsReview only), refine services (medium/low only, high skipped), usage context, hidden detection, edge types, alternative suggestions |
+| `electron/ai/deepAnalyzer.ts` | AI: false-positive filter (≤40 services, reviews ALL including high — catches generic names like OAuth2/Connect), refine services (medium/low only, high skipped), usage context, hidden detection, edge types, alternative suggestions |
 | `electron/ai/alternativeSuggester.ts` | AI: suggest cheaper/open-source alternatives for detected services |
 | `electron/exporters/htmlExporter.ts` | Self-contained HTML report generator (dark theme, print-friendly) |
 | `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |

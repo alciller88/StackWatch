@@ -317,28 +317,25 @@ describe('filterFalsePositivesWithAI', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps high-confidence services and AI-validated candidates', async () => {
-    // Candidates (non-high) are is-e2e(low) and exit-code(low)
-    // AI says only is-e2e is real (unlikely, but testing the mechanism)
-    vi.stubGlobal('fetch', mockFetchResponse('["is-e2e"]'))
+  it('filters ALL services including high-confidence generic names', async () => {
+    // AI reviews everything — keeps redis+stripe, removes generic oauth2+connect
+    vi.stubGlobal('fetch', mockFetchResponse('["redis", "stripe"]'))
 
     const services = [
       mockService('redis', 'Redis', 'database', 'high'),
-      mockService('is-e2e', 'Is E2e', 'other', 'low'),
+      mockService('oauth2', 'Oauth2', 'auth', 'high'),
       mockService('stripe', 'Stripe', 'payments', 'high'),
-      mockService('exit-code', 'Exit Code', 'other', 'low'),
+      mockService('connect', 'Connect', 'other', 'low'),
     ]
 
     const result = await filterFalsePositivesWithAI(services, testProvider)
 
-    // redis(high) + stripe(high) always kept + is-e2e validated by AI
-    expect(result).toHaveLength(3)
-    expect(result.map(s => s.id)).toEqual(['redis', 'stripe', 'is-e2e'])
+    expect(result).toHaveLength(2)
+    expect(result.map(s => s.id)).toEqual(['redis', 'stripe'])
   })
 
-  it('skips AI call when all services are high confidence', async () => {
-    const fetchSpy = vi.fn()
-    vi.stubGlobal('fetch', fetchSpy)
+  it('keeps all services if AI returns all IDs', async () => {
+    vi.stubGlobal('fetch', mockFetchResponse('["redis", "stripe"]'))
 
     const services = [
       mockService('redis', 'Redis', 'database', 'high'),
@@ -348,7 +345,6 @@ describe('filterFalsePositivesWithAI', () => {
     const result = await filterFalsePositivesWithAI(services, testProvider)
 
     expect(result).toHaveLength(2)
-    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('returns original services when AI returns malformed JSON', async () => {

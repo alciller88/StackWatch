@@ -433,19 +433,21 @@ Return ONLY valid JSON. Empty {} if no changes needed.
 // the IDs of services that are real external dependencies. Runs before
 // refineServicesWithAI (which does heavier per-service work).
 
-const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert reviewing low-confidence detections from a codebase scan.
+const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert reviewing auto-detected services from a codebase scan.
 
-These services were detected with WEAK evidence and need your validation.
-Decide which ones are REAL external services (third-party SaaS, API,
-platform, database, or infrastructure tool that exists as an independent
-product) and which are false positives.
+Your job: decide which detections are REAL external services and which are false positives.
 
-Common false positives at low confidence:
-- Internal app modules mistaken for services
-- Generic names that aren't real products
-- The project's own brand or internal identifiers
-- Config parameters that look like service names
-- Duplicate detections of a service already confirmed at higher confidence
+A REAL external service is a third-party SaaS, API, platform, database,
+or infrastructure tool that exists as an independent product with its own
+website, documentation, and billing (e.g. Stripe, PostgreSQL, Sentry, Vercel).
+
+These are NOT real external services — REMOVE them:
+- Generic technical concepts: OAuth2, Connect, Embed, Environment, Docs, Admin, Session, Worker
+- Programming abstractions: Event, Stream, Buffer, Handler, Middleware, Router, Resolver
+- Internal app modules or the project's own brand/components
+- Config parameters or feature flags that look like service names
+- Build tools, linters, formatters (ESLint, Prettier, Webpack, Babel)
+- Library utilities that aren't services (Lodash, Moment, Zod, Axios)
 
 Respond ONLY with a JSON array of service IDs to KEEP. No explanation,
 no markdown, no preamble. Example: ["id1", "id2", "id3"]`
@@ -459,23 +461,17 @@ export async function filterFalsePositivesWithAI(
   // Skip AI filter if too many services (avoid expensive calls / 429s)
   if (services.length > 40) return services
 
-  // Separate high-confidence from candidates needing review
-  const highConfidence = services.filter(s => s.confidence === 'high')
-  const candidates = services.filter(s => s.confidence !== 'high')
-
-  // If no candidates need review, skip the AI call entirely
-  if (candidates.length === 0) return services
-
-  const payload = candidates.map(s => ({
+  // Send ALL services to AI — even high-confidence ones can be generic
+  // names (e.g. "OAuth2", "Connect") that slipped through with strong evidence
+  const payload = services.map(s => ({
     id: s.id,
     name: s.name,
     category: s.category,
     confidence: s.confidence,
-    needsReview: s.needsReview,
     inferredFrom: s.inferredFrom,
   }))
 
-  const userPrompt = `These are the low/medium confidence detections that need validation. High-confidence services have already been validated.\n\nReview and return only the IDs of real external services:\n${JSON.stringify(payload)}`
+  const userPrompt = `Review ALL these detected services and return only the IDs of real external services (remove generic concepts, internal modules, and non-products):\n${JSON.stringify(payload)}`
 
   // Build messages with system + user prompt
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -520,13 +516,12 @@ export async function filterFalsePositivesWithAI(
   }
 
   const keepSet = new Set(keepIds as string[])
-  const filteredCandidates = candidates.filter(s => keepSet.has(s.id))
+  const filtered = services.filter(s => keepSet.has(s.id))
 
-  // Safety: if AI removed ALL candidates, that's likely wrong — fallback
-  if (filteredCandidates.length === 0 && candidates.length > 0) return services
+  // Safety: if AI removed everything, that's clearly wrong — fallback
+  if (filtered.length === 0) return services
 
-  // Merge high-confidence (always kept) + AI-validated candidates
-  return [...highConfidence, ...filteredCandidates]
+  return filtered
 }
 
 // ── Orchestrator ──
