@@ -174,7 +174,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (135 tests, 12 suites) |
+| `npm test` | vitest (241 tests, 18 suites) |
 
 **Common pitfalls**:
 - Stale `dist-electron/tsconfig.node.tsbuildinfo` → delete and rebuild
@@ -185,16 +185,22 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-135 tests across 12 suites. vitest + @testing-library/react + jsdom.
+241 tests across 18 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
+| graphStore | 27 | initFromAnalysis, node/edge CRUD, connect, exclude, resetLayout, persistToConfig |
+| vulnScanner | 27 | Ecosystem mapping, batching, OSV parsing, severity, error handling |
 | Extractor | 26 | File types, URL/env/import patterns |
 | Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
+| badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
 | Heuristic | 13 | Category mapping, confidence, name extraction |
-| ServiceCard | 10 | Rendering, interactions, confidence, a11y |
 | TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
+| monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
+| historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
+| healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
+| ServiceCard | 10 | Rendering, interactions, confidence, a11y |
 | useStore | 10 | mergeServices, ensureConfig, ensureFlowNodes, CRUD |
 | Flow inference | 9 | Node types, edge routing, layout |
 | ContextMenu | 7 | ARIA roles, click/Escape, dividers |
