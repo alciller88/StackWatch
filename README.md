@@ -424,7 +424,7 @@ StackWatch/
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
 - [x] Badge generator + About section in Settings
-- [ ] Production build validation
+- [x] Production build validation (29-point checker script)
 - [x] UI component tests (ServiceCard, TopBar, ContextMenu)
 - [x] Undo/redo with Ctrl+Z/Ctrl+Shift+Z (50-entry history)
 - [x] Skeleton loaders during analysis
@@ -432,8 +432,10 @@ StackWatch/
 - [x] List virtualization (DepsPanel with @tanstack/react-virtual)
 - [x] CLI tool: `npx stackwatch` (scan, --json, --md output)
 - [x] GitHub Action for PR scanning with auto-comments
-- [ ] macOS / Windows / Linux distributable builds
-- [ ] Monorepo support
+- [x] macOS / Windows / Linux distributable builds (electron-builder: dmg, nsis, AppImage, deb)
+- [x] Monorepo support (npm workspaces, pnpm, lerna, turborepo, nx)
+- [x] Dynamic Stack Score badge (SVG generator + shields.io)
+- [x] Vulnerability detection (OSV.dev API, 8 ecosystems)
 
 ---
 

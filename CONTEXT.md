@@ -132,10 +132,26 @@ Full spec: `SPEC.md`
 - Stale `shared/types.js` build artifact removed (was confusing Vite module resolution)
 - Stale `tsbuildinfo` causing empty `dist-electron/shared/` output
 
-- **Previous milestones**:
-  - v0.4.0: Stack Health Score, session restore, demo mode, share badges, cancel button, score reactivity, false positive filtering, 102 tests
-  - v0.3.10: unified types, extracted helpers, removed dead code, WCAG AA contrast fix
-  - v0.3.0–v0.3.9: interactive flow graph, deep AI analysis, confidence levels, costs panel, frameless titlebar, CSP, encrypted storage, onboarding tutorial, error boundary
+- **Previous milestones** (full history):
+  - v0.4.0 (bba5ed6): Stack Health Score in sidebar, session restore ("Reopen" banner), demo mode, share dropdown (badge markdown/HTML, stack summary), ServiceForm validation, accessible ServiceCards (role=button, tabIndex), aria-current on sidebar, role=switch on AI toggle, store tests (mergeServices, ensureFlowNodes, loadDemo, CRUD), deepAnalyzer tests (runDeepAnalysis, hidden services, edge types)
+  - Pre-v0.4.0 fixes (2feca26): score reactivity (reads from graphStore), graph↔service sync (delete node removes service), expanded GENERIC_NAMES filter (60+ names), Node.js builtins blocklist, template variable ($var) rejection, post-AI sanity filter, cancel button styling
+  - Build infra (9f6ddb3, baa9f4b): gitignore shared/ build artifacts, widen rootDir in tsconfig.node.json to include shared/
+  - Import/export fixes (ffa3729–21f2a91): import restores service↔node linkage, standalone import without repo, no disk writes on import, versioned export filenames, 1:1 Services↔Graph mapping guaranteed, overlapping node prevention on import
+  - v0.3.10: unified types into shared/types.ts, extracted duplicated helpers, centralized APP_VERSION constant, flow legend color fix, import error handling, WCAG AA contrast fix
+  - Sprint 4 (05bf392): onboarding tutorial (5-step walkthrough), service ownership + comments fields, badge generator + About section, dashboard redesign with quick start guide
+  - Sprint 3 (b435000): CSP headers, encrypted electron-store, error boundary + Sentry scaffold, 58 tests
+  - Sprint 2 (24adf55): costs panel with category aggregation + renewal alerts, GitHub modal with format validation, empty states with CTAs, API key toggle, analysis progress phases
+  - Sprint 1 (b6da4fc): IPC path validation, GitHub input validation (regex), token sanitization, AI pipeline resilience (checkpoint/restore, category validation, timeout handling), ARIA dialog roles, focus trap, keyboard focus indicators, file traversal depth limit (15 levels)
+  - CI (1469559): GitHub Actions build workflow for multi-platform builds (test + build matrix for ubuntu/windows/macos)
+  - v0.3.5 (5d69d6a): AI validation & refinement of heuristic results (single compact call: remove false positives, fix categories, adjust confidence, merge dupes)
+  - v0.3.4 (19150e8, c41c0be): custom frameless titlebar, themed confirmation dialogs replacing native OS dialogs
+  - v0.3.3 (54da84d): editable confidence field, re-analyze UX fix
+  - v0.3.2 (3241a64): stack source reference, linked/unlinked status, rescan confirmation
+  - v0.3.1 (85056d8): deep AI analysis (usage context, hidden service detection, smart graph edge inference)
+  - v0.3.0 (c9c045e): interactive flow graph (context menus, node editing, custom connections, graphStore)
+  - v0.2.x: semantic heuristic detection, recommended AI providers (Groq/Ollama), manual service form, extractor improvements (API call detection, IGNORED_DOMAINS, env URL patterns), code deduplication, 25+ tests
+  - v0.1 (71b9910): complete scaffolding, 11 analyzers, full React UI, WSL2 support, auto-download Electron binary
+  - Pre-v0.1: multi-ecosystem expansion (Python, Rust, Go, Terraform), CommonJS fix for Electron, WSL2 auto-detect
 
 ---
 
