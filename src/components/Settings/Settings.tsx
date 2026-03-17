@@ -3,11 +3,20 @@ import { useStore } from '../../store/useStore';
 import type { AIProvider, AISettings, ScanMode } from '../../types';
 import { APP_VERSION } from '../../constants';
 
+const LEGACY_PRESET_MAP: Record<string, string> = {
+  'Groq': 'Cloud (Groq)',
+  'Ollama': 'Local',
+  'LM Studio': 'Local',
+  'OpenAI': 'Custom',
+  'Mistral': 'Custom',
+  'Anthropic': 'Custom',
+};
+
 export const Settings: React.FC = () => {
   const { aiSettings, loadAISettings, saveAISettings, testAIConnection } = useStore();
   const [presets, setPresets] = useState<AIProvider[]>([]);
   const [enabled, setEnabled] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('Groq');
+  const [selectedPreset, setSelectedPreset] = useState('Cloud (Groq)');
 
   const getPreset = (name: string): AIProvider | undefined => {
     return presets.find(p => p.name === name);
@@ -32,7 +41,9 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     if (aiSettings) {
       setEnabled(aiSettings.enabled);
-      setSelectedPreset(aiSettings.provider.name);
+      const savedName = aiSettings.provider.name;
+      const mappedName = LEGACY_PRESET_MAP[savedName] ?? savedName;
+      setSelectedPreset(mappedName);
       setBaseUrl(aiSettings.provider.baseUrl);
       setModel(aiSettings.provider.model);
       setApiKey(aiSettings.provider.apiKey ?? '');
@@ -84,6 +95,7 @@ export const Settings: React.FC = () => {
   const currentPreset = getPreset(selectedPreset);
   const isLocal = currentPreset?.localOnly ?? false;
   const isCustom = selectedPreset === 'Custom';
+  const isCloud = selectedPreset === 'Cloud (Groq)';
 
   const inputClass = "w-full border rounded-sm px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]";
   const inputStyle = { background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' };
@@ -122,9 +134,9 @@ export const Settings: React.FC = () => {
 
           {enabled && (
             <>
-              {/* Provider Selection — card list */}
+              {/* Provider Selection */}
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Provider</label>
+                <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Provider</label>
                 <div className="space-y-2">
                   {presets.map((p) => (
                     <button
@@ -139,18 +151,18 @@ export const Settings: React.FC = () => {
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[12px] font-medium text-[var(--color-text-primary)]">{p.name}</span>
-                        {p.recommended && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-[#1a3a1a] text-[#3d8c5e] border border-[#2a5a2a] font-mono tracking-widest">
-                            Recommended
-                          </span>
-                        )}
-                        {p.localOnly && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-[#1a2a3a] text-[#4a8ab0] border border-[#2a4a6a] font-mono tracking-widest">
+                        {p.recommended && p.localOnly && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[#1a2a3a] text-[#4a8ab0] border border-[#2a4a6a] font-mono tracking-widest">
                             Local
                           </span>
                         )}
+                        {p.recommended && !p.localOnly && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[#1a3a1a] text-[#3d8c5e] border border-[#2a5a2a] font-mono tracking-widest">
+                            Free
+                          </span>
+                        )}
                       </div>
-                      <p className="font-mono text-[10px] text-[var(--color-text-muted)] mt-0.5">{p.description}</p>
+                      <p className="font-mono text-[11px] text-[var(--color-text-muted)] mt-0.5">{p.description}</p>
                     </button>
                   ))}
                 </div>
@@ -158,27 +170,25 @@ export const Settings: React.FC = () => {
 
               {/* Provider-specific fields */}
               <div className="space-y-4 pt-1">
-                {/* API Key — hidden for local providers */}
-                {!isLocal && !isCustom && (
+                {/* Cloud (Groq): API Key */}
+                {isCloud && (
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">API Key</label>
-                      {currentPreset?.setupUrl && (
-                        <button
-                          type="button"
-                          onClick={() => window.stackwatch.openExternalUrl(currentPreset.setupUrl!)}
-                          className="text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer p-0"
-                        >
-                          {selectedPreset === 'Groq' ? 'Get free API key' : 'Get API key'} &rarr;
-                        </button>
-                      )}
+                      <label className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)]">API Key</label>
+                      <button
+                        type="button"
+                        onClick={() => window.stackwatch.openExternalUrl('https://console.groq.com/keys')}
+                        className="text-[11px] text-[var(--color-accent)] hover:opacity-80 transition-colors bg-transparent border-none cursor-pointer p-0"
+                      >
+                        Get free API key &rarr;
+                      </button>
                     </div>
                     <div className="relative">
                       <input
                         type={showApiKey ? 'text' : 'password'}
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="sk-..."
+                        placeholder="gsk_..."
                         className={inputClass}
                         style={{ ...inputStyle, paddingRight: '2.5rem' }}
                       />
@@ -203,11 +213,53 @@ export const Settings: React.FC = () => {
                   </div>
                 )}
 
-                {/* Custom: API key + Base URL + Model all editable */}
+                {/* Local: Base URL + Model + setup instructions */}
+                {isLocal && (
+                  <>
+                    <div>
+                      <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Base URL</label>
+                      <input
+                        type="text"
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
+                        placeholder="http://localhost:11434/v1"
+                        className={inputClass}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Model</label>
+                      <input
+                        type="text"
+                        value={model}
+                        onChange={(e) => setModel(e.target.value)}
+                        placeholder="llama3.2"
+                        className={inputClass}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[11px] text-[#4a8ab0] space-y-2">
+                      <div>
+                        <p className="font-medium">Ollama (default, port 11434):</p>
+                        <p>1. Install from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://ollama.com')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">ollama.com</button></p>
+                        <p>2. Run: <code className="bg-[#1a2a3a] px-1">ollama pull llama3.2</code></p>
+                        <p>3. Ollama runs automatically on port 11434</p>
+                      </div>
+                      <div className="border-t border-[#1e3a4e] pt-2">
+                        <p className="font-medium">LM Studio (port 1234):</p>
+                        <p>1. Download from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://lmstudio.ai')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">lmstudio.ai</button></p>
+                        <p>2. Load any GGUF model and start the local server</p>
+                        <p>3. Change Base URL above to <code className="bg-[#1a2a3a] px-1">http://localhost:1234/v1</code></p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Custom: API key + Base URL + Model */}
                 {isCustom && (
                   <>
                     <div>
-                      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">API Key (optional)</label>
+                      <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">API Key (optional)</label>
                       <div className="relative">
                         <input
                           type={showApiKey ? 'text' : 'password'}
@@ -237,79 +289,37 @@ export const Settings: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Base URL</label>
+                      <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Base URL</label>
                       <input
                         type="text"
                         value={baseUrl}
                         onChange={(e) => setBaseUrl(e.target.value)}
-                        placeholder="http://localhost:11434/v1"
+                        placeholder="https://api.openai.com/v1"
                         className={inputClass}
                         style={inputStyle}
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Model</label>
+                      <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Model</label>
                       <input
                         type="text"
                         value={model}
                         onChange={(e) => setModel(e.target.value)}
-                        placeholder="llama3.2"
+                        placeholder="gpt-4o-mini"
                         className={inputClass}
                         style={inputStyle}
                       />
                     </div>
-                  </>
-                )}
-
-                {/* Local providers: Base URL + Model editable for fine-tuning */}
-                {isLocal && (
-                  <>
-                    <div>
-                      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Base URL</label>
-                      <input
-                        type="text"
-                        value={baseUrl}
-                        onChange={(e) => setBaseUrl(e.target.value)}
-                        placeholder="http://localhost:11434/v1"
-                        className={inputClass}
-                        style={inputStyle}
-                      />
+                    <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[11px] text-[#4a8ab0]">
+                      <p>Works with any OpenAI-compatible API: OpenAI, Mistral, Anthropic, Together, and others.</p>
                     </div>
-                    <div>
-                      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1.5">Model</label>
-                      <input
-                        type="text"
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                        placeholder="llama3.2"
-                        className={inputClass}
-                        style={inputStyle}
-                      />
-                    </div>
-                    {/* Inline setup instructions */}
-                    {selectedPreset === 'Ollama' && (
-                      <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[10px] text-[#4a8ab0] space-y-1">
-                        <p className="font-medium">Setup:</p>
-                        <p>1. Install Ollama from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://ollama.com')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">ollama.com</button></p>
-                        <p>2. Run: <code className="bg-[#1a2a3a] px-1">ollama pull llama3.2</code></p>
-                        <p>3. Ollama runs automatically on port 11434</p>
-                      </div>
-                    )}
-                    {selectedPreset === 'LM Studio' && (
-                      <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[10px] text-[#4a8ab0] space-y-1">
-                        <p className="font-medium">Setup:</p>
-                        <p>1. Download from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://lmstudio.ai')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">lmstudio.ai</button></p>
-                        <p>2. Load any GGUF model</p>
-                        <p>3. Start the local server (port 1234)</p>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
 
               {/* Scan Mode */}
               <div>
-                <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Scan Mode</label>
+                <label className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-2">Scan Mode</label>
                 <div className="space-y-2">
                   {([
                     {
@@ -343,12 +353,12 @@ export const Settings: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-[12px] font-medium text-[var(--color-text-primary)]">{opt.label}</span>
                           {!opt.alwaysAvailable && !enabled && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)] font-mono tracking-widest">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border border-[var(--color-border)] font-mono tracking-widest">
                               Requires AI
                             </span>
                           )}
                         </div>
-                        <p className="font-mono text-[10px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</p>
+                        <p className="font-mono text-[11px] text-[var(--color-text-muted)] mt-0.5">{opt.desc}</p>
                       </button>
                     );
                   })}
@@ -357,7 +367,7 @@ export const Settings: React.FC = () => {
 
               {/* Privacy note */}
               <div className="rounded-none px-4 py-2.5 text-[11px] text-[var(--color-text-muted)]" style={{ background: 'var(--color-bg-hover)', borderColor: 'var(--color-border)', borderWidth: '1px', borderStyle: 'solid' }}>
-                Groq is free and requires no credit card. Ollama and LM Studio process your code locally without sending data to third parties.
+                Local models process your code entirely on your machine. Groq is free and requires no credit card.
               </div>
 
               {/* Test Connection + Save */}
@@ -365,14 +375,14 @@ export const Settings: React.FC = () => {
                 <button
                   onClick={handleTest}
                   disabled={testStatus === 'testing' || !baseUrl || !model}
-                  className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50 rounded-none transition-colors"
+                  className="px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50 rounded-none transition-colors"
                 >
                   {testStatus === 'testing' ? 'Testing...' : 'Test Connection'}
                 </button>
 
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
+                  className="px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
                 >
                   {saved ? 'Saved!' : 'Save'}
                 </button>
@@ -392,7 +402,7 @@ export const Settings: React.FC = () => {
           {!enabled && (
             <button
               onClick={handleSave}
-              className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
+              className="px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
             >
               {saved ? 'Saved!' : 'Save'}
             </button>
@@ -400,7 +410,7 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Info section */}
-        <div className="border rounded-sm p-5 font-mono text-[10px] text-[var(--color-text-muted)] space-y-2 leading-relaxed" style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border)' }}>
+        <div className="border rounded-sm p-5 font-mono text-[11px] text-[var(--color-text-muted)] space-y-2 leading-relaxed" style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border)' }}>
           <p>
             <strong className="font-mono text-[var(--color-text-secondary)]">Without AI:</strong> StackWatch uses semantic heuristics to detect
             services from your codebase. This covers ~80% of cases with zero configuration.
@@ -416,7 +426,7 @@ export const Settings: React.FC = () => {
 
         {/* Share section */}
         <div className="border rounded-sm p-5 space-y-4" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h3 className="font-mono uppercase tracking-widest text-[10px] text-[var(--color-text-muted)]">Share</h3>
+          <h3 className="font-mono uppercase tracking-widest text-[11px] text-[var(--color-text-muted)]">Share</h3>
           <div>
             <span
               className="inline-block font-mono text-[11px] px-3 py-1 rounded-full border border-[var(--color-accent)] text-[var(--color-accent)]"
@@ -430,7 +440,7 @@ export const Settings: React.FC = () => {
               readOnly
               rows={2}
               value="[![Analyzed with StackWatch](https://img.shields.io/badge/Analyzed_with-StackWatch-e2b04a?style=flat)](https://github.com/alciller88/StackWatch)"
-              className="flex-1 border rounded-sm px-3 py-2 font-mono text-[10px] text-[var(--color-text-secondary)] resize-none focus:outline-none"
+              className="flex-1 border rounded-sm px-3 py-2 font-mono text-[11px] text-[var(--color-text-secondary)] resize-none focus:outline-none"
               style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border)' }}
             />
             <button
@@ -441,7 +451,7 @@ export const Settings: React.FC = () => {
                 setBadgeCopied(true);
                 setTimeout(() => setBadgeCopied(false), 2000);
               }}
-              className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] rounded-none transition-colors self-start"
+              className="px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] rounded-none transition-colors self-start"
             >
               {badgeCopied ? 'Copied!' : 'Copy'}
             </button>
@@ -450,7 +460,7 @@ export const Settings: React.FC = () => {
 
         {/* About section */}
         <div className="border rounded-sm p-5 space-y-3" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
-          <h3 className="font-mono uppercase tracking-widest text-[10px] text-[var(--color-text-muted)]">About</h3>
+          <h3 className="font-mono uppercase tracking-widest text-[11px] text-[var(--color-text-muted)]">About</h3>
           <p className="font-mono text-[13px] text-[var(--color-accent)]">StackWatch v{APP_VERSION}</p>
           <p className="font-mono text-[11px] text-[var(--color-text-muted)]">Know your stack, own your stack.</p>
           <div className="space-y-1">

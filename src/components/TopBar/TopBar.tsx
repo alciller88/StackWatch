@@ -176,7 +176,7 @@ export const TopBar: React.FC = () => {
         <button
           onClick={handleImport}
           disabled={isAnalyzing}
-          className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
           title="Import config — restore all services, graph layout, and edits from a previously exported file"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -189,7 +189,7 @@ export const TopBar: React.FC = () => {
           <button
             onClick={() => setShowExportMenu(!showExportMenu)}
             disabled={services.length === 0 || isAnalyzing}
-            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
             title="Export — save config backup or generate report"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -228,7 +228,7 @@ export const TopBar: React.FC = () => {
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
               disabled={isAnalyzing}
-              className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-colors"
               title="Share — copy badge or stack summary"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -295,21 +295,21 @@ export const TopBar: React.FC = () => {
         {repoPath && (
           <div className="flex items-center gap-1.5 shrink-0">
             {linkStatus === 'linked' && (
-              <span className="flex items-center gap-1 text-[10px] text-[#3d8c5e]">
+              <span className="flex items-center gap-1 text-[11px] text-[#3d8c5e]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#3d8c5e] inline-block" />
                 Linked
               </span>
             )}
             {linkStatus === 'unlinked' && (
               <>
-                <span className="flex items-center gap-1 text-[10px] text-[var(--color-accent)]">
+                <span className="flex items-center gap-1 text-[11px] text-[var(--color-accent)]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] inline-block" />
                   Unlinked
                 </span>
                 <button
                   onClick={relinkLocal}
                   disabled={isAnalyzing}
-                  className="text-[10px] text-[var(--color-accent)] hover:opacity-80 disabled:opacity-50 transition-colors"
+                  className="text-[11px] text-[var(--color-accent)] hover:opacity-80 disabled:opacity-50 transition-colors"
                 >
                   Re-link
                 </button>
@@ -369,7 +369,7 @@ export const TopBar: React.FC = () => {
           <button
             onClick={handleReanalyze}
             disabled={isAnalyzing}
-            className="px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-50 rounded-sm transition-colors"
+            className="px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-50 rounded-sm transition-colors"
           >
             {isAnalyzing ? (
               <span className="flex items-center gap-1.5">

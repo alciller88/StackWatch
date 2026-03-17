@@ -92,7 +92,7 @@ export const CostsPanel: React.FC = () => {
       >
         <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
           <div
-            className="font-mono text-[9px] uppercase tracking-widest mb-1"
+            className="font-mono text-[10px] uppercase tracking-widest mb-1"
             style={{ color: 'var(--color-text-muted)' }}
           >
             Monthly
@@ -106,7 +106,7 @@ export const CostsPanel: React.FC = () => {
         </div>
         <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
           <div
-            className="font-mono text-[9px] uppercase tracking-widest mb-1"
+            className="font-mono text-[10px] uppercase tracking-widest mb-1"
             style={{ color: 'var(--color-text-muted)' }}
           >
             Yearly
@@ -120,7 +120,7 @@ export const CostsPanel: React.FC = () => {
         </div>
         <div className="p-4" style={{ background: 'var(--color-bg-secondary)' }}>
           <div
-            className="font-mono text-[9px] uppercase tracking-widest mb-1"
+            className="font-mono text-[10px] uppercase tracking-widest mb-1"
             style={{ color: 'var(--color-text-muted)' }}
           >
             Paid Services
@@ -138,7 +138,7 @@ export const CostsPanel: React.FC = () => {
       {costByCategory.length > 0 && (
         <div className="mb-6">
           <h2
-            className="font-mono text-[9px] uppercase tracking-widest mb-3"
+            className="font-mono text-[10px] uppercase tracking-widest mb-3"
             style={{ color: 'var(--color-text-muted)' }}
           >
             Cost by Category
@@ -153,19 +153,19 @@ export const CostsPanel: React.FC = () => {
               style={{ borderColor: 'var(--color-border)' }}
             >
               <span
-                className="font-mono text-[9px] uppercase tracking-widest"
+                className="font-mono text-[10px] uppercase tracking-widest"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 Category
               </span>
               <span
-                className="font-mono text-[9px] uppercase tracking-widest text-right"
+                className="font-mono text-[10px] uppercase tracking-widest text-right"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 Services
               </span>
               <span
-                className="font-mono text-[9px] uppercase tracking-widest text-right"
+                className="font-mono text-[10px] uppercase tracking-widest text-right"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 Monthly
@@ -206,7 +206,7 @@ export const CostsPanel: React.FC = () => {
       {renewals.length > 0 && (
         <div>
           <h2
-            className="font-mono text-[9px] uppercase tracking-widest mb-3"
+            className="font-mono text-[10px] uppercase tracking-widest mb-3"
             style={{ color: 'var(--color-text-muted)' }}
           >
             Renewal Alerts
@@ -240,7 +240,7 @@ export const CostsPanel: React.FC = () => {
                     </span>
                     {badge && (
                       <span
-                        className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5"
+                        className="font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5"
                         style={{
                           color: badge.color,
                           border: `1px solid ${badge.color}`,
@@ -252,13 +252,13 @@ export const CostsPanel: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <span
-                      className="font-mono text-[10px]"
+                      className="font-mono text-[11px]"
                       style={{ color: 'var(--color-text-muted)' }}
                     >
                       {service.renewalDate}
                     </span>
                     <span
-                      className="font-mono text-[10px]"
+                      className="font-mono text-[11px]"
                       style={{ color: days < 0 ? '#ef4444' : 'var(--color-text-muted)' }}
                     >
                       {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`}

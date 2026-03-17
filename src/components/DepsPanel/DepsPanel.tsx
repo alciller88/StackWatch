@@ -138,7 +138,7 @@ export const DepsPanel: React.FC = () => {
           {dep.name}
           {vulnMap.has(`${dep.ecosystem}-${dep.name}`) && (
             <span
-              className="shrink-0 text-[9px] px-1 py-0.5 font-medium uppercase tracking-wide"
+              className="shrink-0 text-[10px] px-1 py-0.5 font-medium uppercase tracking-wide"
               style={{ color: '#c05050', border: '1px solid #c05050' }}
               title={vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.map((v: Vulnerability) => `${v.id}: ${v.summary}`).join('\n')}
             >
@@ -150,7 +150,7 @@ export const DepsPanel: React.FC = () => {
       <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-secondary)]">{dep.version}</td>
       <td className="px-4 py-2.5">
         <span
-          className={`text-[10px] px-2 py-0.5 rounded-sm border font-medium ${typeColors[dep.type]}`}
+          className={`text-[11px] px-2 py-0.5 rounded-sm border font-medium ${typeColors[dep.type]}`}
         >
           {dep.type}
         </span>
@@ -183,7 +183,7 @@ export const DepsPanel: React.FC = () => {
           <button
             onClick={scanVulns}
             disabled={vulnLoading || dependencies.length === 0}
-            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] tracking-widest uppercase rounded-sm transition-colors border disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase rounded-sm transition-colors border disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               borderColor: vulnScanned && totalVulns > 0 ? '#c05050' : 'var(--color-border)',
               color: vulnScanned && totalVulns > 0 ? '#c05050' : 'var(--color-text-secondary)',
@@ -237,7 +237,7 @@ export const DepsPanel: React.FC = () => {
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
-                className={`px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
+                className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
                   filterType === t
                     ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
                     : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
@@ -253,10 +253,10 @@ export const DepsPanel: React.FC = () => {
       {/* Vulnerability summary */}
       {vulnScanned && totalVulns > 0 && (
         <div className="px-6 py-2 border-b flex items-center gap-3" style={{ borderColor: 'var(--color-border)', background: '#1a0a0a' }}>
-          <span className="text-[#c05050] font-mono text-[10px] uppercase tracking-widest font-medium">
+          <span className="text-[#c05050] font-mono text-[11px] uppercase tracking-widest font-medium">
             {totalVulns} vulnerabilit{totalVulns !== 1 ? 'ies' : 'y'} in {vulnResults.length} package{vulnResults.length !== 1 ? 's' : ''}
           </span>
-          <span className="text-[var(--color-text-muted)] font-mono text-[10px]">
+          <span className="text-[var(--color-text-muted)] font-mono text-[11px]">
             via OSV.dev
           </span>
         </div>
@@ -290,21 +290,21 @@ export const DepsPanel: React.FC = () => {
             <thead className="sticky top-0 z-10" style={{ background: 'var(--color-bg-secondary)' }}>
               <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
                 <th
-                  className="px-4 py-2.5 text-left font-mono text-[9px] font-medium uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)]"
+                  className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)]"
                   onClick={() => handleSort('name')}
                 >
                   Name <SortIcon column="name" />
                 </th>
-                <th className="px-4 py-2.5 text-left font-mono text-[9px] font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
+                <th className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
                   Version
                 </th>
                 <th
-                  className="px-4 py-2.5 text-left font-mono text-[9px] font-medium uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)]"
+                  className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)]"
                   onClick={() => handleSort('type')}
                 >
                   Type <SortIcon column="type" />
                 </th>
-                <th className="px-4 py-2.5 text-left font-mono text-[9px] font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
+                <th className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
                   Ecosystem
                 </th>
               </tr>
@@ -316,7 +316,7 @@ export const DepsPanel: React.FC = () => {
                       <tr style={{ background: 'var(--color-bg-secondary)' }}>
                         <td
                           colSpan={4}
-                          className="px-4 py-2 font-mono text-[9px] font-medium text-[var(--color-text-secondary)] uppercase tracking-widest"
+                          className="px-4 py-2 font-mono text-[10px] font-medium text-[var(--color-text-secondary)] uppercase tracking-widest"
                         >
                           {type} ({deps.length})
                         </td>

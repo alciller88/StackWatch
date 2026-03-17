@@ -109,7 +109,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
           </span>
           <div>
             <h3 className="font-mono text-[12px] font-medium text-[var(--color-text-primary)] truncate max-w-[140px]" title={service.name}>{service.name}</h3>
-            <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
               {service.category}
             </span>
           </div>
@@ -120,7 +120,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
           <div className="relative" ref={confRef}>
             <button
               onClick={(e) => { e.stopPropagation(); setShowConfDropdown(v => !v); }}
-              className={`font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium border cursor-pointer transition-colors ${
+              className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium border cursor-pointer transition-colors ${
                 confidence === 'high'
                   ? 'bg-[#1a3a1a] text-[#3d8c5e] border-[#2a5a2a] hover:bg-[#203a20]'
                   : confidence === 'medium'
@@ -142,7 +142,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
                       updateServiceConfidence(service.id, level);
                       setShowConfDropdown(false);
                     }}
-                    className={`w-full text-left font-mono text-[10px] px-3 py-1.5 hover:bg-[var(--color-bg-hover)] transition-colors ${
+                    className={`w-full text-left font-mono text-[11px] px-3 py-1.5 hover:bg-[var(--color-bg-hover)] transition-colors ${
                       level === confidence ? 'text-[var(--color-accent)] font-medium' : 'text-[var(--color-text-secondary)]'
                     }`}
                   >
@@ -159,7 +159,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       {/* Plan badge */}
       <div className="flex items-center gap-2 mb-3">
         <span
-          className={`font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-none font-medium border ${planColors[service.plan]}`}
+          className={`font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-none font-medium border ${planColors[service.plan]}`}
         >
           {service.plan}
         </span>
@@ -167,7 +167,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
       {/* Owner */}
       {service.owner && (
-        <div className="font-mono text-[10px] text-[var(--color-text-secondary)] mb-2 flex items-center gap-1 truncate" title={service.owner}>
+        <div className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-2 flex items-center gap-1 truncate" title={service.owner}>
           <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
@@ -187,7 +187,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
       {/* Renewal date */}
       {service.renewalDate && (
-        <div className={`font-mono text-[10px] mb-2 ${renewalColor}`}>
+        <div className={`font-mono text-[11px] mb-2 ${renewalColor}`}>
           Renews: {new Date(service.renewalDate).toLocaleDateString()}
           {days !== null && days < 30 && (
             <span className="ml-1 font-medium">
@@ -200,19 +200,19 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       {/* AI Context */}
       {context && (
         <div className="mt-2 space-y-1">
-          <div className="font-mono text-[10px] text-[var(--color-text-secondary)] leading-relaxed line-clamp-3">
+          <div className="font-mono text-[11px] text-[var(--color-text-secondary)] leading-relaxed line-clamp-3">
             — {context.usage}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px]">{criticalityIcons[context.criticalityLevel] ?? '\u{26AA}'}</span>
-            <span className={`font-mono text-[9px] uppercase tracking-widest font-medium ${criticalityColors[context.criticalityLevel] ?? 'text-[var(--color-text-muted)]'}`}>
+            <span className="text-[11px]">{criticalityIcons[context.criticalityLevel] ?? '\u{26AA}'}</span>
+            <span className={`font-mono text-[10px] uppercase tracking-widest font-medium ${criticalityColors[context.criticalityLevel] ?? 'text-[var(--color-text-muted)]'}`}>
               {context.criticalityLevel}
             </span>
           </div>
           {context.warnings && context.warnings.length > 0 && (
             <div className="space-y-0.5">
               {context.warnings.map((w, i) => (
-                <div key={i} className="font-mono text-[9px] text-[var(--color-accent)] flex items-start gap-1">
+                <div key={i} className="font-mono text-[10px] text-[var(--color-accent)] flex items-start gap-1">
                   <span className="shrink-0">{'\u26A0'}</span>
                   <span>{w}</span>
                 </div>
@@ -224,28 +224,28 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
       {/* Inferred from */}
       {service.source === 'inferred' && service.inferredFrom && (
-        <div className="font-mono text-[9px] text-[var(--color-text-muted)] mt-2 truncate" title={service.inferredFrom}>
+        <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-2 truncate" title={service.inferredFrom}>
           Inferred from: {service.inferredFrom}
         </div>
       )}
 
       {/* Notes */}
       {service.notes && (
-        <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-2 line-clamp-2">
+        <div className="font-mono text-[11px] text-[var(--color-text-muted)] mt-2 line-clamp-2">
           {service.notes}
         </div>
       )}
 
       {/* Comment */}
       {service.comment && (
-        <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-2 italic line-clamp-2">
+        <div className="font-mono text-[11px] text-[var(--color-text-muted)] mt-2 italic line-clamp-2">
           {service.comment}
         </div>
       )}
 
       {/* Edit hint for manual services */}
       {isClickable && (
-        <div className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] opacity-40 mt-2">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-accent)] opacity-40 mt-2">
           Click to edit
         </div>
       )}

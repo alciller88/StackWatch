@@ -99,7 +99,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         >
           <h3
             id="confirm-dialog-title"
-            className="font-mono text-[10px] uppercase tracking-widest"
+            className="font-mono text-[11px] uppercase tracking-widest"
             style={{ color: 'var(--color-accent)' }}
           >
             {title}
@@ -135,7 +135,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               key={btn.value}
               ref={idx === 0 ? firstButtonRef : undefined}
               onClick={() => onResult(btn.value)}
-              className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors border ${
+              className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest rounded-sm transition-colors border ${
                 btn.danger
                   ? 'border-[#c05050] text-[#c05050] hover:bg-[#c05050] hover:text-white'
                   : btn.primary

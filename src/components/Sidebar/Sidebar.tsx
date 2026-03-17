@@ -184,7 +184,7 @@ export const Sidebar: React.FC = () => {
             {breakdown.score}
           </span>
           {!collapsed && (
-            <span className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>
+            <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>
               Stack Score
             </span>
           )}
@@ -241,7 +241,7 @@ export const Sidebar: React.FC = () => {
       {/* Footer */}
       <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
         {!collapsed && (
-          <span className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>v{APP_VERSION}</span>
+          <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: 'var(--color-text-muted)' }}>v{APP_VERSION}</span>
         )}
       </div>
     </div>

@@ -431,7 +431,7 @@ export const FlowGraph: React.FC = () => {
           >
             <span>{getNodeIcon(n.data.nodeType ?? 'external')}</span>
             <span className="truncate">{n.data.label}</span>
-            {isLowConfidence && <span className="text-[var(--color-accent)] text-[10px]">?</span>}
+            {isLowConfidence && <span className="text-[var(--color-accent)] text-[11px]">?</span>}
           </div>
         ),
       },

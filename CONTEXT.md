@@ -10,7 +10,7 @@
 **StackWatch** scans codebases and maps every external service, dependency, and paid account. Electron desktop app + CLI + GitHub Action.
 
 - **Desktop app**: Electron 35 + React 19 + Vite 6 + TypeScript 5.7 + Tailwind 4 + Zustand 5 + React Flow 11
-- **CLI**: `npx stackwatch [path] [--json|--md]` — same heuristic engine, no Electron dependency
+- **CLI**: `npx stackwatch [path] [--json|--md|--fail-on-vulns|--fail-on-unreviewed]` — same heuristic engine, no Electron dependency. Also: `stackwatch init [path]` generates `stackwatch.config.json`.
 - **GitHub Action**: `alciller88/StackWatch@main` — posts PR comments with scan results
 - **Config file**: `stackwatch.config.json` in the scanned repo (not this repo)
 
@@ -26,7 +26,7 @@ Full spec: `SPEC.md` · User docs: `README.md`
 |------|-------------|
 | **Scan (Open folder / GitHub)** | Fresh analysis from code. Previous edits NOT carried over. Detects monorepos automatically. |
 | **Import config** | Full restore from exported JSON. All services, graph layout, positions, edges restored exactly. Works without a repo. |
-| **CLI / GitHub Action** | Headless scan, outputs JSON or Markdown. No GUI, no config persistence. |
+| **CLI / GitHub Action** | Headless scan, outputs JSON or Markdown. `--fail-on-vulns` (exit 1) and `--fail-on-unreviewed` (exit 2) for CI gates. `stackwatch init` generates config. |
 
 ### Analysis pipeline
 
@@ -126,7 +126,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
 | `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
 | `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types |
-| `electron/ai/provider.ts` | OpenAI-compatible client + 6 provider presets |
+| `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
 
 ### Renderer (src/)
 | File | Purpose |
@@ -151,7 +151,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### CLI & CI
 | File | Purpose |
 |------|---------|
-| `cli/index.ts` | CLI entry point. Built to `dist-cli/` via `npm run build:cli` |
+| `cli/index.ts` | CLI entry: scan, init, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
 | `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
 
 ### Build & validation

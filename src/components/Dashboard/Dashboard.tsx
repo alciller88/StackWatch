@@ -23,7 +23,7 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={() => analyzeLocal(lastRepo)}
               disabled={isAnalyzing}
-              className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
             >
               Reopen
             </button>
@@ -131,7 +131,7 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        <p className="font-mono text-[10px] tracking-wide text-[var(--color-text-muted)] mb-10">
+        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-10">
           Or use the GitHub button in the top bar to analyze a remote repository
         </p>
 
@@ -140,7 +140,7 @@ export const Dashboard: React.FC = () => {
           <div
             className="text-left px-6 py-5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
           >
-            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-[var(--color-accent)]">
+            <h2 className="font-mono text-[11px] uppercase tracking-widest mb-4 text-[var(--color-accent)]">
               Quick Start
             </h2>
             <div className="space-y-3">
@@ -151,7 +151,7 @@ export const Dashboard: React.FC = () => {
               ].map((step) => (
                 <div key={step.num} className="flex items-start gap-3">
                   <span
-                    className="font-mono text-[10px] font-medium shrink-0 w-6 h-6 flex items-center justify-center text-[var(--color-accent)] border border-[var(--color-border)]"
+                    className="font-mono text-[11px] font-medium shrink-0 w-6 h-6 flex items-center justify-center text-[var(--color-accent)] border border-[var(--color-border)]"
                   >
                     {step.num}
                   </span>
@@ -166,7 +166,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Features Grid */}
         <div className="mb-10">
-          <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-left text-[var(--color-accent)]">
+          <h2 className="font-mono text-[11px] uppercase tracking-widest mb-4 text-left text-[var(--color-accent)]">
             Features
           </h2>
           <div className="grid grid-cols-3 gap-px text-left bg-[var(--color-border)]">
@@ -241,12 +241,12 @@ export const Dashboard: React.FC = () => {
               <div key={feat.num} className="p-4 bg-[var(--color-bg-secondary)]">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[var(--color-text-muted)]">{feat.icon}</span>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--color-text-muted)]">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
                     {feat.num} · {feat.label}
                   </span>
                 </div>
                 <h3 className="font-sans text-[12px] font-medium text-[var(--color-text-secondary)] mb-1">{feat.title}</h3>
-                <p className="font-mono text-[10px] text-[var(--color-text-muted)]">{feat.desc}</p>
+                <p className="font-mono text-[11px] text-[var(--color-text-muted)]">{feat.desc}</p>
               </div>
             ))}
           </div>
@@ -257,7 +257,7 @@ export const Dashboard: React.FC = () => {
           <div
             className="px-6 py-5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
           >
-            <h2 className="font-mono text-[10px] uppercase tracking-widest mb-4 text-[var(--color-accent)]">
+            <h2 className="font-mono text-[11px] uppercase tracking-widest mb-4 text-[var(--color-accent)]">
               Keyboard Shortcuts
             </h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2">
@@ -269,11 +269,11 @@ export const Dashboard: React.FC = () => {
               ].map((shortcut) => (
                 <div key={shortcut.key} className="flex items-center gap-3">
                   <kbd
-                    className="font-mono text-[9px] px-1.5 py-0.5 shrink-0 text-[var(--color-accent)] border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+                    className="font-mono text-[10px] px-1.5 py-0.5 shrink-0 text-[var(--color-accent)] border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
                   >
                     {shortcut.key}
                   </kbd>
-                  <span className="font-mono text-[10px] text-[var(--color-text-muted)]">
+                  <span className="font-mono text-[11px] text-[var(--color-text-muted)]">
                     {shortcut.desc}
                   </span>
                 </div>

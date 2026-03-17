@@ -26,7 +26,7 @@ export const TitleBar: React.FC = () => {
       {/* App title */}
       <div className="flex items-center gap-2 px-3">
         <span
-          className="font-mono text-[9px] uppercase tracking-[0.2em] font-medium"
+          className="font-mono text-[10px] uppercase tracking-[0.2em] font-medium"
           style={{ color: 'var(--color-accent)' }}
         >
           StackWatch

@@ -136,7 +136,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
               href="https://github.com/settings/tokens"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] font-mono tracking-wide hover:opacity-80 transition-opacity self-start"
+              className="text-[11px] font-mono tracking-wide hover:opacity-80 transition-opacity self-start"
               style={{ color: 'var(--color-accent)' }}
             >
               Get a token &rarr;
@@ -152,14 +152,14 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 font-mono text-[10px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-secondary)] transition-colors"
+            className="px-4 py-1.5 font-mono text-[11px] tracking-widest uppercase text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-secondary)] transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!repoValid}
-            className="px-4 py-1.5 font-mono text-[10px] tracking-widest uppercase border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-1.5 font-mono text-[11px] tracking-widest uppercase border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Analyze
           </button>

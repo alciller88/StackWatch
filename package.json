@@ -11,6 +11,9 @@
     "README.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"tsc -p tsconfig.node.json && wait-on http://localhost:5173 && node scripts/launch-electron.js\"",
     "build": "npm run build:dist",

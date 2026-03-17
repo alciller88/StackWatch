@@ -70,7 +70,7 @@ export const ServicesPanel: React.FC = () => {
           </h2>
           <button
             onClick={() => { setEditingService(null); setShowAddForm(!showAddForm); }}
-            className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
+            className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
           >
             + Add Service
           </button>
@@ -105,7 +105,7 @@ export const ServicesPanel: React.FC = () => {
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => setActiveCategory('all')}
-            className={`px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest rounded-sm transition-colors ${
+            className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors ${
               activeCategory === 'all'
                 ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
                 : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
@@ -117,7 +117,7 @@ export const ServicesPanel: React.FC = () => {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
+              className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
                 activeCategory === cat
                   ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
                   : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
@@ -132,7 +132,7 @@ export const ServicesPanel: React.FC = () => {
         <div className="flex gap-1.5">
           <button
             onClick={() => setActivePlan('all')}
-            className={`px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest rounded-sm transition-colors ${
+            className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors ${
               activePlan === 'all'
                 ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
                 : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
@@ -144,7 +144,7 @@ export const ServicesPanel: React.FC = () => {
             <button
               key={plan}
               onClick={() => setActivePlan(plan)}
-              className={`px-2.5 py-1 font-mono text-[9px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
+              className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
                 activePlan === plan
                   ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
                   : 'bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
@@ -220,7 +220,7 @@ export const ServicesPanel: React.FC = () => {
               </div>
               <button
                 onClick={() => { setEditingService(null); setShowAddForm(true); }}
-                className="mt-2 px-4 py-2 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
+                className="mt-2 px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
               >
                 + Add service manually
               </button>
@@ -340,7 +340,7 @@ const ServiceForm: React.FC<{
   return (
     <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-primary)' }}>
       <div className="flex items-center justify-between mb-1">
-        <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+        <span className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)]">
           {isEditing ? 'Edit Service' : 'Add Service'}
         </span>
         {isEditing && (
@@ -356,7 +356,7 @@ const ServiceForm: React.FC<{
       {/* Row 1: Name, Category, Plan, Confidence */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[160px]">
-          <label htmlFor="sf-name" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Name *</label>
+          <label htmlFor="sf-name" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Name *</label>
           <input
             type="text"
             id="sf-name"
@@ -366,10 +366,10 @@ const ServiceForm: React.FC<{
             className={`${inputClass} border ${errors.name ? 'border-red-500' : ''}`}
             style={errors.name ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
-          {errors.name && <p className="text-red-500 text-[10px] mt-1">{errors.name}</p>}
+          {errors.name && <p className="text-red-500 text-[11px] mt-1">{errors.name}</p>}
         </div>
         <div>
-          <label htmlFor="sf-category" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Category *</label>
+          <label htmlFor="sf-category" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Category *</label>
           <select
             id="sf-category"
             value={category}
@@ -383,7 +383,7 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div>
-          <label htmlFor="sf-plan" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Plan *</label>
+          <label htmlFor="sf-plan" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Plan *</label>
           <select
             id="sf-plan"
             value={plan}
@@ -397,7 +397,7 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div>
-          <label htmlFor="sf-confidence" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Confidence</label>
+          <label htmlFor="sf-confidence" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Confidence</label>
           <select
             id="sf-confidence"
             value={confidence}
@@ -415,7 +415,7 @@ const ServiceForm: React.FC<{
       {/* Row 2: URL, Cost, Renewal */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <label htmlFor="sf-url" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">URL</label>
+          <label htmlFor="sf-url" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">URL</label>
           <input
             type="text"
             id="sf-url"
@@ -425,10 +425,10 @@ const ServiceForm: React.FC<{
             className={`${inputClass} border ${errors.url ? 'border-red-500' : ''}`}
             style={errors.url ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
-          {errors.url && <p className="text-red-500 text-[10px] mt-1">{errors.url}</p>}
+          {errors.url && <p className="text-red-500 text-[11px] mt-1">{errors.url}</p>}
         </div>
         <div className="w-20">
-          <label htmlFor="sf-cost" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Cost</label>
+          <label htmlFor="sf-cost" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Cost</label>
           <input
             type="number"
             id="sf-cost"
@@ -440,10 +440,10 @@ const ServiceForm: React.FC<{
             className={`${inputClass} border ${errors.cost ? 'border-red-500' : ''}`}
             style={errors.cost ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
-          {errors.cost && <p className="text-red-500 text-[10px] mt-1">{errors.cost}</p>}
+          {errors.cost && <p className="text-red-500 text-[11px] mt-1">{errors.cost}</p>}
         </div>
         <div className="w-16">
-          <label htmlFor="sf-currency" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Currency</label>
+          <label htmlFor="sf-currency" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Currency</label>
           <select
             id="sf-currency"
             value={costCurrency}
@@ -456,7 +456,7 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div className="w-16">
-          <label htmlFor="sf-period" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Period</label>
+          <label htmlFor="sf-period" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Period</label>
           <select
             id="sf-period"
             value={costPeriod}
@@ -469,7 +469,7 @@ const ServiceForm: React.FC<{
           </select>
         </div>
         <div>
-          <label htmlFor="sf-renewal" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Renewal</label>
+          <label htmlFor="sf-renewal" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Renewal</label>
           <input
             type="date"
             id="sf-renewal"
@@ -484,7 +484,7 @@ const ServiceForm: React.FC<{
       {/* Row 3: Email, Notes, Actions */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <label htmlFor="sf-email" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Account Email</label>
+          <label htmlFor="sf-email" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Account Email</label>
           <input
             type="email"
             id="sf-email"
@@ -494,10 +494,10 @@ const ServiceForm: React.FC<{
             className={`${inputClass} border ${errors.email ? 'border-red-500' : ''}`}
             style={errors.email ? { ...inputStyle, borderColor: undefined } : inputStyle}
           />
-          {errors.email && <p className="text-red-500 text-[10px] mt-1">{errors.email}</p>}
+          {errors.email && <p className="text-red-500 text-[11px] mt-1">{errors.email}</p>}
         </div>
         <div className="flex-1">
-          <label htmlFor="sf-notes" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Notes</label>
+          <label htmlFor="sf-notes" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Notes</label>
           <input
             type="text"
             id="sf-notes"
@@ -509,7 +509,7 @@ const ServiceForm: React.FC<{
           />
         </div>
         <div className="flex-1">
-          <label htmlFor="sf-owner" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Owner</label>
+          <label htmlFor="sf-owner" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Owner</label>
           <input
             type="text"
             id="sf-owner"
@@ -521,7 +521,7 @@ const ServiceForm: React.FC<{
           />
         </div>
         <div className="flex-1">
-          <label htmlFor="sf-comment" className="block font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Comment</label>
+          <label htmlFor="sf-comment" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Comment</label>
           <input
             type="text"
             id="sf-comment"
@@ -534,13 +534,13 @@ const ServiceForm: React.FC<{
         </div>
         <button
           onClick={handleSubmit}
-          className="px-4 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
+          className="px-4 py-1.5 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
         >
           {isEditing ? 'Update' : 'Add'}
         </button>
         <button
           onClick={onClose}
-          className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
+          className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
         >
           Cancel
         </button>

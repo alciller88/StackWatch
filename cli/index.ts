@@ -3,9 +3,14 @@
 import path from 'path'
 import fs from 'fs'
 import { analyzeLocalRepo } from '../electron/analyzers/index'
-import type { AnalysisResult } from '../shared/types'
+import { scanVulnerabilities } from '../electron/analyzers/vulnScanner'
+import type { AnalysisResult, UserConfig, Service } from '../shared/types'
 
 const args = process.argv.slice(2)
+
+// Check for subcommand
+const subcommand = args[0] && !args[0].startsWith('-') ? args[0] : null
+const isInitCommand = subcommand === 'init'
 
 // Parse flags
 const flags = {
@@ -13,10 +18,14 @@ const flags = {
   markdown: args.includes('--md') || args.includes('--markdown'),
   help: args.includes('--help') || args.includes('-h'),
   version: args.includes('--version') || args.includes('-v'),
+  failOnVulns: args.includes('--fail-on-vulns'),
+  failOnUnreviewed: args.includes('--fail-on-unreviewed'),
 }
 
-// Get target path (first non-flag argument)
-const targetPath = args.find(a => !a.startsWith('-')) || '.'
+// Get target path (first non-flag argument, skip subcommand)
+const targetPath = isInitCommand
+  ? args.slice(1).find(a => !a.startsWith('-')) || '.'
+  : args.find(a => !a.startsWith('-')) || '.'
 
 if (flags.version) {
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf-8'))
@@ -30,6 +39,10 @@ if (flags.help) {
 
   Usage:
     npx stackwatch [path] [options]
+    npx stackwatch init [path]
+
+  Commands:
+    init [path]       Scan and generate a stackwatch.config.json file
 
   Arguments:
     path              Path to repository (default: current directory)
@@ -37,6 +50,8 @@ if (flags.help) {
   Options:
     --json            Output as JSON
     --md, --markdown  Output as Markdown table
+    --fail-on-vulns   Exit code 1 if critical/high vulnerabilities found
+    --fail-on-unreviewed  Exit code 2 if any services need review
     -h, --help        Show this help
     -v, --version     Show version
 
@@ -45,12 +60,15 @@ if (flags.help) {
     npx stackwatch ./my-project      # Scan specific path
     npx stackwatch --json            # JSON output for piping
     npx stackwatch --md > SERVICES.md  # Generate Markdown report
+    npx stackwatch --fail-on-vulns   # Fail CI if vulns detected
+    npx stackwatch init              # Generate config for current dir
+    npx stackwatch init ./my-project # Generate config for specific path
   `.trim())
   process.exit(0)
 }
 
-async function main() {
-  const resolvedPath = path.resolve(targetPath)
+function resolveAndValidatePath(targetDir: string): string {
+  const resolvedPath = path.resolve(targetDir)
 
   if (!fs.existsSync(resolvedPath)) {
     console.error(`Error: path "${resolvedPath}" does not exist`)
@@ -62,6 +80,19 @@ async function main() {
     process.exit(1)
   }
 
+  return resolvedPath
+}
+
+async function main() {
+  if (isInitCommand) {
+    await runInit()
+  } else {
+    await runScan()
+  }
+}
+
+async function runScan() {
+  const resolvedPath = resolveAndValidatePath(targetPath)
   const projectName = path.basename(resolvedPath)
 
   if (!flags.json && !flags.markdown) {
@@ -78,6 +109,88 @@ async function main() {
     } else {
       printSummary(result, projectName)
     }
+
+    // Semantic exit codes (checked after output is printed)
+    if (flags.failOnVulns) {
+      const vulnResults = await scanVulnerabilities(result.dependencies)
+      const hasCriticalOrHigh = vulnResults.some(r =>
+        r.vulnerabilities.some(v => v.severity === 'critical' || v.severity === 'high')
+      )
+      if (hasCriticalOrHigh) {
+        if (!flags.json && !flags.markdown) {
+          console.error('\n  FAIL: critical or high severity vulnerabilities detected')
+        }
+        process.exit(1)
+      }
+    }
+
+    if (flags.failOnUnreviewed) {
+      const hasUnreviewed = result.services.some(s => s.needsReview === true)
+      if (hasUnreviewed) {
+        if (!flags.json && !flags.markdown) {
+          console.error('\n  FAIL: services needing review detected')
+        }
+        process.exit(2)
+      }
+    }
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+}
+
+async function runInit() {
+  const resolvedPath = resolveAndValidatePath(targetPath)
+  const projectName = path.basename(resolvedPath)
+  const configPath = path.join(resolvedPath, 'stackwatch.config.json')
+
+  // Check if config already exists
+  if (fs.existsSync(configPath)) {
+    console.error(`Warning: ${configPath} already exists, skipping.`)
+    console.error('Delete the existing file and run again to regenerate.')
+    process.exit(0)
+  }
+
+  console.log(`\n  STACKWATCH INIT — scanning ${projectName}\n`)
+
+  try {
+    const result = await analyzeLocalRepo(resolvedPath)
+
+    // Build config from scan results
+    const config: UserConfig = {
+      version: '1',
+      project: {
+        name: projectName,
+        description: '',
+      },
+      services: result.services.map((s): Service => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        plan: s.plan,
+        source: s.source,
+        confidence: s.confidence,
+        needsReview: s.needsReview,
+        inferredFrom: s.inferredFrom,
+        // Empty fields for user to fill in
+        cost: undefined,
+        owner: undefined,
+        renewalDate: undefined,
+        accountEmail: undefined,
+        notes: undefined,
+      })),
+      accounts: [],
+    }
+
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
+
+    console.log(`  Services detected: ${result.services.length}`)
+    console.log(`  Dependencies:      ${result.dependencies.length}`)
+    console.log()
+    console.log(`  Config written to: ${configPath}`)
+    console.log()
+    console.log('  Edit the file to add cost, owner, and renewal info for each service.')
+    console.log()
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
     process.exit(1)

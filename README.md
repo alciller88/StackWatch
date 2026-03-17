@@ -85,7 +85,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (135 tests across 12 suites) |
+| `npm test` | Run unit tests (241 tests across 18 suites) |
 
 ### CLI (no Electron required)
 
@@ -103,6 +103,15 @@ npx stackwatch --json
 
 # Generate Markdown report
 npx stackwatch --md > SERVICES.md
+
+# Generate stackwatch.config.json from scan results
+npx stackwatch init ./my-project
+
+# CI gate: fail if critical/high vulnerabilities found (exit 1)
+npx stackwatch --fail-on-vulns
+
+# CI gate: fail if unreviewed services exist (exit 2)
+npx stackwatch --fail-on-unreviewed
 ```
 
 The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results.
@@ -419,7 +428,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 135 tests across 12 suites (added AI refiner, pipeline checkpoint, store, and utility tests)
+- [x] 241 tests across 18 suites (stores, analyzers, utils, UI components)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
@@ -430,7 +439,7 @@ StackWatch/
 - [x] Skeleton loaders during analysis
 - [x] Toast notification system
 - [x] List virtualization (DepsPanel with @tanstack/react-virtual)
-- [x] CLI tool: `npx stackwatch` (scan, --json, --md output)
+- [x] CLI tool: `npx stackwatch` (scan, --json, --md, init, --fail-on-vulns, --fail-on-unreviewed)
 - [x] GitHub Action for PR scanning with auto-comments
 - [x] macOS / Windows / Linux distributable builds (electron-builder: dmg, nsis, AppImage, deb)
 - [x] Monorepo support (npm workspaces, pnpm, lerna, turborepo, nx)
