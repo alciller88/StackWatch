@@ -303,19 +303,26 @@ export async function refineServicesWithAI(
   services: Service[],
   provider: AIProvider,
 ): Promise<Service[]> {
-  if (services.length < 2) return services
+  // Separate high-confidence (skip AI) from medium/low (need refinement)
+  const highConfidence = services.filter(s => s.confidence === 'high')
+  const toRefine = services.filter(s => s.confidence !== 'high')
+
+  // If nothing to refine, skip the AI call
+  if (toRefine.length === 0) return services
 
   // Build compact numbered list (~70 chars per service)
   let serviceList = ''
-  for (let i = 0; i < services.length; i++) {
-    const s = services[i]
+  for (let i = 0; i < toRefine.length; i++) {
+    const s = toRefine[i]
     const reason = (s.confidenceReasons?.[0] ?? s.inferredFrom ?? '').slice(0, 50)
     const line = `${i + 1}|${s.name}|${s.category}|${s.confidence ?? 'medium'}|${reason}\n`
     if (serviceList.length + line.length > 3500) break // leave room for instructions
     serviceList += line
   }
 
-  const prompt = `Review these auto-detected services from a codebase. Return ONLY changes needed as JSON.
+  const prompt = `Review these medium/low confidence auto-detected services from a codebase. High-confidence services have already been validated and are not shown.
+
+Return ONLY changes needed as JSON.
 
 IMPORTANT: Be aggressive about removing false positives. These are NOT real external services:
 - Programming language built-ins (child_process, fs, path, crypto, http, Buffer, Stream)
@@ -344,8 +351,8 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   const text = await callAI(provider, prompt, 800)
   const actions = safeParseJSON<any>(text, {})
 
-  // Apply changes safely
-  let result = [...services]
+  // Apply changes safely to the medium/low set
+  let result = [...toRefine]
 
   // 1. Merge (before removals so indices are still valid)
   if (Array.isArray(actions.merge)) {
@@ -375,11 +382,10 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   }
 
   // Rebuild index map after merge (original 1-based ID → new array position)
-  // For category/confidence/remove we need to map original IDs to current services
   const remainingIds = new Map(result.map(r => [r.id, r]))
   const idToService = new Map<number, Service>()
-  for (let i = 0; i < services.length; i++) {
-    const svc = remainingIds.get(services[i].id)
+  for (let i = 0; i < toRefine.length; i++) {
+    const svc = remainingIds.get(toRefine[i].id)
     if (svc) idToService.set(i + 1, svc)
   }
 
@@ -417,7 +423,8 @@ Return ONLY valid JSON. Empty {} if no changes needed.
     }
   }
 
-  return result
+  // Merge back: high-confidence (untouched) + refined medium/low
+  return [...highConfidence, ...result]
 }
 
 // ── Step 0: AI false-positive filter ──
@@ -426,21 +433,19 @@ Return ONLY valid JSON. Empty {} if no changes needed.
 // the IDs of services that are real external dependencies. Runs before
 // refineServicesWithAI (which does heavier per-service work).
 
-const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert reviewing a codebase scan.
-Your job is to identify which detected items are NOT real external services.
+const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert reviewing low-confidence detections from a codebase scan.
 
-A REAL external service is a third-party SaaS, API, platform, database,
-or infrastructure tool that exists as an independent product the project
-depends on (e.g. Stripe, PostgreSQL, Sentry, Vercel, Twilio).
+These services were detected with WEAK evidence and need your validation.
+Decide which ones are REAL external services (third-party SaaS, API,
+platform, database, or infrastructure tool that exists as an independent
+product) and which are false positives.
 
-These are NOT real external services and must be excluded:
-- Feature flags or app config (IS_*, DISABLE_*, *_ENABLED, *_ROLLOUT)
-- Internal app parameters (*_INTERVAL, *_MINUTES, *_DELAY, *_LIMIT, *_SIZE)
-- CI/CD pipeline variables (EXIT_CODE, HEAD_REF, BRANCH_NAME, *_REPORT)
-- The project's own name or internal brand identifiers
-- Generic non-product words (Team, Project, Run, Ci, Edge, Single, Sender)
-- Browser polyfills or utilities (*_POLYFILL, *_OBSERVER)
-- Duplicate entries referring to the same service already present
+Common false positives at low confidence:
+- Internal app modules mistaken for services
+- Generic names that aren't real products
+- The project's own brand or internal identifiers
+- Config parameters that look like service names
+- Duplicate detections of a service already confirmed at higher confidence
 
 Respond ONLY with a JSON array of service IDs to KEEP. No explanation,
 no markdown, no preamble. Example: ["id1", "id2", "id3"]`
@@ -451,17 +456,26 @@ export async function filterFalsePositivesWithAI(
 ): Promise<Service[]> {
   if (services.length === 0) return services
 
-  // Skip AI filter for large lists to avoid 429 rate limits
-  if (services.length > 50) return services
+  // Skip AI filter if too many services (avoid expensive calls / 429s)
+  if (services.length > 40) return services
 
-  const payload = services.map(s => ({
+  // Separate high-confidence from candidates needing review
+  const highConfidence = services.filter(s => s.confidence === 'high')
+  const candidates = services.filter(s => s.confidence !== 'high')
+
+  // If no candidates need review, skip the AI call entirely
+  if (candidates.length === 0) return services
+
+  const payload = candidates.map(s => ({
     id: s.id,
     name: s.name,
     category: s.category,
+    confidence: s.confidence,
+    needsReview: s.needsReview,
     inferredFrom: s.inferredFrom,
   }))
 
-  const userPrompt = `Review these detected services and return only the IDs of real external services:\n${JSON.stringify(payload)}`
+  const userPrompt = `These are the low/medium confidence detections that need validation. High-confidence services have already been validated.\n\nReview and return only the IDs of real external services:\n${JSON.stringify(payload)}`
 
   // Build messages with system + user prompt
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -506,12 +520,13 @@ export async function filterFalsePositivesWithAI(
   }
 
   const keepSet = new Set(keepIds as string[])
-  const filtered = services.filter(s => keepSet.has(s.id))
+  const filteredCandidates = candidates.filter(s => keepSet.has(s.id))
 
-  // Safety: if AI removed everything, that's clearly wrong — fallback
-  if (filtered.length === 0) return services
+  // Safety: if AI removed ALL candidates, that's likely wrong — fallback
+  if (filteredCandidates.length === 0 && candidates.length > 0) return services
 
-  return filtered
+  // Merge high-confidence (always kept) + AI-validated candidates
+  return [...highConfidence, ...filteredCandidates]
 }
 
 // ── Orchestrator ──

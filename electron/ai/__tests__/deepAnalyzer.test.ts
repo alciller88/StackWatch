@@ -77,11 +77,14 @@ describe('refineServicesWithAI', () => {
     vi.restoreAllMocks()
   })
 
-  it('skips refinement for less than 2 services (no fetch called)', async () => {
+  it('skips refinement when all services are high confidence (no fetch called)', async () => {
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
 
-    const services = [mockService('redis', 'Redis', 'database', 'high')]
+    const services = [
+      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('stripe', 'Stripe', 'payments', 'high'),
+    ]
     const result = await refineServicesWithAI(services, testProvider)
 
     expect(result).toEqual(services)
@@ -92,7 +95,7 @@ describe('refineServicesWithAI', () => {
     vi.stubGlobal('fetch', mockFetchResponse('{}'))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
@@ -105,9 +108,9 @@ describe('refineServicesWithAI', () => {
     expect(result[1].category).toBe('payments')
   })
 
-  it('removes false positives based on AI response', async () => {
-    // AI says service at 1-based index 2 is a false positive
-    vi.stubGlobal('fetch', mockFetchResponse('{"remove":[2]}'))
+  it('removes false positives based on AI response (medium/low only)', async () => {
+    // toRefine = [lodash(low), stripe(medium)], so AI index 1 = lodash
+    vi.stubGlobal('fetch', mockFetchResponse('{"remove":[1]}'))
 
     const services = [
       mockService('redis', 'Redis', 'database', 'high'),
@@ -117,14 +120,14 @@ describe('refineServicesWithAI', () => {
 
     const result = await refineServicesWithAI(services, testProvider)
 
+    // redis(high) kept untouched, lodash removed, stripe kept
     expect(result).toHaveLength(2)
     expect(result.map(s => s.id)).toEqual(['redis', 'stripe'])
-    // Verify the false positive (lodash) was removed
     expect(result.find(s => s.id === 'lodash')).toBeUndefined()
   })
 
-  it('fixes categories based on AI response', async () => {
-    // AI says service 1 should be "database" instead of "other"
+  it('fixes categories based on AI response (medium/low services only)', async () => {
+    // Only supabase(medium) is sent to AI as index 1
     vi.stubGlobal('fetch', mockFetchResponse('{"category":{"1":"database"}}'))
 
     const services = [
@@ -135,9 +138,12 @@ describe('refineServicesWithAI', () => {
     const result = await refineServicesWithAI(services, testProvider)
 
     expect(result).toHaveLength(2)
-    expect(result[0].category).toBe('database')
-    // Other service unchanged
-    expect(result[1].category).toBe('payments')
+    // stripe(high) is first in result (high come first), supabase after
+    const supabase = result.find(s => s.id === 'supabase')
+    expect(supabase?.category).toBe('database')
+    // stripe unchanged
+    const stripe = result.find(s => s.id === 'stripe')
+    expect(stripe?.category).toBe('payments')
   })
 
   it('adjusts confidence based on AI response', async () => {
@@ -150,57 +156,61 @@ describe('refineServicesWithAI', () => {
 
     const result = await refineServicesWithAI(services, testProvider)
 
-    expect(result[0].confidence).toBe('high')
-    expect(result[0].needsReview).toBe(false)
+    const redis = result.find(s => s.id === 'redis')
+    expect(redis?.confidence).toBe('high')
+    expect(redis?.needsReview).toBe(false)
     // Other service unchanged
-    expect(result[1].confidence).toBe('medium')
+    const stripe = result.find(s => s.id === 'stripe')
+    expect(stripe?.confidence).toBe('medium')
   })
 
   it('sets needsReview true when confidence adjusted to low', async () => {
+    // toRefine = [redis(medium), stripe(medium)], AI adjusts index 1 = redis to low
     vi.stubGlobal('fetch', mockFetchResponse('{"confidence":{"1":"low"}}'))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
     const result = await refineServicesWithAI(services, testProvider)
 
-    expect(result[0].confidence).toBe('low')
-    expect(result[0].needsReview).toBe(true)
+    const redis = result.find(s => s.id === 'redis')
+    expect(redis?.confidence).toBe('low')
+    expect(redis?.needsReview).toBe(true)
   })
 
   it('merges duplicates, keeping first and absorbing confidenceReasons', async () => {
+    // toRefine = [postgres(medium), pg(medium)], AI merges them
     vi.stubGlobal('fetch', mockFetchResponse('{"merge":[[1,2]]}'))
 
     const services = [
-      { ...mockService('postgres', 'PostgreSQL', 'database', 'high'), confidenceReasons: ['Found in package.json'] },
+      { ...mockService('postgres', 'PostgreSQL', 'database', 'medium'), confidenceReasons: ['Found in package.json'] },
       { ...mockService('pg', 'Pg', 'database', 'medium'), confidenceReasons: ['Found in .env'] },
       mockService('stripe', 'Stripe', 'payments', 'high'),
     ]
 
     const result = await refineServicesWithAI(services, testProvider)
 
-    // pg should be merged into postgres, stripe stays
+    // stripe(high) kept, pg merged into postgres
     expect(result).toHaveLength(2)
-    expect(result[0].id).toBe('postgres')
-    expect(result[0].confidenceReasons).toContain('Found in package.json')
-    expect(result[0].confidenceReasons).toContain('Found in .env')
-    expect(result[1].id).toBe('stripe')
+    const postgres = result.find(s => s.id === 'postgres')
+    expect(postgres).toBeDefined()
+    expect(postgres!.confidenceReasons).toContain('Found in package.json')
+    expect(postgres!.confidenceReasons).toContain('Found in .env')
+    expect(result.find(s => s.id === 'stripe')).toBeDefined()
   })
 
   it('handles malformed AI response gracefully (returns original services)', async () => {
-    // AI returns garbage text instead of JSON
     vi.stubGlobal('fetch', mockFetchResponse('Sorry, I cannot process that request. Here is some random text.'))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
     const result = await refineServicesWithAI(services, testProvider)
 
-    // safeParseJSON returns {} fallback, so no actions applied => services unchanged
     expect(result).toHaveLength(2)
     expect(result[0].id).toBe('redis')
     expect(result[1].id).toBe('stripe')
@@ -210,12 +220,10 @@ describe('refineServicesWithAI', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
-    // refineServicesWithAI calls callAI which throws on fetch error
-    // The function itself does NOT catch - the pipeline catches it
     await expect(refineServicesWithAI(services, testProvider)).rejects.toThrow('Network error')
   })
 
@@ -226,7 +234,7 @@ describe('refineServicesWithAI', () => {
     }))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
@@ -237,31 +245,31 @@ describe('refineServicesWithAI', () => {
     vi.stubGlobal('fetch', mockFetchResponse('{"category":{"1":"not-a-real-category"}}'))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
     const result = await refineServicesWithAI(services, testProvider)
 
-    // Category should remain unchanged since "not-a-real-category" is not in VALID_CATEGORIES
-    expect(result[0].category).toBe('database')
+    expect(result[0].category).toBe('redis' === result[0].id ? 'database' : 'payments')
   })
 
   it('ignores invalid confidence in AI response', async () => {
     vi.stubGlobal('fetch', mockFetchResponse('{"confidence":{"1":"super-high"}}'))
 
     const services = [
-      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('redis', 'Redis', 'database', 'medium'),
       mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
     const result = await refineServicesWithAI(services, testProvider)
 
-    // Confidence should remain unchanged
-    expect(result[0].confidence).toBe('high')
+    const redis = result.find(s => s.id === 'redis')
+    expect(redis?.confidence).toBe('medium')
   })
 
   it('applies multiple actions in a single AI response', async () => {
+    // toRefine = [firebase(medium), stripe(low), lodash(low)]
     vi.stubGlobal('fetch', mockFetchResponse(JSON.stringify({
       remove: [3],
       category: { '1': 'auth' },
@@ -277,10 +285,10 @@ describe('refineServicesWithAI', () => {
     const result = await refineServicesWithAI(services, testProvider)
 
     expect(result).toHaveLength(2)
-    expect(result[0].id).toBe('firebase')
-    expect(result[0].category).toBe('auth')
-    expect(result[1].id).toBe('stripe')
-    expect(result[1].confidence).toBe('high')
+    const firebase = result.find(s => s.id === 'firebase')
+    expect(firebase?.category).toBe('auth')
+    const stripe = result.find(s => s.id === 'stripe')
+    expect(stripe?.confidence).toBe('high')
     expect(result.find(s => s.id === 'lodash')).toBeUndefined()
   })
 
@@ -309,8 +317,10 @@ describe('filterFalsePositivesWithAI', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps only services whose IDs are returned by AI', async () => {
-    vi.stubGlobal('fetch', mockFetchResponse('["redis", "stripe"]'))
+  it('keeps high-confidence services and AI-validated candidates', async () => {
+    // Candidates (non-high) are is-e2e(low) and exit-code(low)
+    // AI says only is-e2e is real (unlikely, but testing the mechanism)
+    vi.stubGlobal('fetch', mockFetchResponse('["is-e2e"]'))
 
     const services = [
       mockService('redis', 'Redis', 'database', 'high'),
@@ -321,8 +331,24 @@ describe('filterFalsePositivesWithAI', () => {
 
     const result = await filterFalsePositivesWithAI(services, testProvider)
 
+    // redis(high) + stripe(high) always kept + is-e2e validated by AI
+    expect(result).toHaveLength(3)
+    expect(result.map(s => s.id)).toEqual(['redis', 'stripe', 'is-e2e'])
+  })
+
+  it('skips AI call when all services are high confidence', async () => {
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const services = [
+      mockService('redis', 'Redis', 'database', 'high'),
+      mockService('stripe', 'Stripe', 'payments', 'high'),
+    ]
+
+    const result = await filterFalsePositivesWithAI(services, testProvider)
+
     expect(result).toHaveLength(2)
-    expect(result.map(s => s.id)).toEqual(['redis', 'stripe'])
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('returns original services when AI returns malformed JSON', async () => {
@@ -330,7 +356,7 @@ describe('filterFalsePositivesWithAI', () => {
 
     const services = [
       mockService('redis', 'Redis', 'database', 'high'),
-      mockService('stripe', 'Stripe', 'payments', 'high'),
+      mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
     const result = await filterFalsePositivesWithAI(services, testProvider)
@@ -345,7 +371,7 @@ describe('filterFalsePositivesWithAI', () => {
 
     const services = [
       mockService('redis', 'Redis', 'database', 'high'),
-      mockService('stripe', 'Stripe', 'payments', 'high'),
+      mockService('stripe', 'Stripe', 'payments', 'medium'),
     ]
 
     const result = await filterFalsePositivesWithAI(services, testProvider)
@@ -353,5 +379,19 @@ describe('filterFalsePositivesWithAI', () => {
     expect(result).toHaveLength(2)
     expect(result[0].id).toBe('redis')
     expect(result[1].id).toBe('stripe')
+  })
+
+  it('skips AI filter when more than 40 services', async () => {
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const services = Array.from({ length: 41 }, (_, i) =>
+      mockService(`svc-${i}`, `Service ${i}`, 'other', 'low')
+    )
+
+    const result = await filterFalsePositivesWithAI(services, testProvider)
+
+    expect(result).toHaveLength(41)
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

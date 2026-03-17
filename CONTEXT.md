@@ -39,7 +39,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine
 ```
 
 - **Heuristic mode** (default): fast, offline, ~80% coverage, semantic evidence scoring (score per evidence type, penalties for config suffixes/descriptive names/project name), score-based confidence thresholds at dedup
-- **Hybrid mode**: heuristics → AI filter (false-positive removal) → AI validates/refines → AI deep analysis (~95% coverage)
+- **Hybrid mode**: heuristics → AI filter (≤40 services, targets low/needsReview only; high confidence passes through) → AI refine (medium/low only) → AI deep analysis (~95% coverage)
 - AI is always optional — silent fallback to heuristic results on failure
 
 ### Critical invariant: Service ↔ Graph Node 1:1
@@ -138,7 +138,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
 | `electron/analyzers/zombieDetector.ts` | Zombie detection: git log activity per service, stale/zombie classification |
 | `electron/analyzers/scoreHistory.ts` | Score history: persist health scores to `.stackwatch/score-history.json` |
-| `electron/ai/deepAnalyzer.ts` | AI: false-positive filter, refine services, usage context, hidden detection, edge types, alternative suggestions |
+| `electron/ai/deepAnalyzer.ts` | AI: false-positive filter (≤40 services, targets low/needsReview only), refine services (medium/low only, high skipped), usage context, hidden detection, edge types, alternative suggestions |
 | `electron/ai/alternativeSuggester.ts` | AI: suggest cheaper/open-source alternatives for detected services |
 | `electron/exporters/htmlExporter.ts` | Self-contained HTML report generator (dark theme, print-friendly) |
 | `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
@@ -206,14 +206,14 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-319 tests across 22 suites. vitest + @testing-library/react + jsdom.
+321 tests across 22 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
 | graphStore | 27 | initFromAnalysis, node/edge CRUD, connect, exclude, resetLayout, persistToConfig |
 | vulnScanner | 27 | Ecosystem mapping, batching, OSV parsing, severity, error handling |
 | Extractor | 26 | File types, URL/env/import patterns |
-| Deep Analyzer | 22 | refineServicesWithAI, filterFalsePositivesWithAI, safeParseJSON, malformed responses |
+| Deep Analyzer | 24 | refineServicesWithAI (medium/low only), filterFalsePositivesWithAI (≤40, low/needsReview), safeParseJSON, malformed responses |
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |

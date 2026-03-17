@@ -86,7 +86,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (319 tests across 22 suites) |
+| `npm test` | Run unit tests (321 tests across 22 suites) |
 
 ### CLI (no Electron required)
 
@@ -225,11 +225,12 @@ StackWatch works 100% offline without AI. Two scan modes are available in **Sett
 
 When Heuristic + AI is enabled, the AI pipeline runs in two phases:
 
-**Phase 1 — Validation & refinement** (single compact AI call):
+**Phase 1 — Validation & refinement** (only medium/low confidence services — high confidence skipped):
 - Removes false positives (libraries mistaken for services)
 - Fixes wrong categories
 - Adjusts confidence levels
 - Merges duplicate detections of the same service
+- Capped at ≤40 services to avoid rate limits; silently skipped if exceeded
 
 **Phase 2 — Deep analysis** enriches results with four capabilities:
 
@@ -430,14 +431,14 @@ StackWatch/
 
 ### Test suites
 
-319 tests across 22 suites:
+321 tests across 22 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
 | graphStore | 27 | initFromAnalysis, node/edge CRUD, connect, exclude, resetLayout, persistToConfig |
 | vulnScanner | 27 | Ecosystem mapping, batching, OSV parsing, severity, error handling |
 | Extractor | 26 | All file types, URL/env/import patterns |
-| Deep Analyzer | 19 | refineServicesWithAI, safeParseJSON, malformed responses |
+| Deep Analyzer | 24 | refineServicesWithAI (medium/low), filterFalsePositivesWithAI (≤40), safeParseJSON |
 | badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
 | htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
 | Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
@@ -495,7 +496,7 @@ StackWatch/
 - [x] CSP headers + encrypted API key storage (v0.3.8)
 - [x] CI/CD workflow for multi-platform builds (GitHub Actions)
 - [x] Error boundary + Sentry scaffold for crash reporting
-- [x] 319 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
+- [x] 321 tests across 22 suites (stores, analyzers, exporters, AI, utils, UI components)
 - [x] Enhanced Dashboard with quick start guide, features grid, keyboard shortcuts (v0.3.9)
 - [x] Onboarding tutorial (5-step walkthrough after first scan)
 - [x] Service ownership + comments fields
@@ -526,7 +527,7 @@ StackWatch/
 - [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
 - [x] Zombie UI badges and activity status filter in Services panel
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
-- [x] 319 tests across 22 suites (+43 tests for new modules)
+- [x] 321 tests across 22 suites (+43 tests for new modules)
 
 ---
 

@@ -170,7 +170,8 @@ Resolves simple glob patterns (e.g., `packages/*`). Scans each workspace package
 
 Only runs if the user configures an AI provider. Five capabilities:
 
-0. **False-positive filter** (`filterFalsePositivesWithAI`): Reviews all deduplicator output in a single lightweight AI call. Returns only service IDs that are real external dependencies. Silent fallback on failure. Runs before refinement. Reports `aiFilteredCount` in `AnalysisResult`.
+0. **False-positive filter** (`filterFalsePositivesWithAI`): Reviews only low/medium confidence services (high confidence passes through untouched). Skips if >40 services to avoid rate limits. Single lightweight AI call. Reports `aiFilteredCount` in `AnalysisResult`.
+0b. **Service refinement** (`refineServicesWithAI`): Only processes medium/low confidence services. High confidence services are not sent to AI. Fixes categories, adjusts confidence, removes false positives, merges duplicates.
 1. **Service context**: For each detected service, reads relevant code files and determines usage description, criticality level (critical/important/optional), and warnings (hardcoded secrets, missing error handling).
 2. **Hidden service detection**: Reads priority files (lib/, services/, api/) and finds services consumed via wrappers or custom SDKs that heuristic analysis missed.
 3. **Smart graph edges**: Determines correct edge type (data/auth/payment/webhook) based on actual service usage context.
@@ -693,14 +694,14 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-319 tests across 22 suites. Vitest + @testing-library/react + jsdom.
+321 tests across 22 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
 | graphStore | 27 | `src/store/__tests__/` |
 | vulnScanner | 27 | `electron/analyzers/__tests__/` |
 | Extractor | 26 | `electron/analyzers/__tests__/` |
-| Deep Analyzer | 22 | `electron/ai/__tests__/` |
+| Deep Analyzer | 24 | `electron/ai/__tests__/` |
 | badge | 17 | `src/utils/__tests__/` |
 | htmlExporter | 13 | `electron/exporters/__tests__/` |
 | Deep Analyzer (runDeep) | 13 | `electron/ai/__tests__/` |
