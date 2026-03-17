@@ -433,24 +433,32 @@ Return ONLY valid JSON. Empty {} if no changes needed.
 // the IDs of services that are real external dependencies. Runs before
 // refineServicesWithAI (which does heavier per-service work).
 
-const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert reviewing auto-detected services from a codebase scan.
+const AI_FILTER_SYSTEM_PROMPT = `You are a software architecture expert. Your job is to filter a list of detected services from a codebase scan and remove false positives.
 
-Your job: decide which detections are REAL external services and which are false positives.
+A REAL external service meets ALL of these criteria:
+1. It exists as an independent product/company (has its own website, pricing, docs)
+2. The application communicates with it at RUNTIME via API, SDK, or network call
+3. It is NOT part of the codebase itself
 
-A REAL external service is a third-party SaaS, API, platform, database,
-or infrastructure tool that exists as an independent product with its own
-website, documentation, and billing (e.g. Stripe, PostgreSQL, Sentry, Vercel).
+KEEP these (real external services):
+- SaaS platforms: Stripe, Sendgrid, Twilio, Sentry, Vercel, Cloudflare...
+- Databases: PostgreSQL, Redis, MongoDB (the server, not the client library)
+- Third-party integrations: Zoom, Salesforce, Hubspot, Slack, Linear...
+- Infrastructure: Docker Hub, AWS, GCP, Azure...
+- Auth providers: Auth0, Clerk, Okta, NextAuth (it IS a real auth framework)
 
-These are NOT real external services — REMOVE them:
-- Generic technical concepts: OAuth2, Connect, Embed, Environment, Docs, Admin, Session, Worker
-- Programming abstractions: Event, Stream, Buffer, Handler, Middleware, Router, Resolver
-- Internal app modules or the project's own brand/components
-- Config parameters or feature flags that look like service names
-- Build tools, linters, formatters (ESLint, Prettier, Webpack, Babel)
-- Library utilities that aren't services (Lodash, Moment, Zod, Axios)
+REMOVE these (false positives):
+- Auth protocols/standards that are not products: OAuth, OAuth2, JWT, SAML (these are protocols, not services — unless there's a specific provider)
+- Internal app identifiers: anything with the project's own name
+- Generic technical terms: Connect, Embed, Environment, Docs, Cron, Insights, Session, Worker, Admin, Cache, Queue, Link, Graph
+- Testing tools used only in dev: E2e Test, Playwright, Vitest, Jest
+- Duplicate entries: if PostgreSQL is present, remove Postgres and Database
+- Config parameters masquerading as services: Vapid, Website Terms, Username Blacklist, Reserved Subdomains
+- Internal URL patterns that are the app itself: Webapp, Website, Api V2
 
-Respond ONLY with a JSON array of service IDs to KEEP. No explanation,
-no markdown, no preamble. Example: ["id1", "id2", "id3"]`
+When in doubt, KEEP the service. It's better to have a false positive than to miss a real dependency.
+
+Respond ONLY with a JSON array of service IDs to KEEP. No explanation, no markdown, no preamble. Example: ["id1", "id2", "id3"]`
 
 export async function filterFalsePositivesWithAI(
   services: Service[],
