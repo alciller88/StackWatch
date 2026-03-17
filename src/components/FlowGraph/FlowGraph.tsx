@@ -40,6 +40,8 @@ export const FlowGraph: React.FC = () => {
   const services = useStore(s => s.services)
   const config = useStore(s => s.config)
   const openFolder = useStore(s => s.openFolder)
+  const scanDiffAdded = useStore(s => s.scanDiffAdded)
+  const scanDiffRemoved = useStore(s => s.scanDiffRemoved)
   const nodes = useGraphStore(s => s.nodes)
   const edges = useGraphStore(s => s.edges)
   const onNodesChange = useGraphStore(s => s.onNodesChange)
@@ -426,18 +428,32 @@ export const FlowGraph: React.FC = () => {
     )
   }
 
-  // Apply confidence styling + icons to nodes for rendering
+  // Apply confidence styling + icons + diff highlights to nodes for rendering
   const styledNodes = nodes.map((n) => {
     const confidence = n.data.confidence ?? 'high'
     const isLowConfidence = confidence === 'low'
     const isLayer = n.data.nodeType === 'layer'
     const icon = isLayer ? getLayerIcon(n.data.label ?? '') : getNodeIcon(n.data.nodeType ?? 'external')
+    const serviceId = n.data.serviceId as string | undefined
+
+    // Diff highlight
+    const isAdded = serviceId ? scanDiffAdded.has(serviceId) : false
+    const isRemoved = serviceId ? scanDiffRemoved.has(serviceId) : false
+
+    let style = n.style ?? {}
+    if (isLowConfidence && !isLayer) {
+      style = { ...style, borderStyle: 'dashed', opacity: 0.7 }
+    }
+    if (isAdded) {
+      style = { ...style, border: '2px solid #22c55e', boxShadow: '0 0 8px #22c55e80', transition: 'all 0.3s ease' }
+    }
+    if (isRemoved) {
+      style = { ...style, opacity: 0.4, border: '2px solid #6b7280', transition: 'opacity 0.5s ease' }
+    }
 
     return {
       ...n,
-      style: isLowConfidence && !isLayer
-        ? { ...n.style, borderStyle: 'dashed', opacity: 0.7 }
-        : n.style,
+      style,
       data: {
         ...n.data,
         label: (
@@ -446,7 +462,7 @@ export const FlowGraph: React.FC = () => {
             title={isLowConfidence && !isLayer ? 'Low confidence detection' : undefined}
           >
             <span>{icon}</span>
-            <span className="truncate">{n.data.label}</span>
+            <span className={`truncate ${isRemoved ? 'line-through' : ''}`}>{n.data.label}</span>
             {isLowConfidence && !isLayer && <span className="text-[var(--color-accent)] text-[11px]">?</span>}
           </div>
         ),

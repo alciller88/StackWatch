@@ -14,6 +14,7 @@ import type {
   DiscardedItem,
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
+import { computeScanDiff } from '../utils/scanDiff';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
@@ -38,6 +39,10 @@ interface StoreState {
   showScoreHistory: boolean;
   showDoctor: boolean;
   discardedItems: DiscardedItem[];
+  /** Service IDs added in last scan (for graph diff highlight). Cleared after 3s. */
+  scanDiffAdded: Set<string>;
+  /** Service IDs removed in last scan (for graph diff highlight). Cleared after 3s. */
+  scanDiffRemoved: Set<string>;
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
 
@@ -148,6 +153,8 @@ export const useStore = create<StoreState>((set, get) => ({
   showScoreHistory: false,
   showDoctor: false,
   discardedItems: [],
+  scanDiffAdded: new Set<string>(),
+  scanDiffRemoved: new Set<string>(),
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
 
@@ -214,6 +221,11 @@ export const useStore = create<StoreState>((set, get) => ({
       // Ensure every service has a flow node (manual services aren't in pipeline output)
       const { nodes: extraNodes, edges: extraEdges } = ensureFlowNodes(allServices, result.flowNodes);
 
+      // Compute scan diff for graph highlighting (compare previous vs new service IDs)
+      const previousIds = get().services.map(s => s.id);
+      const currentIds = allServices.map(s => s.id);
+      const diff = computeScanDiff(previousIds, currentIds);
+
       set({
         services: allServices,
         dependencies: result.dependencies,
@@ -221,11 +233,20 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: [...result.flowEdges, ...extraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
         discardedItems: result.discardedItems ?? [],
+        scanDiffAdded: diff.added,
+        scanDiffRemoved: diff.removed,
         isAnalyzing: false,
         analysisPhase: null,
         activePanel: 'flow',
         error: result.aiError ? `AI analysis failed: ${result.aiError}. Showing heuristic results.` : null,
       });
+
+      // Clear diff highlight after 3 seconds
+      if (diff.added.size > 0 || diff.removed.size > 0) {
+        setTimeout(() => {
+          set({ scanDiffAdded: new Set(), scanDiffRemoved: new Set() });
+        }, 3000);
+      }
 
       localStorage.setItem('stackwatch-last-repo', path);
 
@@ -309,6 +330,11 @@ export const useStore = create<StoreState>((set, get) => ({
 
       const { nodes: ghExtraNodes, edges: ghExtraEdges } = ensureFlowNodes(allGhServices, result.flowNodes);
 
+      // Compute scan diff for graph highlighting
+      const previousIds = get().services.map(s => s.id);
+      const currentIds = allGhServices.map(s => s.id);
+      const diff = computeScanDiff(previousIds, currentIds);
+
       set({
         services: allGhServices,
         dependencies: result.dependencies,
@@ -316,11 +342,20 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: [...result.flowEdges, ...ghExtraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
         discardedItems: result.discardedItems ?? [],
+        scanDiffAdded: diff.added,
+        scanDiffRemoved: diff.removed,
         isAnalyzing: false,
         analysisPhase: null,
         activePanel: 'flow',
         linkStatus: 'linked',
       });
+
+      // Clear diff highlight after 3 seconds
+      if (diff.added.size > 0 || diff.removed.size > 0) {
+        setTimeout(() => {
+          set({ scanDiffAdded: new Set(), scanDiffRemoved: new Set() });
+        }, 3000);
+      }
 
       // Show onboarding tutorial on first scan
       if (!get().hasSeenTutorial) {

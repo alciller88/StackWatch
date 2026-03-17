@@ -276,6 +276,7 @@ interface Service {
   confidence?: 'high' | 'medium' | 'low'
   needsReview?: boolean
   confidenceReasons?: string[]
+  evidenceSummary?: EvidenceSummary[]  // best evidence per type with scores
   inferredFrom?: string
   cost?: { amount: number; currency: string; period: 'monthly' | 'yearly' }
   renewalDate?: string
@@ -712,7 +713,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-346 tests across 23 suites. Vitest + @testing-library/react + jsdom.
+355 tests across 24 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -730,7 +731,8 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | historyStore | 12 | `src/store/__tests__/` |
 | healthScore | 11 | `src/utils/__tests__/` |
 | alternativeSuggester | 10 | `electron/ai/__tests__/` |
-| ServiceCard | 10 | `src/components/ServicesPanel/__tests__/` |
+| ServiceCard | 12 | `src/components/ServicesPanel/__tests__/` |
+| scanDiff | 7 | `src/utils/__tests__/` |
 | useStore | 15 | `src/store/__tests__/` |
 | Flow inference | 9 | `electron/analyzers/__tests__/` |
 | scoreHistory | 8 | `electron/analyzers/__tests__/` |
@@ -787,3 +789,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] 10 new tests: DiscardedPanel (7), deduplicator discarded tracking (3)
 - [x] Layer node type: organizational nodes (User, Frontend, Backend, grouping) use type: 'layer' with layerColor, 200x56 dimensions, uppercase bold styling
 - [x] "Add layer node" in pane context menu, layer-specific icons per label (User/Frontend/Backend), no confidence badges on layer nodes
+- [x] Evidence info popover on ServiceCard: "?" button showing score breakdown per evidence type, total score, confidence level
+- [x] Graph diff visual: new nodes highlighted green (3s), removed nodes grey with strikethrough (3s fade-out) after re-scan
+- [x] EvidenceSummary type: best evidence per type with scores, populated in deduplicator
+- [x] 9 new tests: scanDiff (7), ServiceCard evidence popover (2)

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Service, ServiceContext, AlternativeSuggestion } from '../../types';
+import type { Service, ServiceContext, AlternativeSuggestion, EvidenceSummary } from '../../types';
 import { useStore } from '../../store/useStore';
 import { daysUntil } from '../../utils/dates';
 
@@ -84,18 +84,23 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
     return suggestions.find(a => a.serviceId === service.id);
   });
   const [showConfDropdown, setShowConfDropdown] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
   const confRef = useRef<HTMLDivElement>(null);
+  const evidenceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!showConfDropdown) return;
+    if (!showConfDropdown && !showEvidence) return;
     const handler = (e: MouseEvent) => {
-      if (confRef.current && !confRef.current.contains(e.target as Node)) {
+      if (showConfDropdown && confRef.current && !confRef.current.contains(e.target as Node)) {
         setShowConfDropdown(false);
+      }
+      if (showEvidence && evidenceRef.current && !evidenceRef.current.contains(e.target as Node)) {
+        setShowEvidence(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showConfDropdown]);
+  }, [showConfDropdown, showEvidence]);
 
   let renewalColor = 'text-[var(--color-text-secondary)]';
   if (days !== null) {
@@ -137,6 +142,54 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Evidence info button */}
+          {service.source === 'inferred' && service.evidenceSummary && service.evidenceSummary.length > 0 && (
+            <div className="relative" ref={evidenceRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowEvidence(v => !v); }}
+                className="font-mono text-[10px] w-5 h-5 flex items-center justify-center rounded-none border transition-colors border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                aria-label="Evidence details"
+                title="Why was this detected?"
+              >
+                ?
+              </button>
+              {showEvidence && (
+                <div
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[260px] max-w-[340px]"
+                  style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}
+                >
+                  <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                    <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
+                      Evidence breakdown
+                    </span>
+                  </div>
+                  <div className="px-3 py-2 space-y-1">
+                    {service.evidenceSummary!.map((ev, i) => (
+                      <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
+                        <span className="text-[var(--color-text-muted)] w-16 shrink-0 uppercase">{ev.type.replace('_', ' ')}</span>
+                        <span className="text-[var(--color-text-secondary)] truncate flex-1" title={ev.value}>{ev.value}</span>
+                        <span className="text-[#3d8c5e] shrink-0">+{ev.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-3 py-2 border-t flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+                    <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                      Total: {service.evidenceSummary!.reduce((sum, e) => sum + e.score, 0)}
+                    </span>
+                    <span className={`font-mono text-[10px] uppercase ${confidence === 'high' ? 'text-[#3d8c5e]' : 'text-[var(--color-accent)]'}`}>
+                      {confidence}
+                    </span>
+                  </div>
+                  {service.source === 'manual' && (
+                    <div className="px-3 py-1 text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                      \u21A9 Manually restored
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Confidence badge — clickable */}
           <div className="relative" ref={confRef}>
             <button

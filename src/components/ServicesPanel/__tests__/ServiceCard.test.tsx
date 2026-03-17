@@ -94,4 +94,22 @@ describe('ServiceCard', () => {
     render(<ServiceCard service={svc} />)
     expect(screen.getByText(/package\.json/)).toBeInTheDocument()
   })
+
+  it('renders evidence info button when evidenceSummary is present', () => {
+    const svc = {
+      ...baseService,
+      evidenceSummary: [
+        { type: 'env_var', value: 'STRIPE_KEY found in .env', file: '.env', score: 7 },
+        { type: 'npm_package', value: 'npm package stripe', file: '', score: 1 },
+      ],
+    }
+    render(<ServiceCard service={svc} />)
+    expect(screen.getByLabelText('Evidence details')).toBeInTheDocument()
+  })
+
+  it('does not render evidence button for manual services', () => {
+    const svc = { ...baseService, source: 'manual' as const, evidenceSummary: [{ type: 'env_var', value: 'test', file: '', score: 5 }] }
+    render(<ServiceCard service={svc} />)
+    expect(screen.queryByLabelText('Evidence details')).not.toBeInTheDocument()
+  })
 })

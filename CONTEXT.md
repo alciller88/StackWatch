@@ -158,6 +158,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/utils/healthScore.ts` | Stack Score 0-100 (cost 30%, owner 25%, reviewed 25%, graph 20%) |
 | `src/utils/badge.ts` | SVG badge + shields.io URLs: score, services, vulns, deps, scanned date |
 | `src/utils/dates.ts` | Shared `daysUntil()` utility |
+| `src/utils/scanDiff.ts` | Computes added/removed service IDs between scans for graph diff highlight |
 | `src/hooks/useDebounce.ts` | Generic debounce hook |
 | `src/hooks/useTheme.ts` | Applies theme CSS variables to document root |
 | `src/themes.ts` | Dark/light theme CSS variable definitions |
@@ -169,7 +170,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/components/Doctor/` | Doctor modal: health checklist (config, services, costs, vulns, score) |
 | `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
-| `src/components/ServicesPanel/` | Service cards with zombie badges, form with htmlFor labels, confidence badges, activity filter |
+| `src/components/ServicesPanel/` | Service cards with zombie badges, form with htmlFor labels, confidence badges, activity filter, evidence info popover |
 | `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze |
 
 ### CLI & CI
@@ -198,7 +199,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build` | Alias for `build:dist` |
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
-| `npm test` | vitest (346 tests, 23 suites) |
+| `npm test` | vitest (355 tests, 24 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -210,7 +211,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 
 ## Tests
 
-346 tests across 23 suites. vitest + @testing-library/react + jsdom.
+355 tests across 24 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -228,7 +229,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
 | healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
-| ServiceCard | 10 | Rendering, interactions, confidence, a11y |
+| ServiceCard | 12 | Rendering, interactions, confidence, a11y, evidence info popover |
+| scanDiff | 7 | Added/removed detection, empty lists, both empty, first scan |
 | useStore | 15 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel) |
 | Flow inference | 17 | 4-layer hierarchy (user → frontend/backend → grouping → services), virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |

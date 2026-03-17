@@ -6,6 +6,13 @@ export const SERVICE_CATEGORIES = [
 
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
 
+export interface EvidenceSummary {
+  type: string;
+  value: string;
+  file: string;
+  score: number;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -15,6 +22,7 @@ export interface Service {
   confidence?: 'high' | 'medium' | 'low';
   needsReview?: boolean;
   confidenceReasons?: string[];
+  evidenceSummary?: EvidenceSummary[];
   inferredFrom?: string;
   cost?: { amount: number; currency: string; period: 'monthly' | 'yearly' };
   renewalDate?: string;

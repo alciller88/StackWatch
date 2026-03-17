@@ -1,4 +1,4 @@
-import type { Service, HeuristicResult, ServiceCategory, DiscardedItem } from '../types'
+import type { Service, HeuristicResult, ServiceCategory, DiscardedItem, EvidenceSummary } from '../types'
 
 interface ServiceGroup {
   name: string
@@ -7,6 +7,8 @@ interface ServiceGroup {
   reasons: string[]
   /** Best (max) score per unique evidence type. Final score = sum of values. */
   scoreByType: Map<string, number>
+  /** All evidence entries for building EvidenceSummary */
+  evidenceEntries: EvidenceSummary[]
   needsReview?: boolean
 }
 
@@ -38,6 +40,13 @@ export function deduplicateServices(results: HeuristicResult[]): { services: Ser
     if (!key) continue
 
     const typeKey = evidenceTypeKey(result.evidenceType)
+    const evEntry: EvidenceSummary = {
+      type: result.evidenceType,
+      value: result.reason,
+      file: '',
+      score: result.score,
+    }
+
     const existing = groups.get(key)
     if (existing) {
       // Keep best (max) score per evidence type — not additive per instance
@@ -54,6 +63,7 @@ export function deduplicateServices(results: HeuristicResult[]): { services: Ser
       if (!existing.reasons.includes(result.reason)) {
         existing.reasons.push(result.reason)
       }
+      existing.evidenceEntries.push(evEntry)
       // Use better name (longer, more specific)
       if (result.serviceName.length > existing.name.length) {
         existing.name = result.serviceName
@@ -67,6 +77,7 @@ export function deduplicateServices(results: HeuristicResult[]): { services: Ser
         confidence: result.confidence,
         reasons: [result.reason],
         scoreByType: scoreMap,
+        evidenceEntries: [evEntry],
       })
     }
   }
@@ -116,6 +127,16 @@ export function deduplicateServices(results: HeuristicResult[]): { services: Ser
       needsReview = true
     }
 
+    // Build evidence summary: best entry per evidence type
+    const bestByType = new Map<string, EvidenceSummary>()
+    for (const ev of group.evidenceEntries) {
+      const tKey = evidenceTypeKey(ev.type)
+      const prev = bestByType.get(tKey)
+      if (!prev || ev.score > prev.score) {
+        bestByType.set(tKey, ev)
+      }
+    }
+
     services.push({
       id: key,
       name: group.name,
@@ -125,6 +146,7 @@ export function deduplicateServices(results: HeuristicResult[]): { services: Ser
       confidence,
       needsReview,
       confidenceReasons: group.reasons,
+      evidenceSummary: Array.from(bestByType.values()),
       inferredFrom: group.reasons[0],
     })
   }
@@ -186,6 +208,9 @@ function mergeInto(groups: Map<string, ServiceGroup>, into: string, from: string
     if (!gInto.reasons.includes(reason)) {
       gInto.reasons.push(reason)
     }
+  }
+  if (gFrom.evidenceEntries) {
+    gInto.evidenceEntries = [...(gInto.evidenceEntries ?? []), ...gFrom.evidenceEntries]
   }
   groups.delete(from)
 }
@@ -253,6 +278,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
         confidence: g.confidence,
         reasons: [...g.reasons],
         scoreByType: new Map(g.scoreByType),
+        evidenceEntries: [...(g.evidenceEntries ?? [])],
       }
       groups.set(brandKey, brandGroup)
       groups.delete(first)

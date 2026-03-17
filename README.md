@@ -21,7 +21,7 @@ Five panels:
 
 | Panel | What you see |
 |---|---|
-| **Services** | Every external service: inferred + manual, with cost and renewal alerts, confidence badges, and AI-generated usage context |
+| **Services** | Every external service: inferred + manual, with cost and renewal alerts, confidence badges, evidence breakdown popover, and AI-generated usage context |
 | **Dependencies** | Full dependency tree (npm, pip, cargo, go, composer, dart, maven, gradle, gem) with vulnerability scanning |
 | **Discarded** | Items filtered during analysis (low score, AI filter, generic terms) — with search, filter by reason, and restore button |
 | **Flow graph** | Interactive node graph of your app's architecture with drag-and-drop editing, custom connections, and context menus |
@@ -76,7 +76,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (346 tests across 23 suites) |
+| `npm test` | Run unit tests (355 tests across 24 suites) |
 
 ### CLI (no Electron required)
 
@@ -424,7 +424,7 @@ StackWatch/
 
 ### Test suites
 
-346 tests across 23 suites:
+355 tests across 24 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -442,7 +442,8 @@ StackWatch/
 | historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
 | healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
 | alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
-| ServiceCard | 10 | Rendering, interactions, confidence, a11y |
+| ServiceCard | 12 | Rendering, interactions, confidence, a11y, evidence info popover |
+| scanDiff | 7 | Added/removed detection, empty lists, first scan |
 | useStore | 15 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel) |
 | Flow inference | 17 | 4-layer hierarchy, virtual nodes, category routing, edge generation |
 | scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
@@ -523,9 +524,12 @@ StackWatch/
 - [x] Doctor modal in desktop app (interactive health checklist with live vuln scan)
 - [x] Scan mode dialog: merge (keep manual + positions) vs fresh scan on re-analyze
 - [x] Discarded panel: virtualized list of filtered items with search, reason filter, restore to manual service
-- [x] 346 tests across 23 suites (+10 DiscardedPanel and deduplicator tracking tests)
+- [x] 355 tests across 24 suites (+10 DiscardedPanel and deduplicator tracking tests)
 - [x] Layer node type: organizational nodes (User, Frontend, Backend) use type: 'layer' with custom colors and sizing
 - [x] "Add layer node" in canvas context menu, layer-specific icons, no confidence badges
+- [x] Evidence info popover: "Why was this detected?" button on service cards with score breakdown
+- [x] Graph diff visual: green highlight for new nodes, grey strikethrough for removed (3s after re-scan)
+- [x] 355 tests across 24 suites (+9 scanDiff and evidence popover tests)
 
 ---
 
