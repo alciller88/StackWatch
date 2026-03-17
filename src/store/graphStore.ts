@@ -12,10 +12,21 @@ import {
 import dagre from '@dagrejs/dagre'
 import type { FlowNode, FlowEdge, GraphConfig, GraphNodeData, ServiceCategory } from '../types'
 import { getNodeColor, getEdgeColor, getConfidenceBackground } from '../components/FlowGraph/flowUtils'
+import { useHistoryStore } from './historyStore'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+function getCurrentServices(): import('../types').Service[] {
+  try {
+    // Dynamic require to avoid circular dependency at module level
+    const { useStore } = require('./useStore')
+    return useStore.getState().services
+  } catch {
+    return []
+  }
+}
 
 // ── helpers ──
 
@@ -281,6 +292,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
 
   onConnect: (connection) => {
     if (connection.source === connection.target) return
+    useHistoryStore.getState().pushSnapshot('Connect nodes', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
     const newEdge = {
       ...connection,
       animated: true,
@@ -296,6 +310,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   addNode: (id, position, data) => {
+    useHistoryStore.getState().pushSnapshot('Add node', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
     const nodeType = data.nodeType ?? 'external'
     const newNode: Node = {
       id,
@@ -318,6 +335,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   updateNode: (id, data) => {
+    useHistoryStore.getState().pushSnapshot('Update node', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
     set((state) => ({
       nodes: state.nodes.map((n) => {
         if (n.id !== id) return n
@@ -337,6 +357,10 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   deleteNode: (id) => {
     // Find the node before removing it so we can check for a linked service
     const node = get().nodes.find((n) => n.id === id)
+
+    useHistoryStore.getState().pushSnapshot('Delete node', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
 
     set((state) => ({
       nodes: state.nodes.filter((n) => n.id !== id),
@@ -385,6 +409,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   deleteEdge: (edgeId) => {
+    useHistoryStore.getState().pushSnapshot('Delete edge', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
     set((state) => ({
       edges: state.edges.filter((e) => e.id !== edgeId),
     }))
@@ -392,6 +419,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   updateEdgeType: (edgeId, flowType) => {
+    useHistoryStore.getState().pushSnapshot('Change edge type', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
     set((state) => ({
       edges: state.edges.map((e) => {
         if (e.id !== edgeId) return e
@@ -413,6 +443,9 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
   },
 
   resetLayout: () => {
+    useHistoryStore.getState().pushSnapshot('Reset layout', {
+      nodes: get().nodes, edges: get().edges, services: getCurrentServices(),
+    })
     const { nodes, edges } = get()
 
     const g = new dagre.graphlib.Graph()

@@ -156,3 +156,9 @@ body {
 .react-flow__attribution {
   display: none;
 }
+
+/* Skeleton pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.15; }
+}

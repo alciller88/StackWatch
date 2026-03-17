@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useStore } from '../../store/useStore';
 import type { Dependency } from '../../types';
 
@@ -70,6 +71,15 @@ export const DepsPanel: React.FC = () => {
     }
     return groups;
   }, [filtered, groupByType]);
+
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: grouped ? 0 : filtered.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 41,
+    overscan: 20,
+  });
 
   const openExternal = (dep: Dependency) => {
     const urlFn = ecosystemUrls[dep.ecosystem];
@@ -177,7 +187,7 @@ export const DepsPanel: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" ref={tableContainerRef}>
         {filtered.length === 0 ? (
           dependencies.length === 0 && repoPath ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
@@ -238,7 +248,24 @@ export const DepsPanel: React.FC = () => {
                       {deps.map(renderRow)}
                     </React.Fragment>
                   ))
-                : filtered.map(renderRow)}
+                : (
+                  <>
+                    {rowVirtualizer.getVirtualItems().length > 0 && (
+                      <tr style={{ height: rowVirtualizer.getVirtualItems()[0]?.start ?? 0 }}>
+                        <td colSpan={4} />
+                      </tr>
+                    )}
+                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                      const dep = filtered[virtualRow.index];
+                      return renderRow(dep);
+                    })}
+                    {rowVirtualizer.getVirtualItems().length > 0 && (
+                      <tr style={{ height: rowVirtualizer.getTotalSize() - (rowVirtualizer.getVirtualItems().at(-1)?.end ?? 0) }}>
+                        <td colSpan={4} />
+                      </tr>
+                    )}
+                  </>
+                )}
             </tbody>
           </table>
         )}

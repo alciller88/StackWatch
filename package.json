@@ -14,6 +14,7 @@
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",
     "@octokit/rest": "^21.1.1",
+    "@tanstack/react-virtual": "^3.13.23",
     "dotenv": "^16.4.7",
     "electron-store": "^10.0.1",
     "ignore": "^7.0.5",
