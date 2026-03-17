@@ -178,10 +178,25 @@ export interface ServiceContext {
   warnings?: string[];
 }
 
+export interface Alternative {
+  name: string;
+  reason: string;
+  type: 'cheaper' | 'open-source' | 'self-hosted';
+  estimatedSavings?: string;
+  url?: string;
+}
+
+export interface AlternativeSuggestion {
+  serviceId: string;
+  serviceName: string;
+  alternatives: Alternative[];
+}
+
 export interface DeepAnalysisResult {
   serviceContexts: ServiceContext[];
   hiddenServices: Service[];
   inferredEdgeTypes: { serviceId: string; flowType: FlowEdge['flowType']; reason: string }[];
+  alternativeSuggestions?: AlternativeSuggestion[];
 }
 
 export interface Vulnerability {
@@ -227,6 +242,23 @@ export interface ScoreHistoryEntry {
   depCount: number;
 }
 
+export interface HtmlExportData {
+  projectName: string;
+  services: Service[];
+  dependencies: Dependency[];
+  flowNodes: FlowNode[];
+  flowEdges: FlowEdge[];
+  score: number;
+  scoreBreakdown: {
+    servicesWithCost: number;
+    servicesWithOwner: number;
+    servicesReviewed: number;
+    graphCompleteness: number;
+  };
+  generatedAt: string;
+  budget?: { monthly: number; currency: string };
+}
+
 export interface StackWatchAPI {
   analyzeLocal(folderPath: string): Promise<AnalysisResult>;
   analyzeGitHub(repo: string, token: string): Promise<AnalysisResult>;
@@ -246,6 +278,7 @@ export interface StackWatchAPI {
   getStackDiff(folderPath: string): Promise<StackDiffResult | null>;
   getScoreHistory(folderPath: string): Promise<ScoreHistoryEntry[]>;
   checkRenewals(services: Service[]): Promise<void>;
+  exportHtml(data: HtmlExportData): Promise<boolean>;
   openExternalUrl(url: string): Promise<boolean>;
   windowMinimize(): void;
   windowMaximize(): void;

@@ -31,7 +31,7 @@ Full spec: `SPEC.md` · User docs: `README.md`
 ### Analysis pipeline
 
 ```
-extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep analysis] → zombieDetector.ts → flowInference.ts
+extractor.ts → heuristic.ts → deduplicator.ts → [AI refine] → [AI deep analysis + alternatives] → zombieDetector.ts → flowInference.ts
      │                                                                                                          │
      ├── Evidences (env vars, imports, URLs, configs)                                                           ├── FlowNodes
      ├── Dependencies (npm, pip, cargo, go, etc.)                                                               └── FlowEdges
@@ -60,7 +60,7 @@ Never filter services out of the graph. Never create services without nodes.
 ```
 ┌─────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (21 channels)             │
+│  ├── IPC handlers (22 channels)             │
 │  ├── electron-store (safeStorage encrypted) │
 │  ├── Analyzers (pure Node.js)               │
 │  ├── AI client (OpenAI-compatible)          │
@@ -69,6 +69,7 @@ Never filter services out of the graph. Never create services without nodes.
 │  ├── Stack Diff (snapshot compare)          │
 │  ├── Zombie detector (git log activity)     │
 │  ├── Score history (.stackwatch/)           │
+│  ├── HTML exporter (self-contained report)  │
 │  ├── Renewal notifications (Electron)       │
 │  └── CSP headers (production only)          │
 ├─────────────────────────────────────────────┤
@@ -136,7 +137,9 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
 | `electron/analyzers/zombieDetector.ts` | Zombie detection: git log activity per service, stale/zombie classification |
 | `electron/analyzers/scoreHistory.ts` | Score history: persist health scores to `.stackwatch/score-history.json` |
-| `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types |
+| `electron/ai/deepAnalyzer.ts` | AI: refine services, usage context, hidden detection, edge types, alternative suggestions |
+| `electron/ai/alternativeSuggester.ts` | AI: suggest cheaper/open-source alternatives for detected services |
+| `electron/exporters/htmlExporter.ts` | Self-contained HTML report generator (dark theme, print-friendly) |
 | `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
 
 ### Renderer (src/)
@@ -166,7 +169,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 ### CLI & CI
 | File | Purpose |
 |------|---------|
-| `cli/index.ts` | CLI entry: scan, init, badge, doctor, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
+| `cli/index.ts` | CLI entry: scan, init, badge, doctor, --diff, --sbom, --html, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
 | `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
 
 ### Build & validation
@@ -280,6 +283,8 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | Theme in localStorage, not config | User preference, not project-level setting |
 | Budget in UserConfig | Project-level setting, shared via config file |
 | Score history as modal, not panel | Secondary content, doesn't justify a full panel slot |
+| HTML export as template literal | No template engine deps, self-contained, XSS-escaped |
+| AI alternatives as Step D in deep analysis | Reuses existing AI pipeline, silent fallback, no new deps |
 
 ---
 

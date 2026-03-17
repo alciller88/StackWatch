@@ -5,7 +5,7 @@ import { useDialogStore } from '../../store/dialogStore';
 import { GitHubModal } from '../GitHubModal';
 import { getScoreBadgeMarkdown, getScoreBadgeHtml, generateScoreBadgeSvg } from '../../utils/badge';
 import { calculateHealthScore } from '../../utils/healthScore';
-import type { Service, UserConfig, ServiceCategory, FlowEdge } from '../../types';
+import type { Service, UserConfig, ServiceCategory, FlowEdge, HtmlExportData } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
   const date = new Date().toISOString().split('T')[0];
@@ -144,6 +144,36 @@ export const TopBar: React.FC = () => {
     await window.stackwatch.exportServicesMd(md);
   };
 
+  const handleExportHtml = async () => {
+    if (!window.stackwatch) return;
+    setShowExportMenu(false);
+    const projectName = config?.project?.name || repoPath?.split(/[/\\]/).pop() || 'Project';
+    const fNodes = graphNodes.map(n => ({
+      id: n.id, label: n.data.label, type: n.data.nodeType ?? 'external' as const, serviceId: n.data.serviceId,
+    }));
+    const fEdges = graphEdges.map(e => ({
+      source: e.source, target: e.target, label: e.data?.label, flowType: (e.data?.flowType as FlowEdge['flowType']) ?? 'data',
+    }));
+    const health = calculateHealthScore(services, fNodes, fEdges);
+    const data: HtmlExportData = {
+      projectName,
+      services,
+      dependencies,
+      flowNodes: fNodes,
+      flowEdges: fEdges,
+      score: health.score,
+      scoreBreakdown: {
+        servicesWithCost: health.servicesWithCost,
+        servicesWithOwner: health.servicesWithOwner,
+        servicesReviewed: health.servicesReviewed,
+        graphCompleteness: health.graphCompleteness,
+      },
+      generatedAt: new Date().toISOString(),
+      budget: config?.budget ? { monthly: config.budget.monthly, currency: config.budget.currency } : undefined,
+    };
+    await window.stackwatch.exportHtml(data);
+  };
+
   const handleShareCopy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setShareCopied(key);
@@ -218,6 +248,13 @@ export const TopBar: React.FC = () => {
                 role="menuitem"
               >
                 Report (.md)
+              </button>
+              <button
+                onClick={handleExportHtml}
+                className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)]"
+                role="menuitem"
+              >
+                Dashboard (.html)
               </button>
             </div>
           )}

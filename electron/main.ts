@@ -356,6 +356,21 @@ ipcMain.handle('export-services-md', async (_event, content: string) => {
   return true
 })
 
+ipcMain.handle('export-html', async (_event, data: import('./types').HtmlExportData) => {
+  if (!mainWindow) return false
+  const { generateHtmlReport } = await import('./exporters/htmlExporter')
+  const html = generateHtmlReport(data)
+  const safeName = data.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export HTML report',
+    defaultPath: `stackwatch-report-${safeName}.html`,
+    filters: [{ name: 'HTML', extensions: ['html'] }],
+  })
+  if (!filePath) return false
+  await fs.writeFile(filePath, html, 'utf-8')
+  return true
+})
+
 // --- Link Status ---
 
 async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {

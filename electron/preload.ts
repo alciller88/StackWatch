@@ -37,6 +37,9 @@ const api: StackWatchAPI = {
   exportServicesMd: (content: string) =>
     ipcRenderer.invoke('export-services-md', content),
 
+  exportHtml: (data: import('../shared/types').HtmlExportData) =>
+    ipcRenderer.invoke('export-html', data),
+
   checkLinkStatus: (config) =>
     ipcRenderer.invoke('check-link-status', config),
 

@@ -135,11 +135,12 @@ Resolves simple glob patterns (e.g., `packages/*`). Scans each workspace package
 
 ### 3.5 Deep AI analysis (`ai/deepAnalyzer.ts`)
 
-Only runs if the user configures an AI provider. Three capabilities:
+Only runs if the user configures an AI provider. Four capabilities:
 
 1. **Service context**: For each detected service, reads relevant code files and determines usage description, criticality level (critical/important/optional), and warnings (hardcoded secrets, missing error handling).
 2. **Hidden service detection**: Reads priority files (lib/, services/, api/) and finds services consumed via wrappers or custom SDKs that heuristic analysis missed.
 3. **Smart graph edges**: Determines correct edge type (data/auth/payment/webhook) based on actual service usage context.
+4. **Stack alternatives** (`alternativeSuggester.ts`): For paid/trial/high-confidence services, suggests 1-2 cheaper or open-source alternatives with reason, type (cheaper/open-source/self-hosted), and estimated savings. Single AI call, silent fallback.
 
 **Provider presets (3):**
 - **Local** (Ollama / LM Studio) — localhost, no API key needed
@@ -204,7 +205,17 @@ Generates architecture graph from detected services:
 - Dagre hierarchical layout (top-to-bottom)
 - User node always present as entry point
 
-### 3.12 Manual configuration (`stackwatch.config.json`)
+### 3.12 HTML exporter (`exporters/htmlExporter.ts`)
+
+Generates a self-contained HTML report from analysis results:
+- Complete dark-themed HTML document with inline CSS (no external dependencies)
+- Sections: Stack Score (big number + 4 progress bars), services grouped by category (collapsible `<details>`), cost summary with optional budget progress, dependencies grouped by ecosystem, service graph connections table
+- XSS prevention: all user data HTML-escaped via `esc()` helper
+- Print-friendly: `@media print` rules with white background
+- Mobile-responsive layout
+- Available via CLI (`--html > report.html`) and IPC (`export-html` with save dialog)
+
+### 3.13 Manual configuration (`stackwatch.config.json`)
 
 The user can add services manually from the UI with an expanded form: name, category, plan, cost, renewal date, account email, owner, notes, URL. Persisted with `source: "manual"`.
 
@@ -363,10 +374,25 @@ interface ServiceContext {
   warnings?: string[]
 }
 
+interface Alternative {
+  name: string
+  reason: string
+  type: 'cheaper' | 'open-source' | 'self-hosted'
+  estimatedSavings?: string
+  url?: string
+}
+
+interface AlternativeSuggestion {
+  serviceId: string
+  serviceName: string
+  alternatives: Alternative[]
+}
+
 interface DeepAnalysisResult {
   serviceContexts: ServiceContext[]
   hiddenServices: Service[]
   inferredEdgeTypes: { serviceId: string; flowType: FlowEdge['flowType']; reason: string }[]
+  alternativeSuggestions?: AlternativeSuggestion[]
 }
 ```
 
@@ -469,7 +495,7 @@ Every service MUST have a corresponding graph node. Enforced by:
 
 ## 7. IPC communication (main ↔ renderer)
 
-23 methods exposed via `contextBridge`:
+24 methods exposed via `contextBridge`:
 
 ```typescript
 interface StackWatchAPI {
@@ -485,6 +511,7 @@ interface StackWatchAPI {
   openExternalUrl(url: string): Promise<boolean>
   exportConfig(content: string): Promise<boolean>
   exportServicesMd(content: string): Promise<boolean>
+  exportHtml(data: HtmlExportData): Promise<boolean>
 
   // Configuration
   loadConfig(repoPath: string): Promise<UserConfig | null>
@@ -532,6 +559,7 @@ interface StackWatchAPI {
 | `--diff` | Compare with previous scan (loads `.stackwatch/last-scan.json`) |
 | `--sbom cyclonedx` | Output CycloneDX 1.5 SBOM as JSON |
 | `--sbom spdx` | Output SPDX 2.3 SBOM as JSON |
+| `--html` | Output self-contained HTML report (pipe to file) |
 | `--fail-on-vulns` | Exit code 1 if critical/high vulnerabilities found |
 | `--fail-on-unreviewed` | Exit code 2 if unreviewed services exist |
 | `--help` | Show help text |
@@ -665,7 +693,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Interactive flow graph with context menus, node editing, and custom connections
 - [x] Deep AI analysis provides service context, hidden detection, and smart edge types
 - [x] 241 tests passing across 18 suites
-- [x] CLI with scan, init, badge, doctor, --diff, --sbom, --fail-on-vulns, --fail-on-unreviewed
+- [x] CLI with scan, init, badge, doctor, --diff, --sbom, --html, --fail-on-vulns, --fail-on-unreviewed
 - [x] GitHub Action posts PR comments with scan results
 - [x] Monorepo support (npm, pnpm, lerna, turbo, nx)
 - [x] Vulnerability detection via OSV.dev API (8 ecosystems)
@@ -681,3 +709,5 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Budget mode in CostsPanel (monthly budget, progress bar, threshold alerts)
 - [x] Score history UI (Recharts line chart modal, trend stats, min/max/average)
 - [x] Light/dark theme toggle (CSS variables, localStorage persistence, Settings + Sidebar controls)
+- [x] Static HTML export (self-contained report, CLI --html flag, IPC export-html, print-friendly)
+- [x] AI stack alternatives (cheaper/open-source suggestions per service, Step D in deep analysis)

@@ -127,6 +127,9 @@ npx stackwatch badge ./my-project
 # Health check: find actionable problems
 npx stackwatch doctor
 npx stackwatch doctor ./my-project
+
+# Export self-contained HTML report
+npx stackwatch --html > report.html
 ```
 
 The CLI uses the same heuristic engine as the desktop app — zero config, works offline, instant results.
@@ -223,13 +226,14 @@ When Heuristic + AI is enabled, the AI pipeline runs in two phases:
 - Adjusts confidence levels
 - Merges duplicate detections of the same service
 
-**Phase 2 — Deep analysis** enriches results with three capabilities:
+**Phase 2 — Deep analysis** enriches results with four capabilities:
 
 | Capability | What it does |
 |---|---|
 | **Usage context** | For each service, AI reads your code and explains how it's used, its criticality (critical/important/optional), and detects warnings (hardcoded secrets, missing error handling) |
 | **Hidden service detection** | AI scans priority files (lib/, services/, api/) and finds services consumed via wrappers or SDKs that static analysis missed |
 | **Graph edge inference** | AI determines the correct connection type (data/auth/payment/webhook) for each service based on usage context |
+| **Stack alternatives** | For paid/commercial services, suggests 1-2 cheaper or open-source alternatives with estimated savings |
 
 ### Supported AI providers
 
@@ -343,7 +347,7 @@ When re-analysing a project that has manual services, StackWatch shows a confirm
 StackWatch/
 ├── electron/
 │   ├── main.ts              # Main process, 20 IPC handlers, CSP, notifications
-│   ├── preload.ts           # Secure renderer bridge (contextBridge, 23 methods)
+│   ├── preload.ts           # Secure renderer bridge (contextBridge, 24 methods)
 │   ├── types.ts             # Re-exports from shared/types.ts
 │   ├── analyzers/
 │   │   ├── index.ts         # Pipeline orchestrator (extract → classify → dedup → AI → flow)
@@ -358,12 +362,15 @@ StackWatch/
 │   │   ├── zombieDetector.ts # Zombie detection (git log activity per service)
 │   │   ├── scoreHistory.ts  # Score history persistence (.stackwatch/)
 │   │   └── __tests__/       # 7 test suites
-│   └── ai/
-│       ├── provider.ts      # OpenAI-compatible client + 3 provider presets
-│       ├── deepAnalyzer.ts  # Deep analysis: context, hidden detection, edge inference
-│       └── __tests__/       # 2 test suites
+│   ├── ai/
+│   │   ├── provider.ts      # OpenAI-compatible client + 3 provider presets
+│   │   ├── deepAnalyzer.ts  # Deep analysis: context, hidden detection, edge inference, alternatives
+│   │   ├── alternativeSuggester.ts # AI stack alternatives (cheaper/open-source suggestions)
+│   │   └── __tests__/       # 2 test suites
+│   └── exporters/
+│       └── htmlExporter.ts  # Self-contained HTML report generator
 ├── cli/
-│   ├── index.ts             # CLI: scan, init, badge, doctor, --diff, --sbom, --fail-on-*
+│   ├── index.ts             # CLI: scan, init, badge, doctor, --diff, --sbom, --html, --fail-on-*
 │   └── tsconfig.json        # CLI-specific TypeScript config
 ├── shared/
 │   └── types.ts             # Canonical type definitions (23 exports)
@@ -505,6 +512,8 @@ StackWatch/
 - [x] Budget mode in Costs panel (monthly budget, progress bar, threshold alerts, persisted in config)
 - [x] Score history UI (line chart modal, trend indicators, min/max/average stats)
 - [x] Light/dark theme toggle (CSS variables, Settings + Sidebar, localStorage persistence)
+- [x] Static HTML export (self-contained dashboard report, --html flag, print-friendly)
+- [x] AI stack alternatives (cheaper/open-source suggestions per service in deep analysis)
 
 ---
 

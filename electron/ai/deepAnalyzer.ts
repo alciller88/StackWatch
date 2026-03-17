@@ -9,7 +9,9 @@ import type {
   DeepAnalysisResult,
   FlowEdge,
   ServiceCategory,
+  AlternativeSuggestion,
 } from '../types'
+import { suggestAlternatives } from './alternativeSuggester'
 
 const MAX_FILES_PER_SERVICE = 3
 const MAX_FILES_HIDDEN_DETECTION = 4
@@ -488,10 +490,25 @@ export async function runDeepAnalysis(
     } catch { /* fallback to heuristic edge types */ }
   }
 
+  // Step D: Suggest alternatives
+  let alternativeSuggestions: AlternativeSuggestion[] | undefined
+  try {
+    const alternatives = await suggestAlternatives(
+      [...services, ...hiddenServices],
+      provider,
+    )
+    if (alternatives.length > 0) {
+      alternativeSuggestions = alternatives
+    }
+  } catch {
+    // Silent fallback — alternatives are optional
+  }
+
   return {
     serviceContexts: contexts,
     hiddenServices,
     inferredEdgeTypes: inferredEdges,
+    alternativeSuggestions,
   }
 }
 

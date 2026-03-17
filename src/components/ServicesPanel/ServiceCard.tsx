@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Service, ServiceContext } from '../../types';
+import type { Service, ServiceContext, AlternativeSuggestion } from '../../types';
 import { useStore } from '../../store/useStore';
 import { daysUntil } from '../../utils/dates';
 
@@ -68,6 +68,11 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
   const confidence = service.confidence ?? 'high';
   const badge = confidenceBadge[confidence];
   const updateServiceConfidence = useStore(s => s.updateServiceConfidence);
+  const alternativeSuggestion = useStore(s => {
+    const suggestions = s.deepAnalysis?.alternativeSuggestions;
+    if (!suggestions) return undefined;
+    return suggestions.find(a => a.serviceId === service.id);
+  });
   const [showConfDropdown, setShowConfDropdown] = useState(false);
   const confRef = useRef<HTMLDivElement>(null);
 
@@ -241,6 +246,29 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
         <div className="font-mono text-[11px] text-[var(--color-text-muted)] mt-2 italic line-clamp-2">
           {service.comment}
         </div>
+      )}
+
+      {/* Alternatives */}
+      {alternativeSuggestion && alternativeSuggestion.alternatives.length > 0 && (
+        <details className="mt-2 border-t border-[var(--color-border)] pt-2" onClick={(e) => e.stopPropagation()}>
+          <summary className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent)]">
+            Alternatives ({alternativeSuggestion.alternatives.length})
+          </summary>
+          <div className="mt-1 space-y-1">
+            {alternativeSuggestion.alternatives.map((alt, i) => (
+              <div key={i} className="font-mono text-[11px]">
+                <span className="text-[var(--color-accent)]">{alt.name}</span>
+                <span className="ml-1 text-[var(--color-text-muted)]">
+                  [{alt.type}]
+                </span>
+                {alt.estimatedSavings && (
+                  <span className="ml-1 text-emerald-400">{alt.estimatedSavings}</span>
+                )}
+                <p className="text-[var(--color-text-muted)] text-[10px]">{alt.reason}</p>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {/* Edit hint for manual services */}
