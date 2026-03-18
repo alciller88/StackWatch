@@ -15,5 +15,5 @@
     "noUncheckedIndexedAccess": true
   },
   "include": ["electron/**/*.ts", "shared/**/*.ts", "src/utils/healthScore.ts", "src/utils/billing.ts", "src/utils/dates.ts"],
-  "exclude": ["electron/analyzers/__tests__/fixtures/**"]
+  "exclude": ["electron/**/__tests__/**", "electron/analyzers/__tests__/fixtures/**"]
 }
