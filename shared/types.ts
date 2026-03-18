@@ -16,6 +16,17 @@ export interface EvidenceSummary {
   score: number;
 }
 
+export interface ServiceBilling {
+  type: 'manual' | 'automatic' | 'free';
+  period?: 'monthly' | 'yearly' | 'one-time' | 'usage-based';
+  amount?: number;
+  currency?: string;
+  nextDate?: string;
+  autoRenew?: boolean;
+  paymentMethod?: string;
+  lastRenewed?: string;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -27,8 +38,7 @@ export interface Service {
   confidenceReasons?: string[];
   evidenceSummary?: EvidenceSummary[];
   inferredFrom?: string;
-  cost?: { amount: number; currency: string; period: 'monthly' | 'yearly' };
-  renewalDate?: string;
+  billing?: ServiceBilling;
   accountEmail?: string;
   notes?: string;
   url?: string;
@@ -255,15 +265,42 @@ export interface StackDiffResult {
   previousTimestamp: string;
 }
 
+export type CheckStatus = 'pass' | 'fail' | 'unchecked';
+
+export type StackCheckId =
+  | 'NO_CRITICAL_VULNS'
+  | 'NO_HIGH_VULNS'
+  | 'NO_ZOMBIE_SERVICES'
+  | 'NO_OVERDUE_RENEWALS'
+  | 'NO_UPCOMING_RENEWALS'
+  | 'ALL_PAID_HAVE_OWNER'
+  | 'ALL_PAID_HAVE_BILLING'
+  | 'ALL_PAID_HAVE_RENEWAL';
+
+export interface StackCheck {
+  id: StackCheckId;
+  category: 'security' | 'completeness';
+  status: CheckStatus;
+  label: string;
+  detail?: string;
+  affectedCount?: number;
+  actionLabel?: string;
+  actionPanel?: 'services' | 'dependencies' | 'costs';
+  actionFilter?: Record<string, string>;
+}
+
+export interface HealthScore {
+  score: number;
+  totalChecks: number;
+  passingChecks: number;
+  checks: StackCheck[];
+}
+
 export interface ScoreHistoryEntry {
   timestamp: string;
   score: number;
-  breakdown: {
-    servicesWithCost: number;
-    servicesWithOwner: number;
-    servicesReviewed: number;
-    graphCompleteness: number;
-  };
+  passingChecks: number;
+  totalChecks: number;
   serviceCount: number;
   depCount: number;
   source?: 'scan' | 'manual';
@@ -288,12 +325,9 @@ export interface HtmlExportData {
   flowNodes: FlowNode[];
   flowEdges: FlowEdge[];
   score: number;
-  scoreBreakdown: {
-    servicesWithCost: number;
-    servicesWithOwner: number;
-    servicesReviewed: number;
-    graphCompleteness: number;
-  };
+  passingChecks: number;
+  totalChecks: number;
+  checks: StackCheck[];
   generatedAt: string;
   budget?: { monthly: number; currency: string };
 }

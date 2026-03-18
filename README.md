@@ -3,8 +3,8 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.7.0-blue)](https://github.com/alciller88/StackWatch/releases/latest)
-[![Tests](https://img.shields.io/badge/tests-372%20passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-0.8.0-blue)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Tests](https://img.shields.io/badge/tests-389%20passing-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project depends on -- with costs, renewal dates, and an interactive architecture graph. Zero config, works offline, and delivers results in seconds.
@@ -55,10 +55,10 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 | **19 Categories** | Domain, hosting, CI/CD, database, auth, payments, email, analytics, monitoring, CDN, storage, infra, AI, mobile, gaming, data, messaging, support, other |
 | **9 Ecosystems** | npm, pip, Cargo, Go, Composer, Gem, Maven, Gradle, Pub |
 | **Interactive Flow Graph** | Draggable architecture visualization with auto-layout, context menus, custom connections, and node editing |
-| **Cost Tracking** | Category breakdown with bar chart, monthly/yearly totals, renewal alerts, and budget mode |
+| **Billing & Costs** | ServiceBilling model (manual/automatic/free), renewal tracking with per-type thresholds, bar chart, budget mode |
 | **Vulnerability Scanning** | Batch queries OSV.dev across 8 ecosystems with severity classification |
 | **Zombie Detection** | Cross-references services with git log to find abandoned dependencies (6+ months inactive) |
-| **Stack Score** | 0-100 health metric with history tracking and trend visualization |
+| **Stack Score** | 8 binary checks (security + completeness), score = passing/applicable × 100 |
 | **SBOM Generation** | CycloneDX 1.5 and SPDX 2.3 output from detected dependencies |
 | **Stack Diff** | Compare scans to track how your stack changes over time |
 | **Monorepo Support** | npm workspaces, pnpm, Lerna, Turborepo, Nx |
@@ -165,8 +165,13 @@ StackWatch reads `stackwatch.config.json` from the root of the scanned project. 
       "category": "domain",
       "plan": "paid",
       "confidence": "high",
-      "cost": { "amount": 12, "currency": "USD", "period": "yearly" },
-      "renewalDate": "2026-09-01",
+      "billing": {
+        "type": "manual",
+        "period": "yearly",
+        "amount": 12,
+        "currency": "USD",
+        "nextDate": "2026-09-01"
+      },
       "accountEmail": "admin@example.com"
     }
   ],
@@ -228,7 +233,7 @@ For the full detection architecture, see [`SPEC.md`](./SPEC.md).
 |---------|-------------|
 | `npm run dev` | Development mode with hot reload |
 | `npm run build` | Production build with electron-builder |
-| `npm test` | Run 372 tests across 26 suites |
+| `npm test` | Run 389 tests across 27 suites |
 | `npm run lint` | ESLint across src, electron, shared |
 | `npm run validate` | 29-point production build checker |
 | `npm run release` | Validate, tag, push (triggers CI release) |

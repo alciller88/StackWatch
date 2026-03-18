@@ -1,21 +1,6 @@
-import type { Service, Dependency, FlowNode, FlowEdge, ServiceCategory } from '../../shared/types'
+import type { HtmlExportData, Service } from '../../shared/types'
 
-export interface HtmlExportData {
-  projectName: string
-  services: Service[]
-  dependencies: Dependency[]
-  flowNodes: FlowNode[]
-  flowEdges: FlowEdge[]
-  score: number
-  scoreBreakdown: {
-    servicesWithCost: number
-    servicesWithOwner: number
-    servicesReviewed: number
-    graphCompleteness: number
-  }
-  generatedAt: string
-  budget?: { monthly: number; currency: string }
-}
+export type { HtmlExportData }
 
 const CATEGORY_LABELS: Record<string, string> = {
   hosting: 'Hosting', database: 'Database', auth: 'Auth', payments: 'Payments',
@@ -75,8 +60,8 @@ function progressBar(label: string, pct: number): string {
 }
 
 function getMonthlyCost(s: Service): number {
-  if (!s.cost || s.cost.amount <= 0) return 0
-  return s.cost.period === 'yearly' ? s.cost.amount / 12 : s.cost.amount
+  if (!s.billing || !s.billing.amount || s.billing.amount <= 0) return 0
+  return s.billing.period === 'yearly' ? s.billing.amount / 12 : s.billing.amount
 }
 
 function formatCurrency(amount: number, currency?: string): string {
@@ -98,7 +83,7 @@ function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
 export function generateHtmlReport(data: HtmlExportData): string {
   const {
     projectName, services, dependencies, flowNodes, flowEdges,
-    score, scoreBreakdown, generatedAt, budget,
+    score, passingChecks, totalChecks, checks, generatedAt, budget,
   } = data
 
   const date = generatedAt.split('T')[0]
@@ -113,8 +98,8 @@ export function generateHtmlReport(data: HtmlExportData): string {
     const label = CATEGORY_LABELS[cat] ?? cat
     let rows = ''
     for (const s of list) {
-      const cost = s.cost && s.cost.amount > 0
-        ? esc(formatCurrency(getMonthlyCost(s), s.cost.currency)) + '/mo'
+      const cost = s.billing && s.billing.amount && s.billing.amount > 0
+        ? esc(formatCurrency(getMonthlyCost(s), s.billing.currency)) + '/mo'
         : '--'
       const confColor = confidenceColor(s.confidence)
       rows += `<tr>
@@ -311,10 +296,16 @@ footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #1e2230;font-size:0
     <div class="number" style="color:${scoreColor(score)}">${score}</div>
     <div class="out-of">out of 100</div>
   </div>
-  ${progressBar('Cost', scoreBreakdown.servicesWithCost)}
-  ${progressBar('Owner', scoreBreakdown.servicesWithOwner)}
-  ${progressBar('Reviewed', scoreBreakdown.servicesReviewed)}
-  ${progressBar('Graph', scoreBreakdown.graphCompleteness)}
+  <div class="progress-row">
+    <span class="progress-label">${passingChecks}/${totalChecks} checks passing</span>
+    <div class="progress-track">
+      <div class="progress-fill" style="width:${totalChecks > 0 ? Math.round((passingChecks / totalChecks) * 100) : 0}%;background:${scoreColor(score)}"></div>
+    </div>
+    <span class="progress-value">${totalChecks > 0 ? Math.round((passingChecks / totalChecks) * 100) : 0}%</span>
+  </div>
+  ${checks.map(c => `<div class="progress-row">
+    <span class="progress-label">${c.status === 'pass' ? '&#10003;' : c.status === 'fail' ? '&#10007;' : '--'} ${esc(c.label)}</span>
+  </div>`).join('\n  ')}
 </section>
 
 <section id="services">

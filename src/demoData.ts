@@ -10,8 +10,7 @@ export const demoServices: Service[] = [
     confidence: 'high',
     confidenceReasons: ['Found in vercel.json config'],
     inferredFrom: 'vercel.json',
-    cost: { amount: 20, currency: 'USD', period: 'monthly' },
-    renewalDate: '2026-04-15',
+    billing: { type: 'automatic', period: 'monthly', amount: 20, currency: 'USD', nextDate: '2026-04-15' },
     owner: 'Frontend Team',
   },
   {
@@ -35,7 +34,7 @@ export const demoServices: Service[] = [
     confidence: 'high',
     confidenceReasons: ['stripe package in dependencies'],
     inferredFrom: 'package.json',
-    cost: { amount: 0, currency: 'USD', period: 'monthly' },
+    billing: { type: 'automatic', period: 'usage-based', amount: 0, currency: 'USD' },
     notes: 'Pay-per-transaction model',
     owner: 'Payments Team',
   },
@@ -68,8 +67,7 @@ export const demoServices: Service[] = [
     confidence: 'high',
     confidenceReasons: ['@sentry/nextjs in package.json'],
     inferredFrom: 'package.json',
-    cost: { amount: 26, currency: 'USD', period: 'monthly' },
-    renewalDate: '2026-05-01',
+    billing: { type: 'manual', period: 'monthly', amount: 26, currency: 'USD', nextDate: '2026-05-01', lastRenewed: '2026-04-01' },
     accountEmail: 'devops@example.com',
   },
 ];

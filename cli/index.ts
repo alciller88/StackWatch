@@ -171,12 +171,9 @@ async function runScan() {
         flowNodes: result.flowNodes,
         flowEdges: result.flowEdges,
         score: healthResult.score,
-        scoreBreakdown: {
-          servicesWithCost: healthResult.servicesWithCost,
-          servicesWithOwner: healthResult.servicesWithOwner,
-          servicesReviewed: healthResult.servicesReviewed,
-          graphCompleteness: healthResult.graphCompleteness,
-        },
+        passingChecks: healthResult.passingChecks,
+        totalChecks: healthResult.totalChecks,
+        checks: healthResult.checks,
         generatedAt: new Date().toISOString(),
       })
       console.log(html)
@@ -238,14 +235,11 @@ async function runScan() {
       await appendScoreEntry(resolvedPath, {
         timestamp: new Date().toISOString(),
         score: healthResult.score,
-        breakdown: {
-          servicesWithCost: healthResult.servicesWithCost,
-          servicesWithOwner: healthResult.servicesWithOwner,
-          servicesReviewed: healthResult.servicesReviewed,
-          graphCompleteness: healthResult.graphCompleteness,
-        },
+        passingChecks: healthResult.passingChecks,
+        totalChecks: healthResult.totalChecks,
         serviceCount: result.services.length,
         depCount: result.dependencies.length,
+        source: 'scan',
       })
     } catch {
       // Non-critical: don't fail the scan if score history save fails
@@ -314,9 +308,8 @@ async function runInit() {
         needsReview: s.needsReview,
         inferredFrom: s.inferredFrom,
         // Empty fields for user to fill in
-        cost: undefined,
+        billing: undefined,
         owner: undefined,
-        renewalDate: undefined,
         accountEmail: undefined,
         notes: undefined,
       })),
@@ -330,7 +323,7 @@ async function runInit() {
     console.log()
     console.log(`  Config written to: ${configPath}`)
     console.log()
-    console.log('  Edit the file to add cost, owner, and renewal info for each service.')
+    console.log('  Edit the file to add billing, owner, and account info for each service.')
     console.log()
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : String(err)}`)
@@ -439,8 +432,7 @@ async function runDoctor() {
         const svc = services.find(s => s.id === cs.id || s.name === cs.name)
         if (svc) {
           if (cs.owner) svc.owner = cs.owner
-          if (cs.renewalDate) svc.renewalDate = cs.renewalDate
-          if (cs.cost) svc.cost = cs.cost
+          if (cs.billing) svc.billing = cs.billing
           if (cs.plan) svc.plan = cs.plan
         }
       }
@@ -460,7 +452,7 @@ async function runDoctor() {
         pass('All services have owners')
       }
 
-      const paidNoRenewal = services.filter(s => s.plan === 'paid' && !s.renewalDate)
+      const paidNoRenewal = services.filter(s => s.plan === 'paid' && !s.billing?.nextDate)
       if (paidNoRenewal.length > 0) {
         fail(`${paidNoRenewal.length} paid service${paidNoRenewal.length === 1 ? '' : 's'} without renewal date: ${paidNoRenewal.map(s => s.name).join(', ')}`)
       } else if (services.some(s => s.plan === 'paid')) {
@@ -498,7 +490,7 @@ async function runDoctor() {
     if (paidServices.length === 0) {
       pass('No paid services detected')
     } else {
-      const paidNoCost = paidServices.filter(s => !s.cost || !s.cost.amount)
+      const paidNoCost = paidServices.filter(s => !s.billing?.amount)
       if (paidNoCost.length > 0) {
         fail(`${paidNoCost.length} paid service${paidNoCost.length === 1 ? '' : 's'} without documented cost: ${paidNoCost.map(s => s.name).join(', ')}`)
       } else {
@@ -506,8 +498,8 @@ async function runDoctor() {
       }
 
       const totalMonthly = paidServices.reduce((sum, s) => {
-        if (!s.cost || !s.cost.amount) return sum
-        const monthly = s.cost.period === 'yearly' ? s.cost.amount / 12 : s.cost.amount
+        if (!s.billing?.amount) return sum
+        const monthly = s.billing.period === 'yearly' ? s.billing.amount / 12 : s.billing.amount
         return sum + monthly
       }, 0)
 
@@ -553,26 +545,15 @@ async function runDoctor() {
       services,
       result.flowNodes,
       result.flowEdges,
+      vulnResults,
     )
 
-    const totalServices = services.length
-    const costCount = services.filter(s => s.cost && s.cost.amount >= 0).length
-    const ownerCount = services.filter(s => s.owner && s.owner.trim()).length
-    const reviewedCount = services.filter(s => !s.needsReview).length
-
-    const nonUserNodes = result.flowNodes.filter(n => n.type !== 'user')
-    const connectedNodeIds = new Set([
-      ...result.flowEdges.map(e => e.source),
-      ...result.flowEdges.map(e => e.target),
-    ])
-    const connectedCount = nonUserNodes.filter(n => connectedNodeIds.has(n.id)).length
-    const totalNodes = nonUserNodes.length
-
-    console.log(`Stack Score: ${health.score}/100`)
-    console.log(`  Cost documented:     ${health.servicesWithCost}% (${costCount}/${totalServices} services)`)
-    console.log(`  Owner assigned:      ${health.servicesWithOwner}% (${ownerCount}/${totalServices} services)`)
-    console.log(`  Services reviewed:   ${health.servicesReviewed}% (${reviewedCount}/${totalServices} services)`)
-    console.log(`  Graph completeness:  ${health.graphCompleteness}% (${connectedCount}/${totalNodes} nodes connected)`)
+    console.log(`Stack Score: ${health.score}/100 (${health.passingChecks}/${health.totalChecks} checks passing)`)
+    for (const check of health.checks) {
+      if (check.status === 'unchecked') continue
+      const icon = check.status === 'pass' ? '\u2713' : '\u2717'
+      console.log(`  ${icon} ${check.label}`)
+    }
 
     console.log()
     console.log('\u2550'.repeat(35))

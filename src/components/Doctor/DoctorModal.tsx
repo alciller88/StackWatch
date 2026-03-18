@@ -155,7 +155,7 @@ export const DoctorModal: React.FC = () => {
     };
 
     const noOwner = services.filter(s => !s.owner);
-    const paidNoRenewal = services.filter(s => s.plan === 'paid' && !s.renewalDate);
+    const paidNoRenewal = services.filter(s => s.plan === 'paid' && !s.billing?.nextDate);
     const needReview = services.filter(s => s.needsReview);
     const lowConf = services.filter(s => s.confidence === 'low');
 
@@ -186,7 +186,7 @@ export const DoctorModal: React.FC = () => {
       ],
     };
 
-    const paidNoCost = services.filter(s => s.plan === 'paid' && (!s.cost || !s.cost.amount));
+    const paidNoCost = services.filter(s => s.plan === 'paid' && (!s.billing || !s.billing.amount));
 
     const costsSection: CheckSection = {
       title: 'Costs',
@@ -235,7 +235,7 @@ export const DoctorModal: React.FC = () => {
         {
           label: `Score: ${breakdown.score}/100`,
           status: breakdown.score >= 80 ? 'pass' : breakdown.score >= 50 ? 'warn' : 'fail',
-          detail: `Cost: ${breakdown.servicesWithCost}% | Owner: ${breakdown.servicesWithOwner}% | Reviewed: ${breakdown.servicesReviewed}% | Graph: ${breakdown.graphCompleteness}%`,
+          detail: `${breakdown.passingChecks}/${breakdown.totalChecks} checks passing`,
         },
       ],
     };

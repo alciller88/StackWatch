@@ -18,12 +18,8 @@ function makeEntry(overrides?: Partial<ScoreHistoryEntry>): ScoreHistoryEntry {
   return {
     timestamp: '2025-01-15T12:00:00Z',
     score: 72,
-    breakdown: {
-      servicesWithCost: 60,
-      servicesWithOwner: 80,
-      servicesReviewed: 70,
-      graphCompleteness: 50,
-    },
+    passingChecks: 3,
+    totalChecks: 5,
     serviceCount: 5,
     depCount: 20,
     ...overrides,

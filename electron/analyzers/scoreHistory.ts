@@ -1,19 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import type { ScoreHistoryEntry } from '../../shared/types';
 
-export interface ScoreHistoryEntry {
-  timestamp: string;       // ISO date
-  score: number;           // 0-100
-  breakdown: {
-    servicesWithCost: number;
-    servicesWithOwner: number;
-    servicesReviewed: number;
-    graphCompleteness: number;
-  };
-  serviceCount: number;
-  depCount: number;
-  source?: 'scan' | 'manual';
-}
+export type { ScoreHistoryEntry };
 
 const HISTORY_DIR = '.stackwatch';
 const HISTORY_FILE = 'score-history.json';

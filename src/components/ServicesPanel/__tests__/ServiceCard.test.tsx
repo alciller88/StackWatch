@@ -35,8 +35,8 @@ describe('ServiceCard', () => {
     expect(screen.getByText('paid')).toBeInTheDocument()
   })
 
-  it('renders cost when present', () => {
-    const svc = { ...baseService, cost: { amount: 29, currency: 'USD', period: 'monthly' as const } }
+  it('renders billing amount when present', () => {
+    const svc = { ...baseService, billing: { type: 'manual' as const, period: 'monthly' as const, amount: 29, currency: 'USD' } }
     render(<ServiceCard service={svc} />)
     expect(screen.getByText('USD 29')).toBeInTheDocument()
     expect(screen.getByText('/ monthly')).toBeInTheDocument()
@@ -52,7 +52,8 @@ describe('ServiceCard', () => {
     // Set a future date within 30 days so "(Xd left)" shows
     const future = new Date()
     future.setDate(future.getDate() + 10)
-    const svc = { ...baseService, renewalDate: future.toISOString().split('T')[0] }
+    const nextDate = future.toISOString().split('T')[0]
+    const svc = { ...baseService, billing: { type: 'manual' as const, period: 'monthly' as const, amount: 10, nextDate } }
     render(<ServiceCard service={svc} />)
     expect(screen.getByText(/10d left/)).toBeInTheDocument()
   })

@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
+import { useGraphStore } from '../../store/graphStore';
+import { calculateHealthScore } from '../../utils/healthScore';
 import { APP_VERSION } from '../../constants';
+import type { FlowEdge } from '../../types';
 
 import type { ActivePanel } from '../../store/useStore';
 
@@ -119,7 +122,20 @@ const sectionLabel = (text: string, collapsed: boolean) =>
 
 export const Sidebar: React.FC = () => {
   const { activePanel, setActivePanel, services, stackScore, openScoreHistory, openDoctor, theme, toggleTheme } = useStore();
+  const graphNodes = useGraphStore(s => s.nodes);
+  const graphEdges = useGraphStore(s => s.edges);
   const [collapsed, setCollapsed] = useState(false);
+
+  const healthScore = useMemo(() => {
+    if (services.length === 0) return null;
+    const fNodes = graphNodes.map(n => ({
+      id: n.id, label: n.data.label, type: n.data.nodeType ?? 'external' as const, serviceId: n.data.serviceId,
+    }));
+    const fEdges: FlowEdge[] = graphEdges.map(e => ({
+      source: e.source, target: e.target, flowType: (e.data?.flowType as FlowEdge['flowType']) ?? 'data',
+    }));
+    return calculateHealthScore(services, fNodes, fEdges);
+  }, [services, graphNodes, graphEdges]);
 
   const viewItems = navItems.filter(i => i.section === 'views');
   const systemItems = navItems.filter(i => i.section === 'system');
@@ -180,12 +196,19 @@ export const Sidebar: React.FC = () => {
             {stackScore}
           </span>
           {!collapsed && (
-            <span className="font-mono text-[10px] tracking-widest uppercase flex items-center gap-1.5" style={{ color: 'var(--color-text-muted)' }}>
-              Stack Score
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-              </svg>
-            </span>
+            <>
+              <span className="font-mono text-[10px] tracking-widest uppercase flex items-center gap-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                Stack Score
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+              </span>
+              {healthScore && (
+                <span className="font-mono text-[10px] text-[var(--color-text-muted)]">
+                  {healthScore.passingChecks}/{healthScore.totalChecks} checks passing
+                </span>
+              )}
+            </>
           )}
         </button>
       )}

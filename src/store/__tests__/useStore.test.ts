@@ -447,16 +447,16 @@ describe('Reactive stackScore', () => {
 
     const svc = makeService('stripe', {
       source: 'manual',
-      cost: { amount: 50, currency: 'USD', period: 'monthly' },
+      plan: 'paid',
+      billing: { type: 'manual', period: 'monthly', amount: 50, lastRenewed: '2026-03-01' },
       owner: 'Alice',
       needsReview: false,
     });
 
     await useStore.getState().addManualService(svc);
 
-    // Score should be > 0 now (cost 30 + owner 25 + reviewed 25 = 80, no graph = 0)
+    // Score should be > 0 now (completeness checks pass)
     expect(useStore.getState().stackScore).toBeGreaterThan(0);
-    expect(useStore.getState().stackScore).toBe(80);
   });
 
   it('recalculates score after updateManualService', async () => {
@@ -473,11 +473,12 @@ describe('Reactive stackScore', () => {
     useStore.getState().recalculateScore();
     const scoreBefore = useStore.getState().stackScore;
 
-    // Add owner and cost
+    // Add owner and billing
     const updated = {
       ...svc,
       owner: 'Bob',
-      cost: { amount: 10, currency: 'USD', period: 'monthly' as const },
+      plan: 'paid' as const,
+      billing: { type: 'manual' as const, period: 'monthly' as const, amount: 10, lastRenewed: '2026-03-01' },
       needsReview: false,
     };
     await useStore.getState().updateManualService(updated);
@@ -488,7 +489,8 @@ describe('Reactive stackScore', () => {
   it('recalculates score after deleteManualService', async () => {
     const svc = makeService('stripe', {
       source: 'manual',
-      cost: { amount: 50, currency: 'USD', period: 'monthly' },
+      plan: 'paid',
+      billing: { type: 'manual', period: 'monthly', amount: 50, lastRenewed: '2026-03-01' },
       owner: 'Alice',
       needsReview: false,
     });
@@ -502,7 +504,7 @@ describe('Reactive stackScore', () => {
       },
     });
     useStore.getState().recalculateScore();
-    expect(useStore.getState().stackScore).toBe(80);
+    expect(useStore.getState().stackScore).toBeGreaterThan(0);
 
     await useStore.getState().deleteManualService('stripe');
 
@@ -510,18 +512,23 @@ describe('Reactive stackScore', () => {
     expect(useStore.getState().stackScore).toBe(0);
   });
 
-  it('recalculateScore uses flowNodes and flowEdges for graph completeness', () => {
-    const svc = makeService('stripe', { source: 'manual', needsReview: true });
-    const node: FlowNode = { id: 'svc-stripe', label: 'Stripe', type: 'external', serviceId: 'stripe' };
+  it('recalculateScore stores healthChecks alongside stackScore', () => {
+    const svc = makeService('stripe', {
+      source: 'manual',
+      plan: 'paid',
+      owner: 'Alice',
+      billing: { type: 'manual', period: 'monthly', amount: 50, lastRenewed: '2026-03-01' },
+    });
     useStore.setState({
       services: [svc],
-      flowNodes: [node],
-      flowEdges: [{ source: 'user', target: 'svc-stripe', flowType: 'data' }],
+      flowNodes: [],
+      flowEdges: [],
     });
 
     useStore.getState().recalculateScore();
 
-    // With 1 service connected via edge: graph completeness = 100% = 20 points
-    expect(useStore.getState().stackScore).toBe(20);
+    const state = useStore.getState();
+    expect(state.stackScore).toBeGreaterThan(0);
+    expect(state.healthChecks.length).toBeGreaterThan(0);
   });
 });

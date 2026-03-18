@@ -30,8 +30,8 @@ function generateServicesMd(services: Service[], projectName: string): string {
     md += '| Service | Plan | Cost | Renewal |\n';
     md += '|---|---|---|---|\n';
     for (const s of list) {
-      const cost = s.cost ? `${s.cost.currency} ${s.cost.amount}/${s.cost.period}` : '\u2014';
-      const renewal = s.renewalDate ?? '\u2014';
+      const cost = s.billing?.amount ? `${s.billing.currency ?? 'USD'} ${s.billing.amount}/${s.billing.period ?? 'monthly'}` : '\u2014';
+      const renewal = s.billing?.nextDate ?? '\u2014';
       md += `| ${s.name} | ${s.plan === 'unknown' ? '\u2014' : s.plan} | ${cost} | ${renewal} |\n`;
     }
   }
@@ -163,12 +163,9 @@ export const TopBar: React.FC = () => {
       flowNodes: fNodes,
       flowEdges: fEdges,
       score: health.score,
-      scoreBreakdown: {
-        servicesWithCost: health.servicesWithCost,
-        servicesWithOwner: health.servicesWithOwner,
-        servicesReviewed: health.servicesReviewed,
-        graphCompleteness: health.graphCompleteness,
-      },
+      passingChecks: health.passingChecks,
+      totalChecks: health.totalChecks,
+      checks: health.checks,
       generatedAt: new Date().toISOString(),
       budget: config?.budget ? { monthly: config.budget.monthly, currency: config.budget.currency } : undefined,
     };
@@ -193,8 +190,8 @@ export const TopBar: React.FC = () => {
     const serviceCount = services.length;
     const depCount = dependencies.length;
     const monthlyCost = services.reduce((sum, s) => {
-      if (!s.cost) return sum;
-      const monthly = s.cost.period === 'yearly' ? s.cost.amount / 12 : s.cost.amount;
+      if (!s.billing?.amount) return sum;
+      const monthly = s.billing.period === 'yearly' ? s.billing.amount / 12 : s.billing.amount;
       return sum + monthly;
     }, 0);
     return `\u{1F50D} My project uses ${serviceCount} services, ${depCount} dependencies, ~$${Math.round(monthlyCost)}/mo\nStack Score: ${stackScore}/100\nAnalyzed with StackWatch`;

@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.7.0 | Last updated: 2026-03-18 | Tests: 372 across 26 suites
+> Version: v0.8.0 | Last updated: 2026-03-18 | Tests: 389 across 27 suites
 
 ---
 
@@ -233,6 +233,17 @@ Self-contained HTML report with inline CSS. Sections: Stack Score, services by c
 ### 5.1 Service
 
 ```typescript
+interface ServiceBilling {
+  type: 'manual' | 'automatic' | 'free'
+  period?: 'monthly' | 'yearly' | 'one-time' | 'usage-based'
+  amount?: number
+  currency?: string
+  nextDate?: string        // next renewal/payment (ISO string)
+  autoRenew?: boolean
+  paymentMethod?: string
+  lastRenewed?: string     // last renewal date (ISO string)
+}
+
 interface Service {
   id: string
   name: string
@@ -244,8 +255,7 @@ interface Service {
   confidenceReasons?: string[]
   evidenceSummary?: EvidenceSummary[]
   inferredFrom?: string
-  cost?: { amount: number; currency: string; period: 'monthly' | 'yearly' }
-  renewalDate?: string
+  billing?: ServiceBilling
   accountEmail?: string
   owner?: string
   notes?: string
@@ -347,7 +357,7 @@ interface StackDiffResult {
 
 interface ScoreHistoryEntry {
   timestamp: string; score: number
-  breakdown: { servicesWithCost: number; servicesWithOwner: number; servicesReviewed: number; graphCompleteness: number }
+  passingChecks: number; totalChecks: number
   serviceCount: number; depCount: number; source?: 'scan' | 'manual'
 }
 
@@ -585,14 +595,36 @@ interface StackWatchAPI {
 
 ## 12. Stack Score
 
-Composite health metric (0-100):
+Binary check system: Score = (passing checks / applicable checks) × 100.
 
-| Component | Weight | Measures |
-|---|---|---|
-| Costs documented | 30% | Services with `cost.amount > 0` |
-| Owner assigned | 25% | Services with `owner` field |
-| Services reviewed | 25% | Services with `needsReview !== true` |
-| Graph completeness | 20% | Non-user nodes with at least one connection |
+Each check is `pass`, `fail`, or `unchecked`. Unchecked checks don't count toward the score.
+
+### 12.1 Security Checks (5)
+
+| Check | Applies When | Pass | Fail |
+|---|---|---|---|
+| `NO_CRITICAL_VULNS` | Vuln scan executed | 0 critical vulns | ≥1 critical |
+| `NO_HIGH_VULNS` | Vuln scan executed | 0 high vulns | ≥1 high |
+| `NO_ZOMBIE_SERVICES` | ≥1 service has zombieStatus | 0 zombies | ≥1 zombie |
+| `NO_OVERDUE_RENEWALS` | ≥1 service with manual renewal tracking | None overdue | ≥1 overdue |
+| `NO_UPCOMING_RENEWALS` | ≥1 service with manual renewal tracking | None within threshold | ≥1 within threshold |
+
+**Renewal thresholds by billing type:**
+- `automatic` + `monthly`: no tracking (excluded)
+- `automatic` + `yearly`: 60 days
+- `manual` + `monthly`: 7 days
+- `manual` + `yearly`: 30 days
+- `free`, `one-time`, `usage-based`: no tracking (excluded)
+
+### 12.2 Completeness Checks (3)
+
+| Check | Applies When | Pass | Fail |
+|---|---|---|---|
+| `ALL_PAID_HAVE_OWNER` | ≥1 paid/trial service | All have owner | ≥1 missing |
+| `ALL_PAID_HAVE_BILLING` | ≥1 paid/trial service | All have billing.amount | ≥1 missing |
+| `ALL_PAID_HAVE_RENEWAL` | ≥1 paid/trial with recurring period | All have nextDate | ≥1 missing |
+
+Free and unknown-plan services are excluded from completeness checks.
 
 Badge colors: green (>=80), yellow (>=50), red (<50).
 
@@ -630,29 +662,40 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 15. Testing
 
-372 tests across 26 suites (Vitest + @testing-library/react + jsdom).
+389 tests across 27 suites (Vitest + @testing-library/react + jsdom).
 
 | Suite | Count | Suite | Count |
 |---|---|---|---|
 | Heuristic | 32 | graphStore | 27 |
 | vulnScanner | 27 | Extractor | 26 |
 | Deep Analyzer | 24 | Deduplicator | 23 |
-| useStore | 19 | badge | 17 |
-| Flow inference | 17 | TopBar | 13 |
-| htmlExporter | 13 | Deep Analyzer (runDeep) | 13 |
-| zombieDetector | 12 | monorepo | 12 |
-| historyStore | 12 | ServiceCard | 12 |
-| healthScore | 11 | alternativeSuggester | 10 |
-| ScanProgress | 9 | scoreHistory | 8 |
-| scanDiff | 7 | ContextMenu | 7 |
-| DiscardedPanel | 7 | Pipeline | 7 |
-| Pipeline Integration | 4 | daysUntil | 3 |
+| useStore | 19 | healthScore | 18 |
+| Flow inference | 17 | badge | 17 |
+| TopBar | 13 | htmlExporter | 13 |
+| Deep Analyzer (runDeep) | 13 | zombieDetector | 12 |
+| monorepo | 12 | historyStore | 12 |
+| ServiceCard | 12 | billing | 10 |
+| alternativeSuggester | 10 | ScanProgress | 9 |
+| scoreHistory | 8 | scanDiff | 7 |
+| ContextMenu | 7 | DiscardedPanel | 7 |
+| Pipeline | 7 | Pipeline Integration | 4 |
+| daysUntil | 3 | | |
 
 ---
 
 ## 16. Version History
 
-### v0.7.0 (current)
+### v0.8.0 (current)
+- ServiceBilling data model replacing legacy cost/renewalDate fields (type, period, amount, currency, nextDate, lastRenewed)
+- 8 binary Stack Score checks (5 security + 3 completeness): score = passing/applicable × 100
+- Renewal tracking with per-billing-type thresholds (automatic monthly excluded, manual yearly 30d, etc.)
+- billing.ts utilities: calculateNextDate, renewService, getRenewalThreshold, getMonthlyAmount
+- ScoreBreakdown in Sidebar showing N/M checks passing
+- CostsPanel split into auto-renewing vs manual renewal sections
+- ServiceForm with billing type/period/amount/nextDate/lastRenewed fields
+- 389 tests across 27 suites (+17 new billing and healthScore tests)
+
+### v0.7.0
 - Semantic color CSS variables (`--color-danger`, `--color-success`, `--color-warning`, `--color-badge-bg/border-*`) with dark/light variants, replacing ~40 hardcoded hex colors across 15 components
 - WCAG AA contrast compliance: `--color-text-secondary` and `--color-text-muted` adjusted to 4.5:1 ratio in both themes
 - `TypedStore<StoreSchema>` interface for electron-store (replaces `any` typing)

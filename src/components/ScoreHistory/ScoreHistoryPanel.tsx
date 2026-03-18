@@ -60,12 +60,7 @@ const CustomTooltip = ({
         Score: {entry.score}
       </div>
       <div style={{ color: 'var(--color-text-secondary)' }}>
-        Cost: {entry.breakdown.servicesWithCost}% | Owner:{' '}
-        {entry.breakdown.servicesWithOwner}%
-      </div>
-      <div style={{ color: 'var(--color-text-secondary)' }}>
-        Reviewed: {entry.breakdown.servicesReviewed}% | Graph:{' '}
-        {entry.breakdown.graphCompleteness}%
+        {entry.passingChecks}/{entry.totalChecks} checks passing
       </div>
       <div style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
         {entry.serviceCount} services, {entry.depCount} deps

@@ -13,6 +13,8 @@ import type {
   ScoreHistoryEntry,
   DiscardedItem,
   ScanProgressData,
+  StackCheck,
+  DepVulnResult,
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
 import { computeScanDiff } from '../utils/scanDiff';
@@ -52,6 +54,8 @@ interface StoreState {
   /** Service IDs removed in last scan (for graph diff highlight). Cleared after 3s. */
   scanDiffRemoved: Set<string>;
   stackScore: number;
+  healthChecks: StackCheck[];
+  vulnResults: DepVulnResult[];
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
   mode: StoreMode;
@@ -170,6 +174,8 @@ export const useStore = create<StoreState>((set, get) => ({
   scanDiffAdded: new Set<string>(),
   scanDiffRemoved: new Set<string>(),
   stackScore: 0,
+  healthChecks: [],
+  vulnResults: [],
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
   mode: 'scan' as StoreMode,
@@ -184,9 +190,9 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   recalculateScore: () => {
-    const { services, flowNodes, flowEdges } = get();
-    const { score } = calculateHealthScore(services, flowNodes, flowEdges);
-    set({ stackScore: score });
+    const { services, flowNodes, flowEdges, vulnResults } = get();
+    const health = calculateHealthScore(services, flowNodes, flowEdges, vulnResults.length > 0 ? vulnResults : undefined);
+    set({ stackScore: health.score, healthChecks: health.checks });
   },
 
   analyzeLocal: async (path: string) => {
@@ -820,18 +826,14 @@ useStore.subscribe(
     if (state.stackScore !== prev.stackScore && state.stackScore > 0 && !state.isAnalyzing) {
       if (_scoreDebounceTimer) clearTimeout(_scoreDebounceTimer);
       _scoreDebounceTimer = setTimeout(() => {
-        const { repoPath, services, dependencies, flowNodes, flowEdges } = useStore.getState();
+        const { repoPath, services, dependencies, flowNodes, flowEdges, vulnResults } = useStore.getState();
         if (!repoPath || !window.stackwatch?.saveScoreEntry) return;
-        const breakdown = calculateHealthScore(services, flowNodes, flowEdges);
+        const health = calculateHealthScore(services, flowNodes, flowEdges, vulnResults.length > 0 ? vulnResults : undefined);
         const entry: ScoreHistoryEntry = {
           timestamp: new Date().toISOString(),
-          score: breakdown.score,
-          breakdown: {
-            servicesWithCost: breakdown.servicesWithCost,
-            servicesWithOwner: breakdown.servicesWithOwner,
-            servicesReviewed: breakdown.servicesReviewed,
-            graphCompleteness: breakdown.graphCompleteness,
-          },
+          score: health.score,
+          passingChecks: health.passingChecks,
+          totalChecks: health.totalChecks,
           serviceCount: services.length,
           depCount: dependencies.length,
           source: 'manual',

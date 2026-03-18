@@ -3,7 +3,8 @@ import { useStore } from '../../store/useStore';
 import { useDialogStore } from '../../store/dialogStore';
 import { ServiceCard } from './ServiceCard';
 import { SERVICE_CATEGORIES } from '../../types';
-import type { Service, ServiceCategory, ServiceContext } from '../../types';
+import type { Service, ServiceCategory, ServiceContext, ServiceBilling } from '../../types';
+import { renewService } from '../../utils/billing';
 
 const categories = SERVICE_CATEGORIES;
 
@@ -312,10 +313,12 @@ const ServiceForm: React.FC<{
   const [category, setCategory] = useState<ServiceCategory>(editingService?.category ?? 'other');
   const [plan, setPlan] = useState<Service['plan']>(editingService?.plan ?? 'unknown');
   const [url, setUrl] = useState(editingService?.url ?? '');
-  const [costAmount, setCostAmount] = useState(editingService?.cost?.amount?.toString() ?? '');
-  const [costCurrency, setCostCurrency] = useState(editingService?.cost?.currency ?? 'USD');
-  const [costPeriod, setCostPeriod] = useState<'monthly' | 'yearly'>(editingService?.cost?.period ?? 'monthly');
-  const [renewalDate, setRenewalDate] = useState(editingService?.renewalDate ?? '');
+  const [billingType, setBillingType] = useState<ServiceBilling['type']>(editingService?.billing?.type ?? 'manual');
+  const [billingPeriod, setBillingPeriod] = useState<NonNullable<ServiceBilling['period']>>(editingService?.billing?.period ?? 'monthly');
+  const [billingAmount, setBillingAmount] = useState(editingService?.billing?.amount?.toString() ?? '');
+  const [billingCurrency, setBillingCurrency] = useState(editingService?.billing?.currency ?? 'USD');
+  const [billingNextDate, setBillingNextDate] = useState(editingService?.billing?.nextDate ?? '');
+  const [billingLastRenewed, setBillingLastRenewed] = useState(editingService?.billing?.lastRenewed ?? '');
   const [accountEmail, setAccountEmail] = useState(editingService?.accountEmail ?? '');
   const [notes, setNotes] = useState(editingService?.notes ?? '');
   const [confidence, setConfidence] = useState<NonNullable<Service['confidence']>>(editingService?.confidence ?? 'high');
@@ -326,7 +329,7 @@ const ServiceForm: React.FC<{
   function validateForm(): Record<string, string> {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = 'Name is required';
-    if (costAmount && parseFloat(costAmount) < 0) errs.cost = 'Cost cannot be negative';
+    if (billingAmount && parseFloat(billingAmount) < 0) errs.cost = 'Cost cannot be negative';
     if (url && url.trim()) {
       try { new URL(url); } catch { errs.url = 'Invalid URL format'; }
     }
@@ -351,10 +354,16 @@ const ServiceForm: React.FC<{
       source: editingService?.source ?? 'manual',
       confidence,
       ...(url && { url }),
-      ...(costAmount && {
-        cost: { amount: parseFloat(costAmount), currency: costCurrency, period: costPeriod },
+      ...(billingType && {
+        billing: {
+          type: billingType,
+          ...(billingType !== 'free' && { period: billingPeriod }),
+          ...(billingType !== 'free' && billingAmount && { amount: parseFloat(billingAmount) }),
+          ...(billingType !== 'free' && { currency: billingCurrency }),
+          ...(billingNextDate && { nextDate: billingNextDate }),
+          ...(billingLastRenewed && { lastRenewed: billingLastRenewed }),
+        } as ServiceBilling,
       }),
-      ...(renewalDate && { renewalDate }),
       ...(accountEmail && { accountEmail }),
       ...(notes && { notes }),
       ...(owner && { owner }),
@@ -463,7 +472,7 @@ const ServiceForm: React.FC<{
         </div>
       </div>
 
-      {/* Row 2: URL, Cost, Renewal */}
+      {/* Row 2: URL, Billing */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
           <label htmlFor="sf-url" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">URL</label>
@@ -478,59 +487,128 @@ const ServiceForm: React.FC<{
           />
           {errors.url && <p className="text-red-500 text-[11px] mt-1">{errors.url}</p>}
         </div>
-        <div className="w-20">
-          <label htmlFor="sf-cost" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Cost</label>
-          <input
-            type="number"
-            id="sf-cost"
-            value={costAmount}
-            onChange={(e) => { setCostAmount(e.target.value); setErrors(prev => { const next = {...prev}; delete next.cost; return next; }); }}
-            placeholder="0"
-            min="0"
-            step="0.01"
-            className={`${inputClass} border ${errors.cost ? 'border-red-500' : ''}`}
-            style={errors.cost ? { ...inputStyle, borderColor: undefined } : inputStyle}
-          />
-          {errors.cost && <p className="text-red-500 text-[11px] mt-1">{errors.cost}</p>}
-        </div>
-        <div className="w-16">
-          <label htmlFor="sf-currency" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Currency</label>
+        <div className="w-24">
+          <label htmlFor="sf-billing-type" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Billing Type</label>
           <select
-            id="sf-currency"
-            value={costCurrency}
-            onChange={(e) => setCostCurrency(e.target.value)}
-            className="rounded-sm px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] border"
-            style={inputStyle}
-          >
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </div>
-        <div className="w-16">
-          <label htmlFor="sf-period" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Period</label>
-          <select
-            id="sf-period"
-            value={costPeriod}
-            onChange={(e) => setCostPeriod(e.target.value as 'monthly' | 'yearly')}
-            className="rounded-sm px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] border"
-            style={inputStyle}
-          >
-            <option value="monthly">/mo</option>
-            <option value="yearly">/yr</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="sf-renewal" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Renewal</label>
-          <input
-            type="date"
-            id="sf-renewal"
-            value={renewalDate}
-            onChange={(e) => setRenewalDate(e.target.value)}
+            id="sf-billing-type"
+            value={billingType}
+            onChange={(e) => setBillingType(e.target.value as ServiceBilling['type'])}
             className={`${inputClass} border`}
             style={inputStyle}
-          />
+          >
+            <option value="manual">Manual</option>
+            <option value="automatic">Automatic</option>
+            <option value="free">Free</option>
+          </select>
         </div>
+        {billingType !== 'free' && (
+          <>
+            <div className="w-24">
+              <label htmlFor="sf-billing-period" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Period</label>
+              <select
+                id="sf-billing-period"
+                value={billingPeriod}
+                onChange={(e) => setBillingPeriod(e.target.value as NonNullable<ServiceBilling['period']>)}
+                className="rounded-sm px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] border"
+                style={inputStyle}
+              >
+                <option value="monthly">/mo</option>
+                <option value="yearly">/yr</option>
+                <option value="one-time">One-time</option>
+                <option value="usage-based">Usage</option>
+              </select>
+            </div>
+            <div className="w-20">
+              <label htmlFor="sf-billing-amount" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Amount</label>
+              <input
+                type="number"
+                id="sf-billing-amount"
+                value={billingAmount}
+                onChange={(e) => { setBillingAmount(e.target.value); setErrors(prev => { const next = {...prev}; delete next.cost; return next; }); }}
+                placeholder="0"
+                min="0"
+                step="0.01"
+                className={`${inputClass} border ${errors.cost ? 'border-red-500' : ''}`}
+                style={errors.cost ? { ...inputStyle, borderColor: undefined } : inputStyle}
+              />
+              {errors.cost && <p className="text-red-500 text-[11px] mt-1">{errors.cost}</p>}
+            </div>
+            <div className="w-16">
+              <label htmlFor="sf-billing-currency" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Currency</label>
+              <select
+                id="sf-billing-currency"
+                value={billingCurrency}
+                onChange={(e) => setBillingCurrency(e.target.value)}
+                className="rounded-sm px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)] border"
+                style={inputStyle}
+              >
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Row 2b: Billing dates + renew action */}
+      {billingType === 'free' && (
+        <div className="font-mono text-[11px] text-[var(--color-success)] px-1">
+          Free plan — no billing needed
+        </div>
+      )}
+      {billingType !== 'free' && billingPeriod === 'usage-based' && (
+        <div className="font-mono text-[11px] text-[var(--color-text-muted)] px-1">
+          Cost varies by usage
+        </div>
+      )}
+      {billingType !== 'free' && billingPeriod !== 'usage-based' && billingPeriod !== 'one-time' && (
+        <div className="flex items-end gap-3">
+          <div>
+            <label htmlFor="sf-next-date" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Next Renewal</label>
+            <input
+              type="date"
+              id="sf-next-date"
+              value={billingNextDate}
+              onChange={(e) => setBillingNextDate(e.target.value)}
+              className={`${inputClass} border`}
+              style={inputStyle}
+            />
+          </div>
+          {billingType === 'manual' && (
+            <>
+              <div>
+                <label htmlFor="sf-last-renewed" className="block font-mono text-[11px] uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Last Renewed</label>
+                <input
+                  type="date"
+                  id="sf-last-renewed"
+                  value={billingLastRenewed}
+                  onChange={(e) => setBillingLastRenewed(e.target.value)}
+                  className={`${inputClass} border`}
+                  style={inputStyle}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = renewService({
+                    type: billingType,
+                    period: billingPeriod,
+                    amount: billingAmount ? parseFloat(billingAmount) : undefined,
+                    currency: billingCurrency,
+                    nextDate: billingNextDate || undefined,
+                    lastRenewed: billingLastRenewed || undefined,
+                  });
+                  setBillingLastRenewed(updated.lastRenewed ?? '');
+                  setBillingNextDate(updated.nextDate ?? '');
+                }}
+                className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-success)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors whitespace-nowrap"
+              >
+                Mark as renewed today
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Row 3: Email, Notes, Actions */}
       <div className="flex items-end gap-3">

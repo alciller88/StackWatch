@@ -74,7 +74,8 @@ interface ServiceCardProps {
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEdit }) => {
-  const days = service.renewalDate ? daysUntil(service.renewalDate) : null;
+  const nextDate = service.billing?.nextDate;
+  const days = nextDate ? daysUntil(nextDate) : null;
   const confidence = service.confidence ?? 'high';
   const badge = confidenceBadge[confidence];
   const updateServiceConfidence = useStore(s => s.updateServiceConfidence);
@@ -262,20 +263,30 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
         </div>
       )}
 
-      {/* Cost */}
-      {service.cost && (
+      {/* Billing */}
+      {service.billing && service.billing.type === 'free' && (
+        <div className="font-mono text-[11px] text-[var(--color-success)] mb-2">
+          Free plan
+        </div>
+      )}
+      {service.billing && service.billing.type !== 'free' && service.billing.period === 'usage-based' && (
+        <div className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-2">
+          Cost varies by usage
+        </div>
+      )}
+      {service.billing && service.billing.type !== 'free' && service.billing.period !== 'usage-based' && service.billing.amount != null && (
         <div className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-2">
           <span className="text-[var(--color-text-primary)] font-medium">
-            {service.cost.currency} {service.cost.amount}
+            {service.billing.currency ?? 'USD'} {service.billing.amount}
           </span>
-          <span className="text-[var(--color-text-muted)]"> / {service.cost.period}</span>
+          <span className="text-[var(--color-text-muted)]"> / {service.billing.period ?? 'monthly'}</span>
         </div>
       )}
 
       {/* Renewal date */}
-      {service.renewalDate && (
+      {nextDate && (
         <div className={`font-mono text-[11px] mb-2 ${renewalColor}`}>
-          Renews: {new Date(service.renewalDate).toLocaleDateString()}
+          Renews: {new Date(nextDate).toLocaleDateString()}
           {days !== null && days < 30 && (
             <span className="ml-1 font-medium">
               ({days < 0 ? 'overdue' : `${days}d left`})

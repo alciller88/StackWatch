@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateHtmlReport } from '../htmlExporter'
 import type { HtmlExportData } from '../htmlExporter'
-import type { Service, Dependency, FlowNode, FlowEdge } from '../../types'
+import type { Service, Dependency, FlowNode, FlowEdge, StackCheck } from '../../types'
 
 // ── Helpers ──
 
@@ -32,12 +32,9 @@ function makeExportData(overrides?: Partial<HtmlExportData>): HtmlExportData {
     flowNodes: [],
     flowEdges: [],
     score: 72,
-    scoreBreakdown: {
-      servicesWithCost: 60,
-      servicesWithOwner: 80,
-      servicesReviewed: 70,
-      graphCompleteness: 50,
-    },
+    passingChecks: 3,
+    totalChecks: 5,
+    checks: [],
     generatedAt: '2025-03-15T12:00:00Z',
     ...overrides,
   }
@@ -109,14 +106,14 @@ describe('generateHtmlReport', () => {
         name: 'Stripe',
         category: 'payments',
         plan: 'paid',
-        cost: { amount: 50, currency: 'USD', period: 'monthly' },
+        billing: { type: 'manual', period: 'monthly', amount: 50, currency: 'USD' },
       }),
       makeService({
         id: 'sentry',
         name: 'Sentry',
         category: 'monitoring',
         plan: 'paid',
-        cost: { amount: 30, currency: 'USD', period: 'monthly' },
+        billing: { type: 'manual', period: 'monthly', amount: 30, currency: 'USD' },
       }),
     ]
     const html = generateHtmlReport(makeExportData({ services }))
@@ -134,7 +131,7 @@ describe('generateHtmlReport', () => {
         name: 'Stripe',
         category: 'payments',
         plan: 'paid',
-        cost: { amount: 80, currency: 'USD', period: 'monthly' },
+        billing: { type: 'manual', period: 'monthly', amount: 80, currency: 'USD' },
       }),
     ]
     const html = generateHtmlReport(makeExportData({
@@ -188,7 +185,7 @@ describe('generateHtmlReport', () => {
         name: 'Domain',
         category: 'domain',
         plan: 'paid',
-        cost: { amount: 120, currency: 'USD', period: 'yearly' },
+        billing: { type: 'manual', period: 'yearly', amount: 120, currency: 'USD' },
       }),
     ]
     const html = generateHtmlReport(makeExportData({ services }))

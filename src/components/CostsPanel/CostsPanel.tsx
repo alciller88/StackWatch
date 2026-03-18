@@ -3,18 +3,17 @@ import { BarChart, Bar, XAxis, YAxis, Cell, ResponsiveContainer, Tooltip } from 
 import { useStore } from '../../store/useStore';
 import type { Service } from '../../types';
 import { daysUntil } from '../../utils/dates';
+import { getMonthlyAmount } from '../../utils/billing';
 
 function getMonthlyCost(service: Service): number {
-  if (!service.cost) return 0;
-  if (service.cost.period === 'monthly') return service.cost.amount;
-  if (service.cost.period === 'yearly') return service.cost.amount / 12;
-  return 0;
+  if (!service.billing) return 0;
+  return getMonthlyAmount(service.billing);
 }
 
 function getYearlyCost(service: Service): number {
-  if (!service.cost) return 0;
-  if (service.cost.period === 'yearly') return service.cost.amount;
-  if (service.cost.period === 'monthly') return service.cost.amount * 12;
+  if (!service.billing || !service.billing.amount) return 0;
+  if (service.billing.period === 'yearly') return service.billing.amount;
+  if (service.billing.period === 'monthly') return service.billing.amount * 12;
   return 0;
 }
 
@@ -43,7 +42,7 @@ export const CostsPanel: React.FC = () => {
   const [budgetCurrency, setBudgetCurrency] = useState(budget?.currency ?? 'USD');
 
   const paidServices = useMemo(
-    () => services.filter((s) => s.cost && s.cost.amount > 0),
+    () => services.filter((s) => s.billing && s.billing.amount && s.billing.amount > 0),
     [services],
   );
 
@@ -71,8 +70,8 @@ export const CostsPanel: React.FC = () => {
 
   const renewals = useMemo(() => {
     return services
-      .filter((s) => s.renewalDate)
-      .map((s) => ({ service: s, days: daysUntil(s.renewalDate!) }))
+      .filter((s) => s.billing?.nextDate)
+      .map((s) => ({ service: s, days: daysUntil(s.billing!.nextDate!), billingType: s.billing!.type }))
       .sort((a, b) => a.days - b.days);
   }, [services]);
 
@@ -472,73 +471,100 @@ export const CostsPanel: React.FC = () => {
       )}
 
       {/* Renewal Alerts */}
-      {renewals.length > 0 && (
-        <div>
-          <h2
-            className="font-mono text-[10px] uppercase tracking-widest mb-3"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            Renewal Alerts
-          </h2>
-          <div
-            className="border"
-            style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}
-          >
-            {renewals.map(({ service, days }) => {
-              let badge: { text: string; color: string } | null = null;
-              if (days < 0) {
-                badge = { text: 'OVERDUE', color: '#ef4444' };
-              } else if (days < 7) {
-                badge = { text: 'URGENT', color: '#ef4444' };
-              } else if (days < 30) {
-                badge = { text: 'SOON', color: '#eab308' };
-              }
+      {renewals.length > 0 && (() => {
+        const autoRenewals = renewals.filter(r => r.billingType === 'automatic');
+        const manualRenewals = renewals.filter(r => r.billingType === 'manual');
 
-              return (
-                <div
-                  key={service.id}
-                  className="flex items-center justify-between px-4 py-2 border-b last:border-b-0"
-                  style={{ borderColor: 'var(--color-border)' }}
+        const renderRenewalRow = ({ service, days }: { service: Service; days: number }) => {
+          let badge: { text: string; color: string } | null = null;
+          if (days < 0) {
+            badge = { text: 'OVERDUE', color: '#ef4444' };
+          } else if (days < 7) {
+            badge = { text: 'URGENT', color: '#ef4444' };
+          } else if (days < 30) {
+            badge = { text: 'SOON', color: '#eab308' };
+          }
+
+          return (
+            <div
+              key={service.id}
+              className="flex items-center justify-between px-4 py-2 border-b last:border-b-0"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className="font-mono text-[11px]"
+                  style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="font-mono text-[11px]"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {service.name}
-                    </span>
-                    {badge && (
-                      <span
-                        className="font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5"
-                        style={{
-                          color: badge.color,
-                          border: `1px solid ${badge.color}`,
-                        }}
-                      >
-                        {badge.text}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span
-                      className="font-mono text-[11px]"
-                      style={{ color: 'var(--color-text-muted)' }}
-                    >
-                      {service.renewalDate}
-                    </span>
-                    <span
-                      className="font-mono text-[11px]"
-                      style={{ color: days < 0 ? '#ef4444' : 'var(--color-text-muted)' }}
-                    >
-                      {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`}
-                    </span>
-                  </div>
+                  {service.name}
+                </span>
+                {badge && (
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5"
+                    style={{
+                      color: badge.color,
+                      border: `1px solid ${badge.color}`,
+                    }}
+                  >
+                    {badge.text}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-4">
+                <span
+                  className="font-mono text-[11px]"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  {service.billing?.nextDate}
+                </span>
+                <span
+                  className="font-mono text-[11px]"
+                  style={{ color: days < 0 ? '#ef4444' : 'var(--color-text-muted)' }}
+                >
+                  {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`}
+                </span>
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <div className="space-y-4">
+            {autoRenewals.length > 0 && (
+              <div>
+                <h2
+                  className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  Auto-renewing
+                </h2>
+                <div
+                  className="border"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}
+                >
+                  {autoRenewals.map(renderRenewalRow)}
                 </div>
-              );
-            })}
+              </div>
+            )}
+            {manualRenewals.length > 0 && (
+              <div>
+                <h2
+                  className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  Manual renewals
+                </h2>
+                <div
+                  className="border"
+                  style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}
+                >
+                  {manualRenewals.map(renderRenewalRow)}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

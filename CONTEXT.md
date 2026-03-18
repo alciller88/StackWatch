@@ -18,7 +18,7 @@
 | GitHub Action| `alciller88/StackWatch@main` — posts PR comments with results   |
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
 | Persistence  | `electron-store` (safeStorage encrypted, typed via `Store<StoreSchema>`) |
-| Tests        | 372 tests, 26 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 389 tests, 27 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -115,7 +115,7 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 
 | Store          | Purpose                       | Key details                                                                                                                     |
 |----------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` recalculated reactively via `recalculateScore()`. Score changes debounced 2s, persisted with `source: 'manual'`. Registers service getter with graphStore via `registerServiceGetter()`. Scan diff timer properly cancelled on re-scan. |
+| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` + `healthChecks: StackCheck[]` + `vulnResults: DepVulnResult[]` recalculated reactively. Score changes debounced 2s, persisted with `source: 'manual'`. Uses `ServiceBilling` (no legacy cost/renewalDate). |
 | `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock** (prevents race conditions). Uses `registerServiceGetter()` callback (no `require()`). Subscribes to node/edge count to trigger score recalculation. |
 | `historyStore` | Undo/redo                     | Past/future stacks, max 50 snapshots. Captures nodes + edges + services.                                                       |
 | `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
@@ -181,7 +181,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `src/store/historyStore.ts`    | Undo/redo snapshots (50 max)                                      |
 | `src/store/toastStore.ts`      | Toast notifications (4s auto-dismiss)                             |
 | `src/store/dialogStore.ts`     | Promise-based confirm dialog                                      |
-| `src/utils/healthScore.ts`     | Stack Score 0-100 (cost 30%, owner 25%, reviewed 25%, graph 20%)  |
+| `src/utils/healthScore.ts`     | Stack Score via 8 binary checks (security + completeness). Score = passing/applicable × 100 |
+| `src/utils/billing.ts`         | ServiceBilling utilities: calculateNextDate, renewService, getRenewalThreshold, getMonthlyAmount |
 | `src/themes.ts`                | Dark/light theme CSS variable definitions + semantic colors       |
 | `src/components/ServicesPanel/` | Cards, zombie badges, confidence, evidence popover, activity filter |
 | `src/components/DepsPanel/`    | Virtualized table (@tanstack/react-virtual), vuln scanning        |
@@ -240,7 +241,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-372 tests across 26 suites.
+389 tests across 27 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -300,6 +301,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No full Zustand store subscriptions          | Use selectors in perf-critical components      |
 | No synchronous fs in main process            | Use `fs.promises`                              |
 | No assuming AI is available                  | Always fallback to heuristics                  |
+| No using legacy cost/renewalDate fields      | Use `service.billing` (ServiceBilling). Legacy fields removed. |
 | No skipping tsbuildinfo cleanup              | Stale cache breaks builds                      |
 
 ---
@@ -321,6 +323,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | Semantic CSS variables for theming     | Swap vars at root, no component rewrites. WCAG AA contrast. |
 | Theme in localStorage, not config      | User preference, not project-level setting             |
 | Budget in UserConfig                   | Project-level setting, shared via config file          |
+| ServiceBilling replaces cost/renewalDate | Richer billing model (type/period/amount/nextDate/lastRenewed) |
+| Binary checks for Stack Score          | 8 pass/fail checks, score = passing/applicable × 100. No weighted percentages. |
 | OSV.dev for vulns                      | Free, no API key, 8 ecosystems                         |
 | @tanstack/react-virtual               | Handles 500+ rows efficiently                          |
 | Composite GitHub Action               | Faster than Docker, reuses CLI                         |

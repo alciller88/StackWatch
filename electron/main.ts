@@ -245,12 +245,12 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
 
   // Append score history entry
   try {
-    const { score, servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness } =
-      calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+    const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
     await appendScoreEntry(safePath, {
       timestamp: new Date().toISOString(),
-      score,
-      breakdown: { servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness },
+      score: healthResult.score,
+      passingChecks: healthResult.passingChecks,
+      totalChecks: healthResult.totalChecks,
       serviceCount: result.services.length,
       depCount: result.dependencies.length,
       source: 'scan',
@@ -369,12 +369,12 @@ ipcMain.handle(
       // Note: snapshot save skipped for GitHub (no local repo to write to)
       let scoreEntry = undefined
       try {
-        const { score, servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness } =
-          calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+        const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
         scoreEntry = {
           timestamp: new Date().toISOString(),
-          score,
-          breakdown: { servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness },
+          score: healthResult.score,
+          passingChecks: healthResult.passingChecks,
+          totalChecks: healthResult.totalChecks,
           serviceCount: result.services.length,
           depCount: result.dependencies.length,
           source: 'scan' as const,
@@ -589,8 +589,8 @@ function checkRenewalNotifications(services: Service[]): void {
   if (mainWindow?.isFocused()) return
 
   const upcoming = services.filter((s) => {
-    if (!s.renewalDate) return false
-    const days = daysUntil(s.renewalDate)
+    if (!s.billing?.nextDate) return false
+    const days = daysUntil(s.billing.nextDate)
     return days > 0 && days <= 30
   })
 
@@ -599,16 +599,16 @@ function checkRenewalNotifications(services: Service[]): void {
   if (upcoming.length <= 3) {
     // Show individual notifications
     for (const s of upcoming) {
-      const days = daysUntil(s.renewalDate!)
+      const days = daysUntil(s.billing!.nextDate!)
       new Notification({
         title: 'StackWatch: Renewal Alert',
-        body: `${s.name} renews in ${days} days (${s.renewalDate})`,
+        body: `${s.name} renews in ${days} days (${s.billing!.nextDate})`,
       }).show()
     }
   } else {
     // Group into a single notification
     const lines = upcoming.map((s) => {
-      const days = daysUntil(s.renewalDate!)
+      const days = daysUntil(s.billing!.nextDate!)
       return `${s.name} in ${days}d`
     })
     new Notification({
