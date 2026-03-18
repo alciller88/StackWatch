@@ -162,22 +162,24 @@ export const DepsPanel: React.FC = () => {
       {/* Header */}
       <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: 'var(--color-border)' }}>
         <div className="flex items-center justify-between">
-          <h2 className="font-mono uppercase tracking-widest text-sm font-medium text-[var(--color-text-primary)]">
-            Dependencies
-            <span className="ml-2 font-mono text-[11px] text-[var(--color-text-muted)] font-normal">
-              ({filtered.length})
-            </span>
-          </h2>
-          <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] cursor-pointer">
-            <input
-              type="checkbox"
-              checked={groupByType}
-              onChange={(e) => setGroupByType(e.target.checked)}
-              className="rounded-sm border-[var(--color-border)]"
-              style={{ accentColor: 'var(--color-accent)' }}
-            />
-            Group by type
-          </label>
+          <div className="flex items-center gap-4">
+            <h2 className="font-mono uppercase tracking-widest text-sm font-medium text-[var(--color-text-primary)]">
+              Dependencies
+              <span className="ml-2 font-mono text-[11px] text-[var(--color-text-muted)] font-normal">
+                ({filtered.length})
+              </span>
+            </h2>
+            <label className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--color-text-secondary)] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={groupByType}
+                onChange={(e) => setGroupByType(e.target.checked)}
+                className="rounded-sm border-[var(--color-border)]"
+                style={{ accentColor: 'var(--color-accent)' }}
+              />
+              Group by type
+            </label>
+          </div>
           <button
             onClick={scanVulns}
             disabled={vulnLoading || dependencies.length === 0}
@@ -197,24 +199,8 @@ export const DepsPanel: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-7a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            {vulnScanned ? 'Re-scan vulns' : 'Scan vulns'}
+            {vulnScanned ? 'Re-scan' : 'Scan vulns'}
           </button>
-          {vulnScanned && totalVulns > 0 && (
-            <span
-              className="flex items-center gap-1 px-2 py-1 font-mono text-[11px] uppercase tracking-widest border"
-              style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}
-            >
-              {totalVulns} vuln{totalVulns !== 1 ? 's' : ''}
-            </span>
-          )}
-          {vulnScanned && totalVulns === 0 && (
-            <span
-              className="flex items-center gap-1 px-2 py-1 font-mono text-[11px] uppercase tracking-widest border"
-              style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}
-            >
-              No vulns
-            </span>
-          )}
         </div>
 
         <div className="flex gap-3">
