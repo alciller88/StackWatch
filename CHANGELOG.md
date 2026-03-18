@@ -3,6 +3,23 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.2](https://github.com/alciller88/StackWatch/compare/v0.10.1...v0.10.2) (2026-03-18)
+
+### Bug Fixes
+- **Vulnerability scan button broken**: Zod validation schema for `scan-vulnerabilities` IPC was missing `ecosystem` field — Zod stripped it during parsing, causing `vulnScanner` to filter out all dependencies and silently return empty results
+- **Scan progress stuck at 0% on large repos**: pipeline emitted no progress events until after `detectMonorepo()` and `extractEvidences()` completed — added immediate progress emission, granular file-processing updates, and `AbortSignal` checks throughout extraction
+- **Vuln button text not resetting on project switch**: `vulnScanned` and `vulnResults` were not cleared when scanning a new repo or importing a config — button now correctly shows "Scan vulns" instead of "Re-scan" after switching projects
+
+### Improvements
+- Monorepo scanning now shows per-package progress (`Scanning package 3/12...`)
+- File extraction shows incremental progress (`Processing files (150/800)...`)
+- Scan cancellation now works during monorepo detection and file extraction phases
+
+### Tests
+- Updated `scanVulnerabilities` validation tests to include `ecosystem` field
+
+---
+
 ## [0.10.1](https://github.com/alciller88/StackWatch/compare/v0.10.0...v0.10.1) (2026-03-18)
 
 ### Type Safety

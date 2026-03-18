@@ -236,7 +236,7 @@ export const useStore = create<StoreState>((set, get) => ({
       scanMode = decision as 'merge' | 'fresh';
     }
 
-    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan', scanProgress: { phase: 'Initializing...', percent: 0, counts: { evidences: 0, services: 0, vulns: 0 } } });
+    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan', scanProgress: { phase: 'Initializing...', percent: 0, counts: { evidences: 0, services: 0, vulns: 0 } }, vulnResults: [], vulnScanned: false });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
 
@@ -377,7 +377,7 @@ export const useStore = create<StoreState>((set, get) => ({
       scanMode = decision as 'merge' | 'fresh';
     }
 
-    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan', scanProgress: { phase: 'Initializing...', percent: 0, counts: { evidences: 0, services: 0, vulns: 0 } } });
+    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan', scanProgress: { phase: 'Initializing...', percent: 0, counts: { evidences: 0, services: 0, vulns: 0 } }, vulnResults: [], vulnScanned: false });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
 
@@ -714,6 +714,8 @@ export const useStore = create<StoreState>((set, get) => ({
         activePanel: 'flow',
         deepAnalysis: null,
         error: null,
+        vulnResults: [],
+        vulnScanned: false,
       });
       get().recalculateScore();
     } catch (err) {

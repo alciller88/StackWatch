@@ -97,7 +97,7 @@ describe('IPC Validation', () => {
   describe('scanVulnerabilities', () => {
     it('accepts valid deps array', () => {
       const result = validate(schemas.scanVulnerabilities, {
-        deps: [{ name: 'lodash', version: '4.17.21', type: 'npm' }],
+        deps: [{ name: 'lodash', version: '4.17.21', type: 'production', ecosystem: 'npm' }],
       }, 'scan-vulnerabilities')
       expect(result.deps).toHaveLength(1)
     })
@@ -106,7 +106,8 @@ describe('IPC Validation', () => {
       const hugeDeps = Array.from({ length: 5001 }, (_, i) => ({
         name: `pkg-${i}`,
         version: '1.0.0',
-        type: 'npm',
+        type: 'production',
+        ecosystem: 'npm',
       }))
       expect(() => validate(schemas.scanVulnerabilities, { deps: hugeDeps }, 'scan-vulnerabilities')).toThrow()
     })

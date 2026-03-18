@@ -1,7 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import ignore from 'ignore'
-import type { Evidence, Dependency } from '../types'
+import type { Evidence, Dependency, ProgressCallback } from '../types'
 
 const EXCLUDED_DIRS = new Set([
   'node_modules', 'dist', '.next', 'build', '.git', 'coverage',
@@ -102,7 +102,11 @@ interface ExtractionResult {
   projectName: string
 }
 
-export async function extractEvidences(repoPath: string): Promise<ExtractionResult> {
+export async function extractEvidences(
+  repoPath: string,
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal,
+): Promise<ExtractionResult> {
   const evidences: Evidence[] = []
   const dependencies: Dependency[] = []
   const projectDomain = await detectProjectDomain(repoPath)
@@ -117,9 +121,19 @@ export async function extractEvidences(repoPath: string): Promise<ExtractionResu
   }
 
   // Walk the repo
+  onProgress?.({ phase: 'Walking file tree...', percent: 7, counts: { evidences: 0, services: 0, vulns: 0 } })
+  if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
   const files = await walkRepo(repoPath, repoPath, ig)
 
-  for (const filePath of files) {
+  // Emit progress periodically during file processing
+  const progressInterval = Math.max(1, Math.floor(files.length / 5))
+  for (let i = 0; i < files.length; i++) {
+    const filePath = files[i]
+    if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
+    if (i > 0 && i % progressInterval === 0) {
+      const filePercent = 8 + Math.round((i / files.length) * 10)
+      onProgress?.({ phase: `Processing files (${i}/${files.length})...`, percent: filePercent, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+    }
     const relPath = path.relative(repoPath, filePath)
     const basename = path.basename(filePath)
     const ext = path.extname(filePath)

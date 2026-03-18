@@ -15,18 +15,23 @@ export async function analyzeLocalRepo(
   onProgress?: ProgressCallback,
   signal?: AbortSignal,
 ): Promise<AnalysisResult> {
+  // Emit initial progress immediately so the UI shows activity
+  onProgress?.({ phase: 'Detecting project structure...', percent: 1, counts: { evidences: 0, services: 0, vulns: 0 } })
+  if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
+
   // Check for monorepo structure
   const mono = await detectMonorepo(folderPath)
 
   if (mono.type && mono.packages.length > 1) {
     // Monorepo: scan root + each package, merge results
+    onProgress?.({ phase: `Scanning monorepo (${mono.packages.length} packages)...`, percent: 3, counts: { evidences: 0, services: 0, vulns: 0 } })
     return analyzeMonorepo(folderPath, mono.packages, mono.type, aiSettings, excludedServices, onProgress, signal)
   }
 
   // Single repo
   onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
-  const { evidences, dependencies, projectName } = await extractEvidences(folderPath)
+  const { evidences, dependencies, projectName } = await extractEvidences(folderPath, onProgress, signal)
   onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
   return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath, onProgress, signal)
 }
@@ -43,15 +48,21 @@ async function analyzeMonorepo(
   const rootName = path.basename(rootPath)
 
   // Scan root first (for shared config, CI, docker-compose, etc.)
-  const rootResult = await extractEvidences(rootPath)
+  onProgress?.({ phase: 'Scanning root package...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
+  if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
+  const rootResult = await extractEvidences(rootPath, onProgress, signal)
 
   // Scan each package
   const allEvidences: Evidence[] = [...rootResult.evidences]
   const allDeps: Dependency[] = [...rootResult.dependencies]
 
-  for (const pkgPath of packagePaths) {
+  for (let i = 0; i < packagePaths.length; i++) {
+    const pkgPath = packagePaths[i]
+    if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
+    const pkgPercent = 5 + Math.round((i / packagePaths.length) * 12)
+    onProgress?.({ phase: `Scanning package ${i + 1}/${packagePaths.length}...`, percent: pkgPercent, counts: { evidences: allEvidences.length, services: 0, vulns: 0 } })
     try {
-      const pkgResult = await extractEvidences(pkgPath)
+      const pkgResult = await extractEvidences(pkgPath, onProgress, signal)
       // Tag evidences with package name
       const pkgName = path.basename(pkgPath)
       for (const ev of pkgResult.evidences) {
@@ -59,8 +70,9 @@ async function analyzeMonorepo(
       }
       allEvidences.push(...pkgResult.evidences)
       allDeps.push(...pkgResult.dependencies)
-    } catch {
-      // Skip packages that fail to scan
+    } catch (err: any) {
+      // Re-throw cancellation, skip other failures
+      if (err?.name === 'AbortError') throw err
     }
   }
 

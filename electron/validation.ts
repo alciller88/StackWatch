@@ -49,6 +49,7 @@ export const schemas = {
       name: z.string(),
       version: z.string(),
       type: z.string(),
+      ecosystem: z.string(),
     })).max(5000),
   }),
   exportServicesMd: z.object({
