@@ -62,10 +62,10 @@ Rules:
       const service = targetServices[idx]
       const alternatives: Alternative[] = item.alternatives
         .slice(0, 2)
-        .filter((a: any) => a.name && a.reason && a.type)
-        .map((a: any) => {
-          const validTypes = ['cheaper', 'open-source', 'self-hosted'] as const
-          const type = validTypes.includes(a.type) ? a.type : 'cheaper'
+        .filter((a: Record<string, unknown>) => a.name && a.reason && a.type)
+        .map((a: Record<string, unknown>) => {
+          const validTypes: readonly string[] = ['cheaper', 'open-source', 'self-hosted']
+          const type = validTypes.includes(String(a.type)) ? String(a.type) : 'cheaper'
           return {
             name: String(a.name),
             reason: String(a.reason).slice(0, 80),

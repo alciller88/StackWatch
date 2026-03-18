@@ -74,7 +74,7 @@ export const FlowGraph: React.FC = () => {
     }
     initFromAnalysis(flowNodes, flowEdges, config?.graph, services)
     initialized.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialization effect: config, services, and initFromAnalysis are excluded to prevent re-init loops
   }, [flowNodes, flowEdges])
 
   // Close menus on outside events
@@ -265,7 +265,7 @@ export const FlowGraph: React.FC = () => {
             label: 'New Layer',
             nodeType: 'layer',
             source: 'manual',
-            layerColor: '#e2b04a',
+            layerColor: 'var(--color-accent)',
           })
         },
       },
@@ -471,10 +471,10 @@ export const FlowGraph: React.FC = () => {
       style = { ...style, borderStyle: 'dashed', opacity: 0.7 }
     }
     if (isAdded) {
-      style = { ...style, border: '2px solid #22c55e', boxShadow: '0 0 8px #22c55e80', transition: 'all 0.3s ease' }
+      style = { ...style, border: '2px solid var(--color-success)', boxShadow: '0 0 8px var(--color-success-muted)', transition: 'all 0.3s ease' }
     }
     if (isRemoved) {
-      style = { ...style, opacity: 0.4, border: '2px solid #6b7280', transition: 'opacity 0.5s ease' }
+      style = { ...style, opacity: 0.4, border: '2px solid var(--color-text-muted)', transition: 'opacity 0.5s ease' }
     }
 
     return {

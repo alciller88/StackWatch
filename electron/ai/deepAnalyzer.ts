@@ -427,7 +427,7 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   if (Array.isArray(actions.remove)) {
     const removeIds = new Set(
       actions.remove
-        .map((id: any) => idToService.get(Number(id))?.id)
+        .map((id: number) => idToService.get(Number(id))?.id)
         .filter(Boolean),
     )
     if (removeIds.size > 0) {

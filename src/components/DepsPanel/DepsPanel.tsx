@@ -9,7 +9,7 @@ type SortDir = 'asc' | 'desc';
 
 const typeColors: Record<Dependency['type'], string> = {
   production: 'bg-[var(--color-badge-bg-success)] text-[var(--color-success)] border-[var(--color-badge-border-success)]',
-  development: 'bg-[#1a2a3a] text-[#4a8ab0] border-[#2a4a6a]',
+  development: 'bg-[var(--color-info-bg)] text-[var(--color-info)] border-[var(--color-info-border)]',
   peer: 'bg-[var(--color-badge-bg-warning)] text-[var(--color-accent)] border-[var(--color-badge-border-warning)]',
 };
 
@@ -132,7 +132,7 @@ export const DepsPanel: React.FC = () => {
     <tr
       key={`${dep.ecosystem}-${dep.name}`}
       className="border-b cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
-      style={{ borderColor: 'rgba(30,36,48,0.3)' }}
+      style={{ borderColor: 'var(--color-border)' }}
       onClick={() => openExternal(dep)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -265,7 +265,7 @@ export const DepsPanel: React.FC = () => {
 
       {/* Vulnerability summary */}
       {vulnScanned && totalVulns > 0 && (
-        <div className="px-6 py-2 border-b flex items-center gap-3" style={{ borderColor: 'var(--color-border)', background: '#1a0a0a' }}>
+        <div className="px-6 py-2 border-b flex items-center gap-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-danger-bg)' }}>
           <span className="text-[var(--color-danger)] font-mono text-[11px] uppercase tracking-widest font-medium">
             {totalVulns} vulnerabilit{totalVulns !== 1 ? 'ies' : 'y'} in {vulnResults.length} package{vulnResults.length !== 1 ? 's' : ''}
           </span>

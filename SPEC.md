@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.5 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
+> Version: v0.10.6 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -699,7 +699,14 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.5 (current)
+### v0.10.6 (current)
+- **Code quality**: All hardcoded hex colors replaced with CSS variables (`--color-info`, `--color-info-bg`, `--color-info-border`, `--color-danger-bg` added to both themes)
+- **Code quality**: Unjustified `any` types removed — `Record<string, unknown>` or proper types used; remaining annotated with eslint justification
+- **Code quality**: Magic numbers extracted to named constants (`SCORE_GREEN_THRESHOLD`, `SCORE_YELLOW_THRESHOLD`, `MAX_VULNS_PER_DEP`, `MAX_SUMMARY_LENGTH`)
+- **Code quality**: `eslint-disable react-hooks/exhaustive-deps` in FlowGraph.tsx now has justification comment
+- 487 tests across 36 suites
+
+### v0.10.5
 - **Security**: SSRF protection — AI provider `baseUrl` blocks cloud metadata IPs; localhost allowed for Ollama/LM Studio
 - **Security**: Symlink traversal prevention — `walkRepo` resolves symlinks, skips outside root, detects circular via visited set
 - **Security**: Prompt injection prevention — `sanitizeForPrompt()` strips control chars before AI prompt interpolation

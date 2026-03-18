@@ -1,6 +1,8 @@
+import { SCORE_GREEN_THRESHOLD, SCORE_YELLOW_THRESHOLD } from '../constants'
+
 /** Generate a Stack Score badge as SVG string */
 export function generateScoreBadgeSvg(score: number, serviceCount: number): string {
-  const color = score >= 80 ? '#3d8c5e' : score >= 50 ? '#e2b04a' : '#c05050'
+  const color = score >= SCORE_GREEN_THRESHOLD ? '#3d8c5e' : score >= SCORE_YELLOW_THRESHOLD ? '#e2b04a' : '#c05050'
   const labelWidth = 82
   const scoreText = `${score}/100`
   const valueWidth = 54
@@ -25,19 +27,19 @@ export function generateScoreBadgeSvg(score: number, serviceCount: number): stri
 
 /** Generate shields.io URL for Stack Score badge */
 export function getScoreBadgeUrl(score: number): string {
-  const color = score >= 80 ? 'brightgreen' : score >= 50 ? 'yellow' : 'red'
+  const color = score >= SCORE_GREEN_THRESHOLD ? 'brightgreen' : score >= SCORE_YELLOW_THRESHOLD ? 'yellow' : 'red'
   return `https://img.shields.io/badge/Stack_Score-${score}%2F100-${color}`
 }
 
 /** Generate full badge markdown with score */
 export function getScoreBadgeMarkdown(score: number, serviceCount: number): string {
-  const color = score >= 80 ? 'brightgreen' : score >= 50 ? 'yellow' : 'red'
+  const color = score >= SCORE_GREEN_THRESHOLD ? 'brightgreen' : score >= SCORE_YELLOW_THRESHOLD ? 'yellow' : 'red'
   return `![Stack Score: ${score}/100](https://img.shields.io/badge/Stack_Score-${score}%2F100-${color}) ![Services: ${serviceCount}](https://img.shields.io/badge/StackWatch-${serviceCount}%20services-gold)`
 }
 
 /** Generate full badge HTML with score */
 export function getScoreBadgeHtml(score: number, serviceCount: number): string {
-  const color = score >= 80 ? 'brightgreen' : score >= 50 ? 'yellow' : 'red'
+  const color = score >= SCORE_GREEN_THRESHOLD ? 'brightgreen' : score >= SCORE_YELLOW_THRESHOLD ? 'yellow' : 'red'
   return `<a href="https://github.com/alciller88/StackWatch"><img src="https://img.shields.io/badge/Stack_Score-${score}%2F100-${color}" alt="Stack Score: ${score}/100" /></a> <a href="https://github.com/alciller88/StackWatch"><img src="https://img.shields.io/badge/StackWatch-${serviceCount}%20services-gold" alt="Analyzed with StackWatch" /></a>`
 }
 

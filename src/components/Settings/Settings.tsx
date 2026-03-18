@@ -203,7 +203,7 @@ export const Settings: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[12px] font-medium text-[var(--color-text-primary)]">{p.name}</span>
                         {p.recommended && p.localOnly && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[#1a2a3a] text-[#4a8ab0] border border-[#2a4a6a] font-mono tracking-widest">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[var(--color-info-bg)] text-[var(--color-info)] border border-[var(--color-info-border)] font-mono tracking-widest">
                             Local
                           </span>
                         )}
@@ -289,18 +289,18 @@ export const Settings: React.FC = () => {
                         style={inputStyle}
                       />
                     </div>
-                    <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[11px] text-[#4a8ab0] space-y-2">
+                    <div className="bg-[var(--color-info-bg)] border border-[var(--color-info-border)] rounded-none px-4 py-3 font-mono text-[11px] text-[var(--color-info)] space-y-2">
                       <div>
                         <p className="font-medium">Ollama (default, port 11434):</p>
                         <p>1. Install from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://ollama.com')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">ollama.com</button></p>
-                        <p>2. Run: <code className="bg-[#1a2a3a] px-1">ollama pull llama3.2</code></p>
+                        <p>2. Run: <code className="bg-[var(--color-bg-tertiary)] px-1">ollama pull llama3.2</code></p>
                         <p>3. Ollama runs automatically on port 11434</p>
                       </div>
-                      <div className="border-t border-[#1e3a4e] pt-2">
+                      <div className="border-t border-[var(--color-info-border)] pt-2">
                         <p className="font-medium">LM Studio (port 1234):</p>
                         <p>1. Download from <button type="button" onClick={() => window.stackwatch.openExternalUrl('https://lmstudio.ai')} className="underline hover:opacity-80 bg-transparent border-none text-inherit cursor-pointer p-0 font-inherit text-[inherit]">lmstudio.ai</button></p>
                         <p>2. Load any GGUF model and start the local server</p>
-                        <p>3. Change Base URL above to <code className="bg-[#1a2a3a] px-1">http://localhost:1234/v1</code></p>
+                        <p>3. Change Base URL above to <code className="bg-[var(--color-bg-tertiary)] px-1">http://localhost:1234/v1</code></p>
                       </div>
                     </div>
                   </>
@@ -361,7 +361,7 @@ export const Settings: React.FC = () => {
                         style={inputStyle}
                       />
                     </div>
-                    <div className="bg-[#0d1a24] border border-[#1e3a4e] rounded-none px-4 py-3 font-mono text-[11px] text-[#4a8ab0]">
+                    <div className="bg-[var(--color-info-bg)] border border-[var(--color-info-border)] rounded-none px-4 py-3 font-mono text-[11px] text-[var(--color-info)]">
                       <p>Works with any OpenAI-compatible API: OpenAI, Mistral, Anthropic, Together, and others.</p>
                     </div>
                   </>

@@ -3,6 +3,19 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.6](https://github.com/alciller88/StackWatch/compare/v0.10.5...v0.10.6) (2026-03-18)
+
+### Fixed
+- All hardcoded hex colors replaced with CSS variables — light/dark mode now consistent across DepsPanel, ServiceCard, CostsPanel, FlowGraph, Settings
+- Unjustified `any` types replaced with `Record<string, unknown>` or proper types in main.ts, deepAnalyzer.ts, alternativeSuggester.ts; remaining `as any` annotated with justification
+- Magic numbers extracted to named constants: `SCORE_GREEN_THRESHOLD`, `SCORE_YELLOW_THRESHOLD`, `MAX_VULNS_PER_DEP`, `MAX_SUMMARY_LENGTH`
+- `react-hooks/exhaustive-deps` disable in FlowGraph.tsx now has justification comment
+
+### Added
+- CSS variables `--color-info`, `--color-info-bg`, `--color-info-border`, `--color-danger-bg` in both dark and light themes
+
+---
+
 ## [0.10.5](https://github.com/alciller88/StackWatch/compare/v0.10.4...v0.10.5) (2026-03-18)
 
 ### Security

@@ -22,9 +22,9 @@ function formatCurrency(amount: number, currency = 'USD'): string {
 }
 
 function getBudgetColor(percentage: number, threshold: number): string {
-  if (percentage > 100) return '#ef4444';
-  if (percentage >= threshold) return '#eab308';
-  return '#10b981';
+  if (percentage > 100) return 'var(--color-danger)';
+  if (percentage >= threshold) return 'var(--color-warning)';
+  return 'var(--color-success)';
 }
 
 function getBudgetBgClass(percentage: number, threshold: number): string {
@@ -80,7 +80,7 @@ export const CostsPanel: React.FC = () => {
   const budgetPercentage = budget ? (totalMonthly / budget.monthly) * 100 : 0;
   const budgetThreshold = budget?.alertThreshold ?? 80;
   const budgetRemaining = budget ? budget.monthly - totalMonthly : 0;
-  const budgetColor = budget ? getBudgetColor(budgetPercentage, budgetThreshold) : '#10b981';
+  const budgetColor = budget ? getBudgetColor(budgetPercentage, budgetThreshold) : 'var(--color-success)';
   const budgetBgClass = budget ? getBudgetBgClass(budgetPercentage, budgetThreshold) : 'bg-emerald-500';
 
   const handleSetBudget = () => {
@@ -331,8 +331,8 @@ export const CostsPanel: React.FC = () => {
                 className="font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-none cursor-pointer hover:opacity-80"
                 style={{
                   background: 'transparent',
-                  color: '#ef4444',
-                  border: '1px solid #ef4444',
+                  color: 'var(--color-danger)',
+                  border: '1px solid var(--color-danger)',
                 }}
               >
                 Clear
@@ -405,7 +405,7 @@ export const CostsPanel: React.FC = () => {
                 />
                 <Bar dataKey="total" radius={0}>
                   {costByCategory.map((row) => (
-                    <Cell key={row.category} fill="#e2b04a" />
+                    <Cell key={row.category} fill="#e2b04a" /> {/* Matches --color-accent in dark theme */}
                   ))}
                 </Bar>
               </BarChart>
@@ -478,11 +478,11 @@ export const CostsPanel: React.FC = () => {
         const renderRenewalRow = ({ service, days }: { service: Service; days: number }) => {
           let badge: { text: string; color: string } | null = null;
           if (days < 0) {
-            badge = { text: 'OVERDUE', color: '#ef4444' };
+            badge = { text: 'OVERDUE', color: 'var(--color-danger)' };
           } else if (days < 7) {
-            badge = { text: 'URGENT', color: '#ef4444' };
+            badge = { text: 'URGENT', color: 'var(--color-danger)' };
           } else if (days < 30) {
-            badge = { text: 'SOON', color: '#eab308' };
+            badge = { text: 'SOON', color: 'var(--color-warning)' };
           }
 
           return (
@@ -519,7 +519,7 @@ export const CostsPanel: React.FC = () => {
                 </span>
                 <span
                   className="font-mono text-[11px]"
-                  style={{ color: days < 0 ? '#ef4444' : 'var(--color-text-muted)' }}
+                  style={{ color: days < 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}
                 >
                   {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`}
                 </span>

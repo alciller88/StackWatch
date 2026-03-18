@@ -24,6 +24,10 @@ export const themes = {
     '--color-badge-border-success': '#2a5a2a',
     '--color-badge-bg-danger': '#1a1520',
     '--color-badge-border-danger': '#4a2040',
+    '--color-info': '#4a8ab0',
+    '--color-info-bg': '#1a2a3a',
+    '--color-info-border': '#2a4a6a',
+    '--color-danger-bg': '#1a0a0a',
   },
   light: {
     '--color-bg-primary': '#f5f6f8',
@@ -50,6 +54,10 @@ export const themes = {
     '--color-badge-border-success': '#60c080',
     '--color-badge-bg-danger': '#f8e0f0',
     '--color-badge-border-danger': '#c060a0',
+    '--color-info': '#0369a1',
+    '--color-info-bg': '#f0f9ff',
+    '--color-info-border': '#bae6fd',
+    '--color-danger-bg': '#fef2f2',
   },
 } as const;
 

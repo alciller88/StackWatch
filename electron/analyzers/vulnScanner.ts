@@ -17,6 +17,8 @@ const BATCH_DELAY_MS = 200
 const MAX_RETRIES = 3
 const RETRY_BASE_DELAY_MS = 1000
 const REQUEST_TIMEOUT_MS = 15000
+const MAX_VULNS_PER_DEP = 5
+const MAX_SUMMARY_LENGTH = 200
 
 function mapSeverity(scores: Array<{ score?: number; severity?: string }>): Vulnerability['severity'] {
   if (!scores || scores.length === 0) return 'unknown'
@@ -116,9 +118,9 @@ export async function scanVulnerabilities(
           name: dep.name,
           version: dep.version,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OSV.dev API response is untyped
-          vulnerabilities: vulns.slice(0, 5).map((v: Record<string, any>) => ({
+          vulnerabilities: vulns.slice(0, MAX_VULNS_PER_DEP).map((v: Record<string, any>) => ({
             id: v.id ?? 'unknown',
-            summary: (v.summary ?? v.details ?? 'No description').slice(0, 200),
+            summary: (v.summary ?? v.details ?? 'No description').slice(0, MAX_SUMMARY_LENGTH),
             severity: mapSeverity(v.severity ?? []),
             aliases: v.aliases ?? [],
             fixedVersion: v.affected?.[0]?.ranges?.[0]?.events?.find((e: Record<string, unknown>) => e.fixed)?.fixed as string | undefined,

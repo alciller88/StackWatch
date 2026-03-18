@@ -123,6 +123,7 @@ function createWindow() {
 app.whenReady().then(() => {
   // Initialize store without custom encryption key — safeStorage handles sensitive values directly
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- electron-store constructor types incompatible with our TypedStore interface
     store = new (Store as any)()
     // Force a read to detect corrupted data early
     store.store
@@ -133,6 +134,7 @@ app.whenReady().then(() => {
       const storePath = path.join(app.getPath('userData'), 'config.json')
       require('fs').unlinkSync(storePath)
     } catch { /* Expected: corrupted file may not exist */ }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- electron-store constructor types incompatible with our TypedStore interface
     store = new (Store as any)()
   }
 
@@ -282,7 +284,7 @@ function encryptConfig(config: UserConfig): UserConfig {
     for (const field of SENSITIVE_FIELDS) {
       const value = svc[field as keyof typeof svc]
       if (typeof value === 'string' && value && !value.startsWith('$encrypted:')) {
-        (svc as any)[field] = encryptServiceField(svc.id, field, value)
+        ;(svc as Record<string, unknown>)[field] = encryptServiceField(svc.id, field, value)
       }
     }
   }
@@ -297,7 +299,7 @@ function decryptConfig(config: UserConfig): UserConfig {
       if (typeof value === 'string' && value.startsWith('$encrypted:')) {
         const real = decryptServiceField(value)
         if (real !== undefined) {
-          (svc as any)[field] = real
+          ;(svc as Record<string, unknown>)[field] = real
         }
       }
     }
