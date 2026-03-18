@@ -103,7 +103,7 @@ export const ScoreBreakdown: React.FC = () => {
             className="font-mono text-[11px] block"
             style={{ color: check.status === 'unchecked' ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}
           >
-            {check.status === 'pass' ? 'Pass' : check.status === 'fail' ? 'Fail' : 'Not checked'}: {check.label}
+            {check.label}
           </span>
           {check.detail && (
             <span className="font-mono text-[10px] block" style={{ color: 'var(--color-text-muted)' }}>

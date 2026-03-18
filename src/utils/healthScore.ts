@@ -17,49 +17,66 @@ export function calculateHealthScore(
 
   // --- SECURITY CHECKS ---
 
-  // NO_CRITICAL_VULNS
   if (vulnResults) {
     const criticalCount = vulnResults.reduce(
       (sum, d) => sum + d.vulnerabilities.filter(v => v.severity === 'critical').length, 0,
     );
+    const highCount = vulnResults.reduce(
+      (sum, d) => sum + d.vulnerabilities.filter(v => v.severity === 'high').length, 0,
+    );
+    const mediumCount = vulnResults.reduce(
+      (sum, d) => sum + d.vulnerabilities.filter(v => v.severity === 'medium').length, 0,
+    );
+    const lowCount = vulnResults.reduce(
+      (sum, d) => sum + d.vulnerabilities.filter(v => v.severity === 'low').length, 0,
+    );
+    const otherCount = mediumCount + lowCount;
+
+    // NO_CRITICAL_VULNS
     checks.push({
       id: 'NO_CRITICAL_VULNS',
       category: 'security',
       status: criticalCount === 0 ? 'pass' : 'fail',
-      label: criticalCount === 0 ? 'No critical vulnerabilities' : `${criticalCount} critical vulnerabilit${criticalCount === 1 ? 'y' : 'ies'} found`,
+      label: criticalCount === 0
+        ? 'No critical vulnerabilities'
+        : `${criticalCount} critical vulnerabilit${criticalCount === 1 ? 'y' : 'ies'} found`,
+      detail: criticalCount === 0 && otherCount > 0
+        ? `${otherCount} medium/low severity (not scored)`
+        : undefined,
       affectedCount: criticalCount > 0 ? criticalCount : undefined,
       actionPanel: 'dependencies',
     });
-  } else {
-    checks.push({
-      id: 'NO_CRITICAL_VULNS',
-      category: 'security',
-      status: 'unchecked',
-      label: 'Vulnerability scan not run',
-      actionLabel: 'Run scan',
-      actionPanel: 'dependencies',
-    });
-  }
 
-  // NO_HIGH_VULNS
-  if (vulnResults) {
-    const highCount = vulnResults.reduce(
-      (sum, d) => sum + d.vulnerabilities.filter(v => v.severity === 'high').length, 0,
-    );
+    // NO_HIGH_VULNS
     checks.push({
       id: 'NO_HIGH_VULNS',
       category: 'security',
       status: highCount === 0 ? 'pass' : 'fail',
-      label: highCount === 0 ? 'No high-severity vulnerabilities' : `${highCount} high-severity vulnerabilit${highCount === 1 ? 'y' : 'ies'} found`,
+      label: highCount === 0
+        ? 'No high-severity vulnerabilities'
+        : `${highCount} high-severity vulnerabilit${highCount === 1 ? 'y' : 'ies'} found`,
+      detail: highCount > 0
+        ? 'High severity = CVSS 7.0-8.9'
+        : undefined,
       affectedCount: highCount > 0 ? highCount : undefined,
       actionPanel: 'dependencies',
     });
   } else {
+    // Single unchecked entry for both vuln checks
+    checks.push({
+      id: 'NO_CRITICAL_VULNS',
+      category: 'security',
+      status: 'unchecked',
+      label: 'Critical vulnerability check — scan not run',
+      actionLabel: 'Run scan',
+      actionPanel: 'dependencies',
+    });
+
     checks.push({
       id: 'NO_HIGH_VULNS',
       category: 'security',
       status: 'unchecked',
-      label: 'Vulnerability scan not run',
+      label: 'High vulnerability check — scan not run',
       actionLabel: 'Run scan',
       actionPanel: 'dependencies',
     });
@@ -82,7 +99,7 @@ export function calculateHealthScore(
       id: 'NO_ZOMBIE_SERVICES',
       category: 'security',
       status: 'unchecked',
-      label: 'Zombie detection not available',
+      label: 'Zombie detection — requires local repo scan',
       actionPanel: 'services',
     });
   }
@@ -114,8 +131,7 @@ export function calculateHealthScore(
       id: 'NO_OVERDUE_RENEWALS',
       category: 'security',
       status: 'unchecked',
-      label: 'No services with manual renewal tracking',
-      actionPanel: 'costs',
+      label: 'Overdue renewal check — no manual billing services',
     });
   }
 
@@ -133,7 +149,7 @@ export function calculateHealthScore(
       id: 'NO_UPCOMING_RENEWALS',
       category: 'security',
       status: upcomingCount === 0 ? 'pass' : 'fail',
-      label: upcomingCount === 0 ? 'No upcoming renewals within threshold' : `${upcomingCount} renewal${upcomingCount === 1 ? '' : 's'} coming up soon`,
+      label: upcomingCount === 0 ? 'No renewals coming up soon' : `${upcomingCount} renewal${upcomingCount === 1 ? '' : 's'} coming up soon`,
       affectedCount: upcomingCount > 0 ? upcomingCount : undefined,
       actionPanel: 'costs',
     });
@@ -142,8 +158,7 @@ export function calculateHealthScore(
       id: 'NO_UPCOMING_RENEWALS',
       category: 'security',
       status: 'unchecked',
-      label: 'No services with manual renewal tracking',
-      actionPanel: 'costs',
+      label: 'Upcoming renewal check — no manual billing services',
     });
   }
 
@@ -168,8 +183,7 @@ export function calculateHealthScore(
       id: 'ALL_PAID_HAVE_OWNER',
       category: 'completeness',
       status: 'unchecked',
-      label: 'No paid/trial services to check',
-      actionPanel: 'services',
+      label: 'Owner check — no paid/trial services',
     });
   }
 
@@ -190,8 +204,7 @@ export function calculateHealthScore(
       id: 'ALL_PAID_HAVE_BILLING',
       category: 'completeness',
       status: 'unchecked',
-      label: 'No paid/trial services to check',
-      actionPanel: 'services',
+      label: 'Billing check — no paid/trial services',
     });
   }
 
@@ -221,8 +234,7 @@ export function calculateHealthScore(
       id: 'ALL_PAID_HAVE_RENEWAL',
       category: 'completeness',
       status: 'unchecked',
-      label: 'No recurring paid services to check',
-      actionPanel: 'costs',
+      label: 'Renewal date check — no recurring paid services',
     });
   }
 
