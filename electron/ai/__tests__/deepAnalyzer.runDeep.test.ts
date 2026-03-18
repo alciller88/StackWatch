@@ -104,9 +104,11 @@ describe('callAI', () => {
   })
 
   it('throws on empty choices array', async () => {
+    const body = JSON.stringify({ choices: [] })
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ choices: [] }),
+      headers: new Map([['content-length', String(body.length)]]),
+      text: async () => body,
     }))
 
     await expect(callAI(testProvider, 'prompt', 100)).rejects.toThrow('AI returned empty response')

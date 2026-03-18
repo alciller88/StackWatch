@@ -516,7 +516,9 @@ export async function filterFalsePositivesWithAI(
 
     if (!response.ok) throw new Error(`AI HTTP ${response.status}`)
 
-    const data = await response.json()
+    const rawText = await response.text()
+    if (rawText.length > 10 * 1024 * 1024) throw new Error('AI response too large')
+    const data = JSON.parse(rawText)
     if (!Array.isArray(data.choices) || data.choices.length === 0) {
       throw new Error('AI returned empty response')
     }
