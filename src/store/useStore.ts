@@ -18,11 +18,15 @@ import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '..
 import { computeScanDiff } from '../utils/scanDiff';
 import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
+import { registerServiceGetter } from './graphStore';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
 export type ActivePanel = 'services' | 'dependencies' | 'discarded' | 'flow' | 'costs' | 'settings';
 export type StoreMode = 'scan' | 'blank';
+
+// Timer for scan diff cleanup (task 1.7)
+let diffCleanupTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface StoreState {
   services: Service[];
@@ -293,9 +297,11 @@ export const useStore = create<StoreState>((set, get) => ({
         useToastStore.getState().addToast('No services detected. Try adding services manually.', 'info', 8000);
       }
 
-      // Clear diff highlight after 3 seconds
+      // Clear diff highlight after 3 seconds (cancel previous timer if re-scanning)
       if (diff.added.size > 0 || diff.removed.size > 0) {
-        setTimeout(() => {
+        if (diffCleanupTimer) clearTimeout(diffCleanupTimer);
+        diffCleanupTimer = setTimeout(() => {
+          diffCleanupTimer = null;
           set({ scanDiffAdded: new Set(), scanDiffRemoved: new Set() });
         }, 3000);
       }
@@ -412,9 +418,11 @@ export const useStore = create<StoreState>((set, get) => ({
 
       get().recalculateScore();
 
-      // Clear diff highlight after 3 seconds
+      // Clear diff highlight after 3 seconds (cancel previous timer if re-scanning)
       if (diff.added.size > 0 || diff.removed.size > 0) {
-        setTimeout(() => {
+        if (diffCleanupTimer) clearTimeout(diffCleanupTimer);
+        diffCleanupTimer = setTimeout(() => {
+          diffCleanupTimer = null;
           set({ scanDiffAdded: new Set(), scanDiffRemoved: new Set() });
         }, 3000);
       }
@@ -800,6 +808,9 @@ export const useStore = create<StoreState>((set, get) => ({
     get().setTheme(current === 'dark' ? 'light' : 'dark');
   },
 }));
+
+// Register service getter for graphStore (avoids circular dependency)
+registerServiceGetter(() => useStore.getState().services);
 
 // Debounced score history persistence — saves manual score changes to disk after 2s
 let _scoreDebounceTimer: ReturnType<typeof setTimeout> | null = null;

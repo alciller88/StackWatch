@@ -39,15 +39,18 @@ function getNodeDimensions(node: FlowNode | Node): { width: number; height: numb
   return { width: NODE_WIDTH, height: NODE_HEIGHT }
 }
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+let persistLock = false
+let persistQueued = false
+
+// Module-level service getter — set by useStore to avoid circular dependency
+let _getServices: (() => import('../types').Service[]) | null = null
+
+export function registerServiceGetter(getter: () => import('../types').Service[]) {
+  _getServices = getter
+}
 
 function getCurrentServices(): import('../types').Service[] {
-  try {
-    // Dynamic require to avoid circular dependency at module level
-    const { useStore } = require('./useStore')
-    return useStore.getState().services
-  } catch {
-    return []
-  }
+  return _getServices?.() ?? []
 }
 
 // ── helpers ──
@@ -546,50 +549,65 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     await new Promise<void>(resolve => {
       persistTimer = setTimeout(resolve, 500)
     })
-    const { nodes, edges, excludedServices } = get()
 
-    const graphConfig: GraphConfig = {
-      nodes: nodes.map((n) => ({
-        id: n.id,
-        position: n.position,
-        data: {
-          label: n.data.label,
-          category: n.data.category,
-          nodeType: n.data.nodeType,
-          plan: n.data.plan,
-          confidence: n.data.confidence,
-          url: n.data.url,
-          note: n.data.note,
-          source: n.data.source,
-          layerColor: n.data.layerColor,
-        },
-      })),
-      edges: edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: e.data?.flowType ?? 'data',
-      })),
-      excludedServices,
+    // Serialize writes: if already writing, queue a re-persist with latest state
+    if (persistLock) {
+      persistQueued = true
+      return
     }
+    persistLock = true
 
-    // We need to read the current config, merge graph, and save
-    // Use the main store's repoPath
-    const { useStore } = await import('./useStore')
-    const repoPath = useStore.getState().repoPath
-    if (!repoPath) return
+    try {
+      const { nodes, edges, excludedServices } = get()
 
-    let config = await window.stackwatch.loadConfig(repoPath)
-    if (!config) {
-      config = {
-        version: '1',
-        project: { name: '', description: '' },
-        services: [],
-        accounts: [],
+      const graphConfig: GraphConfig = {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          position: n.position,
+          data: {
+            label: n.data.label,
+            category: n.data.category,
+            nodeType: n.data.nodeType,
+            plan: n.data.plan,
+            confidence: n.data.confidence,
+            url: n.data.url,
+            note: n.data.note,
+            source: n.data.source,
+            layerColor: n.data.layerColor,
+          },
+        })),
+        edges: edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          type: e.data?.flowType ?? 'data',
+        })),
+        excludedServices,
+      }
+
+      // Use the main store's repoPath
+      const { useStore } = await import('./useStore')
+      const repoPath = useStore.getState().repoPath
+      if (!repoPath) return
+
+      let config = await window.stackwatch.loadConfig(repoPath)
+      if (!config) {
+        config = {
+          version: '1',
+          project: { name: '', description: '' },
+          services: [],
+          accounts: [],
+        }
+      }
+      config.graph = graphConfig
+      await window.stackwatch.saveConfig(repoPath, config)
+    } finally {
+      persistLock = false
+      if (persistQueued) {
+        persistQueued = false
+        get().persistToConfig()
       }
     }
-    config.graph = graphConfig
-    await window.stackwatch.saveConfig(repoPath, config)
   },
 }))
 

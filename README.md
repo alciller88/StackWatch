@@ -579,6 +579,12 @@ StackWatch/
 - [x] Reactive Stack Score: recalculates in real-time after every service/graph mutation, debounced history persistence with scan/manual source differentiation
 - [x] Scan progress screen: real-time progress bar with CRT effect, phase text with blinking cursor, counters, cancel with AbortController
 - [x] 372 tests across 26 suites (+9 ScanProgress tests)
+- [x] Fix: race condition in graphStore `persistToConfig` — serialized write lock
+- [x] Fix: circular dependency graphStore ↔ useStore — `registerServiceGetter()` callback pattern
+- [x] Fix: typed `electron-store` (`Store<StoreSchema>`) instead of `any`
+- [x] Fix: GitHub scans now return score entry (parity with local scans)
+- [x] Fix: scan diff cleanup timer properly cancelled on re-scan
+- [x] Fix: toast slide-in animation keyframes
 
 ---
 

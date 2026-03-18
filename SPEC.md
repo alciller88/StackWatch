@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification document. Source of truth for AI agents and developers.
-> Last updated: 2026-03-18 | Status: v0.4.0
+> Last updated: 2026-03-18 | Status: v0.4.1
 
 ---
 
@@ -554,7 +554,7 @@ Services with `needsReview: true` appear in a dedicated section at top of Servic
 | Store | Purpose | Key details |
 |---|---|---|
 | `useStore` | Global state: services, deps, config, AI settings, analysis state, mode (scan/blank) | Merged services = inferred + manual + confidence overrides. Blank mode: empty state with USER layer node, no repoPath. |
-| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms. Pushes to historyStore before mutations. |
+| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with serialized write lock. Uses `registerServiceGetter()` callback to avoid circular dependency. Pushes to historyStore before mutations. |
 | `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
 | `dialogStore` | Promise-based confirm dialogs | Returns button value string |
 | `toastStore` | Notifications | Auto-dismiss after 4s |
@@ -845,3 +845,9 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Pipeline emits scan-progress IPC events at each phase (Initializing → Extracting → Classifying → Deduplicating → AI filter → Analyzing → Building graph → Done)
 - [x] Scan cancellation via cancel-scan IPC + AbortSignal propagation through pipeline
 - [x] 9 new tests: ScanProgress component (rendering, phases, counters, cancel, Done state)
+- [x] Fix: race condition in graphStore `persistToConfig` — serialized write lock prevents lost writes from overlapping debounced operations
+- [x] Fix: circular dependency graphStore ↔ useStore — replaced `require()` with `registerServiceGetter()` callback pattern
+- [x] Fix: `electron-store` typed as `Store<StoreSchema>` instead of `any` in main process
+- [x] Fix: GitHub scans now compute and return score entry (parity with local scans)
+- [x] Fix: scan diff cleanup timer properly cancelled on re-scan (prevents stale state)
+- [x] Fix: toast animation keyframes defined in CSS (slide-in-from-right + fade-in)

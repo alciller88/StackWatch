@@ -12,7 +12,12 @@ import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import { SENSITIVE_FIELDS } from '../shared/types'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
-let store: any
+interface StoreSchema {
+  aiSettings?: AISettings
+  encrypted: Record<string, string>
+}
+
+let store: Store<StoreSchema>
 let mainWindow: BrowserWindow | null = null
 let scanAbortController: AbortController | null = null
 
@@ -73,7 +78,7 @@ function createWindow() {
 app.whenReady().then(() => {
   const key = getEncryptionKey()
   try {
-    store = new (Store as any)({ encryptionKey: key })
+    store = new Store<StoreSchema>({ encryptionKey: key })
     // Force a read to detect corrupted/mis-keyed data early
     store.store
   } catch {
@@ -82,7 +87,7 @@ app.whenReady().then(() => {
       const storePath = path.join(app.getPath('userData'), 'config.json')
       require('fs').unlinkSync(storePath)
     } catch { /* ignore if file doesn't exist */ }
-    store = new (Store as any)({ encryptionKey: key })
+    store = new Store<StoreSchema>({ encryptionKey: key })
   }
   createWindow()
 })
@@ -355,6 +360,25 @@ ipcMain.handle(
     try {
       const result = await analyzeGitHubRepo(fetchFile, listDir, aiSettings, onProgress, signal)
       scanAbortController = null
+
+      // Persist score history for GitHub scans (same as local scans)
+      try {
+        const { score, servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness } =
+          calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+        // Store under a github: prefixed key using the .stackwatch/ convention
+        // Note: snapshot save skipped for GitHub (no local repo to write to)
+        result.scoreEntry = {
+          timestamp: new Date().toISOString(),
+          score,
+          breakdown: { servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness },
+          serviceCount: result.services.length,
+          depCount: result.dependencies.length,
+          source: 'scan' as const,
+        }
+      } catch {
+        // Non-critical
+      }
+
       return result
     } catch (err: any) {
       scanAbortController = null

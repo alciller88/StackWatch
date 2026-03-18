@@ -163,3 +163,19 @@ body {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.15; }
 }
+
+/* Toast animations */
+@keyframes animate-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-in {
+  animation: animate-in 0.2s ease-out forwards;
+}
