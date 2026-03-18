@@ -119,6 +119,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
 
   return (
     <div
+      data-testid="service-card"
       className={`border rounded-none p-4 transition-colors overflow-hidden ${
         confidenceBorder[service.confidence ?? 'default']
       } ${zombieStyle} ${isClickable ? 'cursor-pointer hover:border-[var(--color-accent)]' : 'hover:border-[var(--color-border-light)]'} focus:ring-1 focus:ring-[var(--color-accent)] focus:outline-none`}

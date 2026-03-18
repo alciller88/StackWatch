@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.8 | Last updated: 2026-03-18 | Tests: 520+ across 38 suites
+> Version: v0.10.9 | Last updated: 2026-03-18 | Tests: 520+ across 38 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -703,7 +703,13 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.8 (current)
+### v0.10.9 (current)
+- **Accessibility**: `aria-sort` on sortable headers, `aria-live` for filtered counts, `role="alert"` on errors, `aria-label` on icon buttons, `aria-pressed` on filter toggles
+- **Testing**: Playwright E2E infrastructure (`playwright.config.ts`, `e2e/app.test.ts`)
+- **DX**: `data-testid` on critical elements (stack-score, service-card, scan-progress, nav items)
+- 520+ tests across 38+ suites
+
+### v0.10.8
 - **Testing**: 18 previously uncovered IPC handlers now tested (window controls, AI, exports, link status, SBOM, score history, connectivity)
 - **Testing**: toastStore and dialogStore test suites added
 - **Testing**: Coverage scope expanded to `electron/config/**` and `shared/**`

@@ -145,6 +145,7 @@ export const Sidebar: React.FC = () => {
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <svg
@@ -168,6 +169,7 @@ export const Sidebar: React.FC = () => {
       {services.length > 0 && (
         <button
           onClick={openScoreBreakdown}
+          data-testid="stack-score"
           className="w-full flex flex-col items-center py-3 border-b cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
           style={{ borderColor: 'var(--color-border)' }}
           title={collapsed ? `Score: ${stackScore} — Click for details` : `Stack Score: ${stackScore} — Click for details`}
@@ -227,6 +229,7 @@ export const Sidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActivePanel(item.id)}
+              data-testid={`nav-${item.id}`}
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
                 isActive
                   ? 'text-[var(--color-text-primary)]'
@@ -249,6 +252,7 @@ export const Sidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActivePanel(item.id)}
+              data-testid={`nav-${item.id}`}
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
                 isActive
                   ? 'text-[var(--color-text-primary)]'
@@ -273,6 +277,7 @@ export const Sidebar: React.FC = () => {
         <button
           onClick={toggleTheme}
           className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:bg-[var(--color-bg-hover)] rounded-none transition-colors"
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {theme === 'dark' ? (

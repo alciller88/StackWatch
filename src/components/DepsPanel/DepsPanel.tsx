@@ -245,11 +245,12 @@ export const DepsPanel: React.FC = () => {
           </div>
 
           {/* Type filter */}
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5" role="group" aria-label="Filter by type">
             {(['all', 'production', 'development', 'peer'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
+                aria-pressed={filterType === t}
                 className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
                   filterType === t
                     ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
@@ -305,6 +306,10 @@ export const DepsPanel: React.FC = () => {
                 <th
                   className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)]"
                   onClick={() => handleSort('name')}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('name') } }}
+                  tabIndex={0}
+                  role="columnheader"
+                  aria-sort={sortKey === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   Name <SortIcon column="name" />
                 </th>
@@ -314,6 +319,10 @@ export const DepsPanel: React.FC = () => {
                 <th
                   className="px-4 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-widest text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)]"
                   onClick={() => handleSort('type')}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('type') } }}
+                  tabIndex={0}
+                  role="columnheader"
+                  aria-sort={sortKey === 'type' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
                   Type <SortIcon column="type" />
                 </th>

@@ -18,6 +18,7 @@ export function ScanProgress() {
 
   return (
     <div
+      data-testid="scan-progress"
       className="flex-1 flex items-center justify-center p-8"
       style={{ background: 'var(--color-bg-primary)' }}
     >

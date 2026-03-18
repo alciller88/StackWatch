@@ -117,9 +117,10 @@ export const ServicesPanel: React.FC = () => {
         </div>
 
         {/* Category filters */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by category">
           <button
             onClick={() => setActiveCategory('all')}
+            aria-pressed={activeCategory === 'all'}
             className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-colors ${
               activeCategory === 'all'
                 ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
@@ -132,6 +133,7 @@ export const ServicesPanel: React.FC = () => {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
+              aria-pressed={activeCategory === cat}
               className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest rounded-sm capitalize transition-colors ${
                 activeCategory === cat
                   ? 'bg-[var(--color-accent)] text-[var(--color-bg-primary)]'
@@ -189,6 +191,10 @@ export const ServicesPanel: React.FC = () => {
           </div>
         )}
       </div>
+
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        Showing {filtered.length} of {services.length} services
+      </span>
 
       {/* Add/Edit Service Form */}
       {showAddForm && (

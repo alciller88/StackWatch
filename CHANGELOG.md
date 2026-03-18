@@ -3,6 +3,21 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.9](https://github.com/alciller88/StackWatch/compare/v0.10.8...v0.10.9) (2026-03-18)
+
+### Added
+- Playwright E2E test infrastructure (`playwright.config.ts`, `e2e/app.test.ts`) covering app launch, navigation, panel switching
+- `data-testid` attributes on critical elements: stack-score, service-card, scan-progress, nav items
+- WCAG 2.1 AA accessibility improvements:
+  - `aria-sort` on sortable table headers in DepsPanel
+  - `aria-live` region announcing filtered service count in ServicesPanel
+  - `role="alert"` on error messages in TopBar
+  - `aria-label` on all icon-only buttons in TopBar and Sidebar
+  - `aria-pressed` on category/type filter toggle buttons
+  - Keyboard support (Enter/Space) on DepsPanel sortable headers
+
+---
+
 ## [0.10.8](https://github.com/alciller88/StackWatch/compare/v0.10.7...v0.10.8) (2026-03-18)
 
 ### Added
