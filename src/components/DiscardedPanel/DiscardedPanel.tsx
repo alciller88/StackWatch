@@ -10,7 +10,7 @@ const REASON_LABELS: Record<DiscardedItem['reason'], string> = {
 }
 
 const REASON_COLORS: Record<DiscardedItem['reason'], string> = {
-  low_score: 'bg-[#2a1e0a] text-[#e2b04a] border-[#6b3d0a]',
+  low_score: 'bg-[var(--color-badge-bg-warning)] text-[var(--color-accent)] border-[var(--color-badge-border-warning)]',
   ai_filter: 'bg-[#1a2a3a] text-[#4a8ab0] border-[#2a4a6a]',
   generic_term: 'bg-[#1a1a2a] text-[#8a7ab0] border-[#3a3a6a]',
 }
@@ -63,24 +63,30 @@ export const DiscardedPanel: React.FC = () => {
       {/* Header */}
       <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: 'var(--color-border)' }}>
         <div className="flex items-center justify-between">
-          <h2 className="font-mono text-[11px] uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
+          <h2 className="font-mono text-sm font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-primary)' }}>
             Discarded ({discardedItems.length})
           </h2>
         </div>
 
         {/* Search */}
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search discarded items..."
-          className="w-full px-3 py-2 font-mono text-sm border rounded-none"
-          style={{
-            background: 'var(--color-bg-primary)',
-            borderColor: 'var(--color-border)',
-            color: 'var(--color-text-primary)',
-          }}
-        />
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search discarded items..."
+            aria-label="Search discarded items"
+            className="w-full pl-10 pr-4 py-2 font-mono text-sm border rounded-none"
+            style={{
+              background: 'var(--color-bg-primary)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-primary)',
+            }}
+          />
+        </div>
 
         {/* Reason filter */}
         <div className="flex gap-1.5 flex-wrap">

@@ -585,6 +585,13 @@ StackWatch/
 - [x] Fix: GitHub scans now return score entry (parity with local scans)
 - [x] Fix: scan diff cleanup timer properly cancelled on re-scan
 - [x] Fix: toast slide-in animation keyframes
+- [x] Semantic color CSS variables (danger, success, warning, badge-bg/border) with dark/light theme variants
+- [x] Replaced ~40 hardcoded hex colors across 15 components with theme-aware CSS variables
+- [x] WCAG AA contrast: adjusted text-secondary and text-muted for 4.5:1 ratio
+- [x] Accessibility: aria-label on all search inputs, unified panel headers (h2 text-sm)
+- [x] DiscardedPanel: search icon for consistency
+- [x] ScanProgress: replaced JS hover handlers with Tailwind hover: classes
+- [x] ContextMenu: ArrowDown/ArrowUp keyboard navigation with auto-focus
 
 ---
 

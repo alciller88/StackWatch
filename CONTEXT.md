@@ -338,7 +338,7 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 | Doctor as CLI subcommand | Reuses existing pipeline + vuln scanner, no new deps |
 | SBOM without external deps | CycloneDX/SPDX JSON generated directly, no library overhead |
 | Recharts for cost visualization | Lightweight, React-native, good dark theme support |
-| CSS variables for theming | Least invasive approach, swap vars at root, no component rewrites |
+| CSS variables for theming | Least invasive approach, swap vars at root, no component rewrites. Semantic colors (danger, success, warning, badge-bg/border) with dark/light variants for full theme adaptation. |
 | Theme in localStorage, not config | User preference, not project-level setting |
 | Budget in UserConfig | Project-level setting, shared via config file |
 | Score history as modal, not panel | Secondary content, doesn't justify a full panel slot |
@@ -353,7 +353,8 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 - **No `nodeIntegration: true`** — all IPC via contextBridge
 - **No `window.open()`** — use shell.openExternal via IPC
 - **No Google Fonts CDN** — fonts bundled in `src/assets/fonts/`
-- **No JS hover handlers** — use Tailwind `hover:` classes
+- **No JS hover handlers** — use Tailwind `hover:` classes (all onMouseEnter/onMouseLeave removed)
+- **No hardcoded hex colors in components** — use CSS variables from `themes.ts` (--color-danger, --color-success, --color-badge-bg-*, etc.)
 - **No `shared/types.js` in repo root** — delete if it appears (breaks Vite)
 - **No full Zustand store subscriptions** in perf-critical components — use selectors
 - **No synchronous fs** in main process — use `fs.promises`

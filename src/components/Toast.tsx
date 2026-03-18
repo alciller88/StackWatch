@@ -1,8 +1,8 @@
 import { useToastStore } from '../store/toastStore'
 
 const typeStyles = {
-  success: { border: '#2a5a2a', text: '#3d8c5e', icon: '✓' },
-  error: { border: '#5a2a2a', text: '#c05050', icon: '✕' },
+  success: { border: 'var(--color-success-muted)', text: 'var(--color-success)', icon: '✓' },
+  error: { border: 'var(--color-danger-muted)', text: 'var(--color-danger)', icon: '✕' },
   info: { border: 'var(--color-border)', text: 'var(--color-text-secondary)', icon: 'ℹ' },
 }
 

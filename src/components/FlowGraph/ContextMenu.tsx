@@ -40,6 +40,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const buttons = ref.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+        if (!buttons?.length) return
+        const focused = document.activeElement as HTMLElement
+        const idx = Array.from(buttons).indexOf(focused as HTMLButtonElement)
+        const next = e.key === 'ArrowDown'
+          ? (idx + 1) % buttons.length
+          : (idx - 1 + buttons.length) % buttons.length
+        buttons[next].focus()
+      }
     },
     [onClose],
   )
@@ -47,6 +58,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
+    // Focus first menu item on open
+    const firstButton = ref.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+    firstButton?.focus()
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
@@ -91,7 +105,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }
               entry.active
                 ? 'text-[var(--color-accent)]'
                 : entry.danger
-                  ? 'text-[#c05050] hover:bg-[var(--color-bg-hover)]'
+                  ? 'text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)]'
                   : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
             }`}
             style={entry.active ? { background: 'var(--color-bg-hover)' } : undefined}

@@ -106,6 +106,7 @@ export const ServicesPanel: React.FC = () => {
           <input
             type="text"
             placeholder="Search services..."
+            aria-label="Search services"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full border rounded-sm pl-10 pr-4 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]"
@@ -199,13 +200,13 @@ export const ServicesPanel: React.FC = () => {
       <div className="flex-1 overflow-auto p-6 space-y-6">
         {/* Zombie summary banner */}
         {zombieCounts.hasAny && !search && activeCategory === 'all' && activePlan === 'all' && activeActivity === 'all' && (
-          <div className="bg-[#1a1520] border border-[#4a2040] rounded-sm px-4 py-2.5 flex items-center gap-2">
-            <svg className="w-4 h-4 text-[#c05050] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-[var(--color-badge-bg-danger)] border border-[var(--color-badge-border-danger)] rounded-sm px-4 py-2.5 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[var(--color-danger)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">
               {zombieCounts.zombie > 0 && (
-                <span className="text-[#c05050]">{zombieCounts.zombie} zombie service{zombieCounts.zombie !== 1 ? 's' : ''}</span>
+                <span className="text-[var(--color-danger)]">{zombieCounts.zombie} zombie service{zombieCounts.zombie !== 1 ? 's' : ''}</span>
               )}
               {zombieCounts.zombie > 0 && zombieCounts.stale > 0 && ', '}
               {zombieCounts.stale > 0 && (
@@ -218,7 +219,7 @@ export const ServicesPanel: React.FC = () => {
 
         {/* Needs Review Section */}
         {needsReview.length > 0 && !search && activeCategory === 'all' && activePlan === 'all' && (
-          <div className="bg-[#2a1e0a] border border-[#6b3d0a] rounded-sm p-4">
+          <div className="bg-[var(--color-badge-bg-warning)] border border-[var(--color-badge-border-warning)] rounded-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-[var(--color-accent)]">&#9888;</span>
@@ -240,7 +241,7 @@ export const ServicesPanel: React.FC = () => {
                 />
               ))}
             </div>
-            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#6b3d0a]/30">
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[var(--color-badge-border-warning)]/30">
               <button
                 onClick={() => { setEditingService(null); setShowAddForm(true); }}
                 className="text-xs text-[var(--color-accent)] hover:opacity-80 transition-colors"

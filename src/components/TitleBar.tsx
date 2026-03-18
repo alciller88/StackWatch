@@ -68,7 +68,7 @@ export const TitleBar: React.FC = () => {
 
         <button
           onClick={() => window.stackwatch?.windowClose()}
-          className="h-full px-3 flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-[var(--color-text-secondary)] hover:bg-[#c05050] hover:text-white"
+          className="h-full px-3 flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-[var(--color-text-secondary)] hover:bg-[var(--color-danger)] hover:text-white"
           aria-label="Close"
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">

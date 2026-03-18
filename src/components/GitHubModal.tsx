@@ -119,7 +119,7 @@ export const GitHubModal: React.FC<GitHubModalProps> = ({ onAnalyze, onClose }) 
               {repoTouched && (
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm">
                   {repoValid ? (
-                    <span style={{ color: '#3d8c5e' }}>&#10003;</span>
+                    <span style={{ color: 'var(--color-success)' }}>&#10003;</span>
                   ) : (
                     <span style={{ color: '#c44' }}>&#10005;</span>
                   )}

@@ -333,8 +333,8 @@ export const TopBar: React.FC = () => {
         {repoPath && (
           <div className="flex items-center gap-1.5 shrink-0">
             {linkStatus === 'linked' && (
-              <span className="flex items-center gap-1 text-[11px] text-[#3d8c5e]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#3d8c5e] inline-block" />
+              <span className="flex items-center gap-1 text-[11px] text-[var(--color-success)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] inline-block" />
                 Linked
               </span>
             )}

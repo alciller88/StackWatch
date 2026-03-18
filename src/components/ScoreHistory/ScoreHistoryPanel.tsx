@@ -46,28 +46,28 @@ const CustomTooltip = ({
   return (
     <div
       style={{
-        background: '#1a1f2e',
-        border: '1px solid #2a3040',
+        background: 'var(--color-bg-tertiary)',
+        border: '1px solid var(--color-border)',
         fontFamily: 'IBM Plex Mono',
         fontSize: 10,
         padding: '8px 10px',
       }}
     >
-      <div style={{ color: '#e2b04a', marginBottom: 4 }}>
+      <div style={{ color: 'var(--color-accent)', marginBottom: 4 }}>
         {formatFullDate(entry.timestamp)}
       </div>
-      <div style={{ color: '#e0e0e0', marginBottom: 4 }}>
+      <div style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>
         Score: {entry.score}
       </div>
-      <div style={{ color: '#7a8da6' }}>
+      <div style={{ color: 'var(--color-text-secondary)' }}>
         Cost: {entry.breakdown.servicesWithCost}% | Owner:{' '}
         {entry.breakdown.servicesWithOwner}%
       </div>
-      <div style={{ color: '#7a8da6' }}>
+      <div style={{ color: 'var(--color-text-secondary)' }}>
         Reviewed: {entry.breakdown.servicesReviewed}% | Graph:{' '}
         {entry.breakdown.graphCompleteness}%
       </div>
-      <div style={{ color: '#7a8da6', marginTop: 4 }}>
+      <div style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
         {entry.serviceCount} services, {entry.depCount} deps
       </div>
       <div style={{ color: entry.source === 'manual' ? '#60a5fa' : '#e2b04a', marginTop: 4 }}>
@@ -261,7 +261,7 @@ export const ScoreHistoryPanel: React.FC = () => {
                     <XAxis
                       dataKey="dateLabel"
                       tick={{
-                        fill: '#7a8da6',
+                        fill: 'var(--color-text-secondary)',
                         fontFamily: 'IBM Plex Mono',
                         fontSize: 10,
                       }}
@@ -271,7 +271,7 @@ export const ScoreHistoryPanel: React.FC = () => {
                     <YAxis
                       domain={[0, 100]}
                       tick={{
-                        fill: '#7a8da6',
+                        fill: 'var(--color-text-secondary)',
                         fontFamily: 'IBM Plex Mono',
                         fontSize: 10,
                       }}

@@ -116,12 +116,12 @@ export const CostsPanel: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--color-bg-primary)' }}>
       {/* Header */}
-      <h1
-        className="font-mono text-xs font-medium tracking-widest uppercase mb-6"
+      <h2
+        className="font-mono text-sm font-medium tracking-widest uppercase mb-6"
         style={{ color: 'var(--color-text-primary)' }}
       >
         Costs Overview
-      </h1>
+      </h2>
 
       {/* Summary Cards */}
       <div
@@ -381,14 +381,14 @@ export const CostsPanel: React.FC = () => {
               >
                 <XAxis
                   type="number"
-                  tick={{ fill: '#7a8da6', fontFamily: 'IBM Plex Mono', fontSize: 10 }}
+                  tick={{ fill: 'var(--color-text-secondary)', fontFamily: 'IBM Plex Mono', fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   type="category"
                   dataKey="category"
-                  tick={{ fill: '#7a8da6', fontFamily: 'IBM Plex Mono', fontSize: 10 }}
+                  tick={{ fill: 'var(--color-text-secondary)', fontFamily: 'IBM Plex Mono', fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                   width={80}

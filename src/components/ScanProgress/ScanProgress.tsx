@@ -78,21 +78,7 @@ export function ScanProgress() {
           <div className="text-center mt-4">
             <button
               onClick={cancelScan}
-              className="font-mono text-xs px-4 py-1.5 transition-colors cursor-pointer"
-              style={{
-                color: 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 0,
-                background: 'transparent',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#e05252';
-                e.currentTarget.style.borderColor = '#e05252';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--color-text-secondary)';
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-              }}
+              className="font-mono text-xs px-4 py-1.5 transition-colors cursor-pointer rounded-none bg-transparent text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:text-[var(--color-danger)] hover:border-[var(--color-danger)]"
             >
               Cancel
             </button>

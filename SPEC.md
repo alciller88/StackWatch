@@ -488,7 +488,7 @@ interface UserConfig {
 
 ### 5.1 Design system
 
-- **Theme**: dark/light toggle via CSS custom properties (`src/themes.ts`). Dark: `#0a0c0f` primary, `#0d1017` secondary, `#e2b04a` accent. Light: `#f5f6f8` primary, `#ffffff` secondary, `#c4962e` accent. Persisted in `localStorage('stackwatch-theme')`. Applied via `useTheme` hook on `document.documentElement`.
+- **Theme**: dark/light toggle via CSS custom properties (`src/themes.ts`). Dark: `#0a0c0f` primary, `#0d1017` secondary, `#e2b04a` accent. Light: `#f5f6f8` primary, `#ffffff` secondary, `#c4962e` accent. Semantic color variables: `--color-danger`, `--color-success`, `--color-warning`, `--color-badge-bg-*`, `--color-badge-border-*` (with light/dark variants for proper theme adaptation). WCAG AA contrast: text-secondary and text-muted adjusted to meet 4.5:1 ratio. Persisted in `localStorage('stackwatch-theme')`. Applied via `useTheme` hook on `document.documentElement`.
 - **Typography**: IBM Plex Mono (primary), IBM Plex Sans (headings) — bundled locally
 - **Minimum font size**: 10px
 - **Border radius**: `rounded-none` (industrial aesthetic)
@@ -851,3 +851,11 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Fix: GitHub scans now compute and return score entry (parity with local scans)
 - [x] Fix: scan diff cleanup timer properly cancelled on re-scan (prevents stale state)
 - [x] Fix: toast animation keyframes defined in CSS (slide-in-from-right + fade-in)
+- [x] Semantic color CSS variables: --color-danger, --color-success, --color-warning, --color-badge-bg/border-* with dark/light variants
+- [x] Replaced ~40 hardcoded hex colors across 15 components with theme-aware CSS variables
+- [x] WCAG AA contrast: adjusted --color-text-secondary and --color-text-muted for 4.5:1 ratio in both themes
+- [x] Accessibility: aria-label on all search inputs (ServicesPanel, DepsPanel, DiscardedPanel)
+- [x] Unified panel headers: all panels use h2 text-sm font-medium (DiscardedPanel, CostsPanel normalized)
+- [x] DiscardedPanel: added search icon for consistency with other panels
+- [x] ScanProgress: replaced JS hover handlers with Tailwind hover: classes
+- [x] ContextMenu: added ArrowDown/ArrowUp keyboard navigation between menu items, auto-focus first item on open

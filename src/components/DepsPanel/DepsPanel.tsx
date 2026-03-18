@@ -8,9 +8,9 @@ type SortKey = 'name' | 'type';
 type SortDir = 'asc' | 'desc';
 
 const typeColors: Record<Dependency['type'], string> = {
-  production: 'bg-[#1a3a1a] text-[#3d8c5e] border-[#2a5a2a]',
+  production: 'bg-[var(--color-badge-bg-success)] text-[var(--color-success)] border-[var(--color-badge-border-success)]',
   development: 'bg-[#1a2a3a] text-[#4a8ab0] border-[#2a4a6a]',
-  peer: 'bg-[#2a1e0a] text-[#e2b04a] border-[#6b3d0a]',
+  peer: 'bg-[var(--color-badge-bg-warning)] text-[var(--color-accent)] border-[var(--color-badge-border-warning)]',
 };
 
 const ecosystemUrls: Record<Dependency['ecosystem'], (name: string) => string> = {
@@ -139,7 +139,7 @@ export const DepsPanel: React.FC = () => {
           {vulnMap.has(`${dep.ecosystem}-${dep.name}`) && (
             <span
               className="shrink-0 text-[10px] px-1 py-0.5 font-medium uppercase tracking-wide"
-              style={{ color: '#c05050', border: '1px solid #c05050' }}
+              style={{ color: 'var(--color-danger)', border: '1px solid var(--color-danger)' }}
               title={vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.map((v: Vulnerability) => `${v.id}: ${v.summary}`).join('\n')}
             >
               {vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.length} vuln{vulnMap.get(`${dep.ecosystem}-${dep.name}`)!.vulnerabilities.length !== 1 ? 's' : ''}
@@ -185,8 +185,8 @@ export const DepsPanel: React.FC = () => {
             disabled={vulnLoading || dependencies.length === 0}
             className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase rounded-sm transition-colors border disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              borderColor: vulnScanned && totalVulns > 0 ? '#c05050' : 'var(--color-border)',
-              color: vulnScanned && totalVulns > 0 ? '#c05050' : 'var(--color-text-secondary)',
+              borderColor: vulnScanned && totalVulns > 0 ? 'var(--color-danger)' : 'var(--color-border)',
+              color: vulnScanned && totalVulns > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)',
             }}
           >
             {vulnLoading ? (
@@ -224,6 +224,7 @@ export const DepsPanel: React.FC = () => {
             <input
               type="text"
               placeholder="Search dependencies..."
+              aria-label="Search dependencies"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full border rounded-sm pl-10 pr-4 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]"
@@ -253,7 +254,7 @@ export const DepsPanel: React.FC = () => {
       {/* Vulnerability summary */}
       {vulnScanned && totalVulns > 0 && (
         <div className="px-6 py-2 border-b flex items-center gap-3" style={{ borderColor: 'var(--color-border)', background: '#1a0a0a' }}>
-          <span className="text-[#c05050] font-mono text-[11px] uppercase tracking-widest font-medium">
+          <span className="text-[var(--color-danger)] font-mono text-[11px] uppercase tracking-widest font-medium">
             {totalVulns} vulnerabilit{totalVulns !== 1 ? 'ies' : 'y'} in {vulnResults.length} package{vulnResults.length !== 1 ? 's' : ''}
           </span>
           <span className="text-[var(--color-text-muted)] font-mono text-[11px]">

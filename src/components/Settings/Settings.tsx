@@ -191,7 +191,7 @@ export const Settings: React.FC = () => {
                           </span>
                         )}
                         {p.recommended && !p.localOnly && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[#1a3a1a] text-[#3d8c5e] border border-[#2a5a2a] font-mono tracking-widest">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-[var(--color-badge-bg-success)] text-[var(--color-success)] border border-[var(--color-badge-border-success)] font-mono tracking-widest">
                             Free
                           </span>
                         )}
@@ -422,10 +422,10 @@ export const Settings: React.FC = () => {
                 </button>
 
                 {testStatus === 'ok' && (
-                  <span className="font-mono text-[11px] text-[#3d8c5e]">Connection OK</span>
+                  <span className="font-mono text-[11px] text-[var(--color-success)]">Connection OK</span>
                 )}
                 {testStatus === 'error' && (
-                  <span className="font-mono text-[11px] text-[#c05050] truncate max-w-64" title={testError}>
+                  <span className="font-mono text-[11px] text-[var(--color-danger)] truncate max-w-64" title={testError}>
                     {testError}
                   </span>
                 )}

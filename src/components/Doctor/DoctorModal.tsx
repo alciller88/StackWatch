@@ -20,14 +20,14 @@ interface CheckSection {
 const StatusIcon: React.FC<{ status: CheckStatus }> = ({ status }) => {
   if (status === 'pass') {
     return (
-      <svg className="w-3.5 h-3.5 text-[#3d8c5e] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5 text-[var(--color-success)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
     );
   }
   if (status === 'fail') {
     return (
-      <svg className="w-3.5 h-3.5 text-[#c05050] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5 text-[var(--color-danger)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
       </svg>
     );
@@ -361,7 +361,7 @@ export const DoctorModal: React.FC = () => {
         >
           <div className="font-mono text-[10px] tracking-wide flex items-center gap-3">
             {summary.errors > 0 && (
-              <span className="text-[#c05050]">
+              <span className="text-[var(--color-danger)]">
                 {summary.errors} error{summary.errors !== 1 ? 's' : ''}
               </span>
             )}
@@ -370,7 +370,7 @@ export const DoctorModal: React.FC = () => {
                 {summary.warnings} warning{summary.warnings !== 1 ? 's' : ''}
               </span>
             )}
-            <span className="text-[#3d8c5e]">
+            <span className="text-[var(--color-success)]">
               {summary.passed} passed
             </span>
           </div>

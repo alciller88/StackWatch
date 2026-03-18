@@ -137,7 +137,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               onClick={() => onResult(btn.value)}
               className={`px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest rounded-sm transition-colors border ${
                 btn.danger
-                  ? 'border-[#c05050] text-[#c05050] hover:bg-[#c05050] hover:text-white'
+                  ? 'border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white'
                   : btn.primary
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)]'
                     : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'

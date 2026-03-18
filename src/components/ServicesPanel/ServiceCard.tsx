@@ -26,8 +26,8 @@ const categoryIcons: Record<Service['category'], string> = {
 };
 
 const planColors: Record<Service['plan'], string> = {
-  free: 'bg-[#1a3a1a] text-[#3d8c5e] border-[#2a5a2a]',
-  paid: 'bg-[#2a1e0a] text-[#e2b04a] border-[#6b3d0a]',
+  free: 'bg-[var(--color-badge-bg-success)] text-[var(--color-success)] border-[var(--color-badge-border-success)]',
+  paid: 'bg-[var(--color-badge-bg-warning)] text-[var(--color-accent)] border-[var(--color-badge-border-warning)]',
   trial: 'bg-[#1a2a3a] text-[#4a8ab0] border-[#2a4a6a]',
   unknown: 'bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] border-[var(--color-border)]',
 };
@@ -35,17 +35,17 @@ const planColors: Record<Service['plan'], string> = {
 const confidenceBadge: Record<string, { bg: string; text: string; label: string }> = {
   high: { bg: '', text: '', label: '' },
   medium: { bg: 'bg-[#2a2010]', text: 'text-[#c8a040]', label: 'review' },
-  low: { bg: 'bg-[#2a1e0a]', text: 'text-[var(--color-accent)]', label: 'incomplete' },
+  low: { bg: 'bg-[var(--color-badge-bg-warning)]', text: 'text-[var(--color-accent)]', label: 'incomplete' },
 };
 
 const criticalityColors: Record<string, string> = {
-  critical: 'text-[#c05050]',
+  critical: 'text-[var(--color-danger)]',
   important: 'text-[var(--color-accent)]',
   optional: 'text-[var(--color-text-muted)]',
 };
 
 const confidenceBorder: Record<string, string> = {
-  high:    'border-[#2a5a2a]',
+  high:    'border-[var(--color-badge-border-success)]',
   medium:  'border-[#6b5520]',
   low:     'border-[var(--color-accent)] border-dashed',
   default: 'border-[var(--color-border)]',
@@ -58,12 +58,12 @@ const criticalityIcons: Record<string, string> = {
 };
 
 const zombieBadgeStyles: Record<string, { bg: string; text: string; border: string }> = {
-  zombie: { bg: 'bg-[#2a1010]', text: 'text-[#c05050]', border: 'border-[#6b2020]' },
+  zombie: { bg: 'bg-[#2a1010]', text: 'text-[var(--color-danger)]', border: 'border-[#6b2020]' },
   stale: { bg: 'bg-[#2a2010]', text: 'text-[#c8a040]', border: 'border-[#6b5520]' },
 };
 
 const zombieBorderStyles: Record<string, string> = {
-  zombie: 'border-l-2 border-l-[#c05050]/50',
+  zombie: 'border-l-2 border-l-[var(--color-danger)]/50',
   stale: 'border-l-2 border-l-[#c8a040]/50',
 };
 
@@ -104,7 +104,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
 
   let renewalColor = 'text-[var(--color-text-secondary)]';
   if (days !== null) {
-    if (days < 7) renewalColor = 'text-[#c05050]';
+    if (days < 7) renewalColor = 'text-[var(--color-danger)]';
     else if (days < 30) renewalColor = 'text-[var(--color-accent)]';
   }
 
@@ -168,7 +168,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
                       <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
                         <span className="text-[var(--color-text-muted)] w-16 shrink-0 uppercase">{ev.type.replace('_', ' ')}</span>
                         <span className="text-[var(--color-text-secondary)] truncate flex-1" title={ev.value}>{ev.value}</span>
-                        <span className="text-[#3d8c5e] shrink-0">+{ev.score}</span>
+                        <span className="text-[var(--color-success)] shrink-0">+{ev.score}</span>
                       </div>
                     ))}
                   </div>
@@ -176,7 +176,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
                     <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-text-primary)' }}>
                       Total: {service.evidenceSummary!.reduce((sum, e) => sum + e.score, 0)}
                     </span>
-                    <span className={`font-mono text-[10px] uppercase ${confidence === 'high' ? 'text-[#3d8c5e]' : 'text-[var(--color-accent)]'}`}>
+                    <span className={`font-mono text-[10px] uppercase ${confidence === 'high' ? 'text-[var(--color-success)]' : 'text-[var(--color-accent)]'}`}>
                       {confidence}
                     </span>
                   </div>
@@ -196,10 +196,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
               onClick={(e) => { e.stopPropagation(); setShowConfDropdown(v => !v); }}
               className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded-none font-medium border cursor-pointer transition-colors ${
                 confidence === 'high'
-                  ? 'bg-[#1a3a1a] text-[#3d8c5e] border-[#2a5a2a] hover:bg-[#203a20]'
+                  ? 'bg-[var(--color-badge-bg-success)] text-[var(--color-success)] border-[var(--color-badge-border-success)] hover:opacity-80'
                   : confidence === 'medium'
-                  ? `${badge.bg} ${badge.text} border-[#6b5520] hover:bg-[#302510]`
-                  : `${badge.bg} ${badge.text} border-[#6b3d0a] hover:bg-[#301e08]`
+                  ? `${badge.bg} ${badge.text} border-[#6b5520] hover:opacity-80`
+                  : `${badge.bg} ${badge.text} border-[var(--color-badge-border-warning)] hover:opacity-80`
               }`}
               title={service.confidenceReasons?.join('\n') ?? 'Click to change confidence'}
             >
