@@ -102,6 +102,10 @@ vi.mock('../analyzers/sbom', () => ({
   generateSPDX: vi.fn(() => ({})),
 }))
 
+vi.mock('../exporters/htmlExporter', () => ({
+  generateHtmlReport: vi.fn(() => '<html>mock report</html>'),
+}))
+
 vi.mock('../analyzers/stackDiff', () => ({
   saveScanSnapshot: vi.fn(() => Promise.resolve()),
   loadPreviousScan: vi.fn(() => Promise.resolve(null)),
