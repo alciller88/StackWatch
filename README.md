@@ -3,8 +3,8 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
-[![Tests](https://img.shields.io/badge/tests-389%20passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Tests](https://img.shields.io/badge/tests-412%20passing-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project depends on -- with costs, renewal dates, and an interactive architecture graph. Zero config, works offline, and delivers results in seconds.
@@ -233,9 +233,9 @@ For the full detection architecture, see [`SPEC.md`](./SPEC.md).
 |---------|-------------|
 | `npm run dev` | Development mode with hot reload |
 | `npm run build` | Production build with electron-builder |
-| `npm test` | Run 389 tests across 27 suites |
+| `npm test` | Run 412 tests across 29 suites |
 | `npm run lint` | ESLint across src, electron, shared |
-| `npm run validate` | 29-point production build checker |
+| `npm run validate` | 32-point production build checker |
 | `npm run release` | Validate, tag, push (triggers CI release) |
 
 ### Project Structure
@@ -243,7 +243,8 @@ For the full detection architecture, see [`SPEC.md`](./SPEC.md).
 ```
 StackWatch/
 ├── electron/           # Main process
-│   ├── main.ts         # IPC handlers, CSP, window management
+│   ├── main.ts         # IPC handlers, safeStorage encryption, CSP, error handlers
+│   ├── validation.ts   # Zod schemas for all IPC input validation
 │   ├── preload.ts      # Secure renderer bridge (contextBridge)
 │   ├── analyzers/      # Pipeline: extractor → heuristic → dedup → flow
 │   ├── ai/             # AI provider, deep analyzer, alternatives
@@ -252,7 +253,7 @@ StackWatch/
 ├── shared/             # Canonical type definitions
 ├── src/                # Renderer (React)
 │   ├── components/     # Dashboard, Services, Deps, Discarded, Flow, Costs, Settings
-│   ├── store/          # Zustand stores (useStore, graphStore, history, dialog, toast)
+│   ├── store/          # Zustand stores (useStore, graphStore, history, dialog, toast, mutex)
 │   └── utils/          # Health score, badges, dates
 ├── scripts/            # WSL launcher, build validator, icon generator
 ├── build/              # Icons and entitlements
