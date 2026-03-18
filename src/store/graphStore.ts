@@ -42,11 +42,26 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null
 let persistLock = false
 let persistQueued = false
 
-// Module-level service getter — set by useStore to avoid circular dependency
+// Module-level callbacks — set by useStore to avoid circular dependency
 let _getServices: (() => import('../types').Service[]) | null = null
+let _deleteService: ((serviceId: string) => void) | null = null
+let _getRepoPath: (() => string | null) | null = null
+let _recalculateScore: (() => void) | null = null
 
 export function registerServiceGetter(getter: () => import('../types').Service[]) {
   _getServices = getter
+}
+
+export function registerServiceDeleter(deleter: (serviceId: string) => void) {
+  _deleteService = deleter
+}
+
+export function registerRepoPathGetter(getter: () => string | null) {
+  _getRepoPath = getter
+}
+
+export function registerScoreRecalculator(fn: () => void) {
+  _recalculateScore = fn
 }
 
 function getCurrentServices(): import('../types').Service[] {
@@ -425,26 +440,8 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     }))
 
     // If this node was linked to a service, remove the service from the main store
-    if (node?.data?.serviceId) {
-      import('./useStore').then(({ useStore }) => {
-        const store = useStore.getState()
-        const serviceId = node.data.serviceId as string
-        if (store.services.find((s) => s.id === serviceId)) {
-          useStore.setState({
-            services: store.services.filter((s) => s.id !== serviceId),
-            flowNodes: store.flowNodes.filter((n) => n.serviceId !== serviceId),
-            flowEdges: store.flowEdges.filter((e) => {
-              const nodeId = `svc-${serviceId}`
-              return e.source !== nodeId && e.target !== nodeId
-            }),
-          })
-          // Also remove from config if it's a manual service
-          const config = store.config
-          if (config && config.services.find((s) => s.id === serviceId)) {
-            store.deleteManualService(serviceId)
-          }
-        }
-      })
+    if (node?.data?.serviceId && _deleteService) {
+      _deleteService(node.data.serviceId as string)
     }
 
     get().persistToConfig()
@@ -585,9 +582,8 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
         excludedServices,
       }
 
-      // Use the main store's repoPath
-      const { useStore } = await import('./useStore')
-      const repoPath = useStore.getState().repoPath
+      // Use the main store's repoPath via registered getter (avoids circular dependency)
+      const repoPath = _getRepoPath?.()
       if (!repoPath) return
 
       let config = await window.stackwatch.loadConfig(repoPath)
@@ -615,9 +611,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
 useGraphStore.subscribe(
   (state, prev) => {
     if (state.nodes.length !== prev.nodes.length || state.edges.length !== prev.edges.length) {
-      import('./useStore').then(({ useStore }) => {
-        useStore.getState().recalculateScore()
-      })
+      _recalculateScore?.()
     }
   }
 )

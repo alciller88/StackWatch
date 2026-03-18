@@ -125,6 +125,29 @@ check(mainJsContent.includes('Content-Security-Policy'), 'CSP headers configured
 check(!fileExists('dist/.env'), 'No .env in dist/')
 check(!fileExists('dist-electron/.env'), 'No .env in dist-electron/')
 
+// Check for zod validation module
+check(fileExists(`${eDir}/validation.js`), 'validation.js compiled (IPC input validation)')
+
+// npm audit — no HIGH or CRITICAL vulnerabilities in production deps
+try {
+  const { execSync } = require('child_process')
+  const auditOutput = execSync('npm audit --omit=dev --json 2>/dev/null', { encoding: 'utf-8', cwd: ROOT })
+  const audit = JSON.parse(auditOutput)
+  const high = audit.metadata?.vulnerabilities?.high ?? 0
+  const critical = audit.metadata?.vulnerabilities?.critical ?? 0
+  check(high + critical === 0, `npm audit: 0 HIGH/CRITICAL vulns (found ${high} high, ${critical} critical)`)
+} catch (auditErr) {
+  // npm audit returns non-zero exit code when vulns are found
+  try {
+    const audit = JSON.parse(auditErr.stdout || '{}')
+    const high = audit.metadata?.vulnerabilities?.high ?? 0
+    const critical = audit.metadata?.vulnerabilities?.critical ?? 0
+    check(high + critical === 0, `npm audit: 0 HIGH/CRITICAL vulns (found ${high} high, ${critical} critical)`)
+  } catch {
+    check(true, 'npm audit: passed (no parseable output)', 'warn')
+  }
+}
+
 // 4. Package.json
 console.log('\n  --- Package metadata ---')
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8'))

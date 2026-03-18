@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.8.0 | Last updated: 2026-03-18 | Tests: 389 across 27 suites
+> Version: v0.9.0 | Last updated: 2026-03-18 | Tests: 412 across 29 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -42,7 +42,8 @@ Modern projects depend on dozens of external services spread across multiple acc
 | Remote GitHub | Octokit (`@octokit/rest`) | — |
 | Local persistence | electron-store | 10 |
 | Testing | Vitest + @testing-library/react + jsdom | — |
-| Build | electron-builder | 25 |
+| IPC validation | zod | — |
+| Build | electron-builder | 26 |
 | CI/CD | GitHub Actions | — |
 
 ---
@@ -585,13 +586,16 @@ interface StackWatchAPI {
 
 | Area | Implementation |
 |---|---|
-| Encryption | `TypedStore<StoreSchema>` with deterministic key from `app.getPath('userData')`. Auto-recovery on corruption. |
+| Encryption | `safeStorage` delegates to OS keychain (macOS Keychain, Windows DPAPI, Linux libsecret/kwallet). Fallback to unencrypted storage with console warning if keychain unavailable. Auto-migration from legacy deterministic key on startup. |
+| IPC validation | `zod` schemas in `electron/validation.ts` validate all IPC handler arguments before any logic. Rejects malformed inputs with structured error messages. |
 | CSP | `Content-Security-Policy` via `session.webRequest.onHeadersReceived` (production only) |
-| External URLs | IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only) |
+| External URLs | IPC `open-external-url` → zod-validated (http/https only) → `shell.openExternal()` |
 | Path validation | `validateRepoPath()` checks for `..` traversal via regex before resolving |
-| Secrets | GitHub tokens and AI API keys in encrypted electron-store, never in config JSON |
-| Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) stored as `$encrypted:` references in JSON; real values in electron-store |
+| Secrets | GitHub tokens and AI API keys encrypted with `safeStorage` in electron-store, never in config JSON |
+| Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) stored as `$encrypted:` references in JSON; real values encrypted with `safeStorage` in electron-store |
 | Context isolation | `contextIsolation: true`, `nodeIntegration: false`, all IPC via contextBridge |
+| Race conditions | `AsyncMutex` (`src/store/mutex.ts`) serializes multi-store mutations (addService, updateService, deleteService). Cross-store communication uses registered callbacks instead of dynamic `import()` to prevent re-initialization races. |
+| Error handling | Global `unhandledRejection` and `uncaughtException` handlers in main process prevent crashes; errors logged and shown to user via dialog. |
 
 ---
 
@@ -664,30 +668,40 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 15. Testing
 
-389 tests across 27 suites (Vitest + @testing-library/react + jsdom).
+412 tests across 29 suites (Vitest + @testing-library/react + jsdom).
 
 | Suite | Count | Suite | Count |
 |---|---|---|---|
 | Heuristic | 32 | graphStore | 27 |
 | vulnScanner | 27 | Extractor | 26 |
 | Deep Analyzer | 24 | Deduplicator | 23 |
-| useStore | 19 | healthScore | 18 |
-| Flow inference | 17 | badge | 17 |
-| TopBar | 13 | htmlExporter | 13 |
-| Deep Analyzer (runDeep) | 13 | zombieDetector | 12 |
-| monorepo | 12 | historyStore | 12 |
-| ServiceCard | 12 | billing | 10 |
-| alternativeSuggester | 10 | ScanProgress | 9 |
-| scoreHistory | 8 | scanDiff | 7 |
-| ContextMenu | 7 | DiscardedPanel | 7 |
-| Pipeline | 7 | Pipeline Integration | 4 |
+| useStore | 19 | IPC Validation | 18 |
+| healthScore | 18 | Flow inference | 17 |
+| badge | 17 | TopBar | 13 |
+| htmlExporter | 13 | Deep Analyzer (runDeep) | 13 |
+| zombieDetector | 12 | monorepo | 12 |
+| historyStore | 12 | ServiceCard | 12 |
+| billing | 10 | alternativeSuggester | 10 |
+| ScanProgress | 9 | scoreHistory | 8 |
+| scanDiff | 7 | ContextMenu | 7 |
+| DiscardedPanel | 7 | Pipeline | 7 |
+| AsyncMutex | 5 | Pipeline Integration | 4 |
 | daysUntil | 3 | | |
 
 ---
 
 ## 16. Version History
 
-### v0.8.0 (current)
+### v0.9.0 (current)
+- **Security**: `safeStorage` encryption replacing deterministic key derivation (delegates to OS keychain: DPAPI, Keychain, libsecret)
+- **Security**: `zod` schemas validate all IPC handler arguments before processing (`electron/validation.ts`)
+- **Security**: Race condition fixes — `AsyncMutex` for multi-store operations, registered callbacks replace dynamic `import()` in cross-store communication
+- **Security**: `electron-builder` upgraded to v26 (0 HIGH/CRITICAL CVEs in `npm audit`)
+- **Stability**: Global `unhandledRejection` and `uncaughtException` handlers prevent main process crashes
+- **Stability**: AI API keys encrypted with `safeStorage` (not just electron-store encryption)
+- 412 tests across 29 suites (+23 new validation and mutex tests)
+
+### v0.8.0
 - ServiceBilling data model replacing legacy cost/renewalDate fields (type, period, amount, currency, nextDate, lastRenewed)
 - 8 binary Stack Score checks (5 security + 3 completeness): score = passing/applicable × 100
 - Renewal tracking with per-billing-type thresholds (automatic monthly excluded, manual yearly 30d, etc.)

@@ -10,7 +10,24 @@ import { appendScoreEntry, loadScoreHistory } from './analyzers/scoreHistory'
 import { calculateHealthScore } from '../src/utils/healthScore'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import { SENSITIVE_FIELDS } from '../shared/types'
+import { schemas, validate } from './validation'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
+
+// --- Global error handlers (stability) ---
+
+process.on('unhandledRejection', (reason, _promise) => {
+  console.error('[Main] Unhandled rejection:', reason)
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('[Main] Uncaught exception:', error)
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    dialog.showErrorBox(
+      'Unexpected error',
+      `StackWatch encountered an error: ${error.message}\n\nThe app will continue running.`,
+    )
+  }
+})
 
 // electron-store with encryption — Conf's type declarations require moduleResolution: node16+
 // which is incompatible with our tsconfig. We type with the methods we actually use.
@@ -19,17 +36,27 @@ interface TypedStore {
   get(key: string): any
   set(key: string, value: any): void
   set(object: Record<string, any>): void
+  delete(key: string): void
 }
 
 let store: TypedStore
 let mainWindow: BrowserWindow | null = null
 let scanAbortController: AbortController | null = null
 
-function getEncryptionKey(): string {
-  // Deterministic machine-unique key from userData path.
-  // NOTE: safeStorage.encryptString() is non-deterministic (random nonce each call),
-  // so it cannot be used to derive a stable encryption key for electron-store.
-  return `sw-${Buffer.from(app.getPath('userData')).toString('base64').slice(0, 24)}`
+// --- safeStorage encryption helpers ---
+
+function encryptValue(value: string): string {
+  if (!safeStorage.isEncryptionAvailable()) return value
+  return safeStorage.encryptString(value).toString('base64')
+}
+
+function decryptValue(encrypted: string): string {
+  if (!safeStorage.isEncryptionAvailable()) return encrypted
+  try {
+    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
+  } catch {
+    return encrypted
+  }
 }
 
 function getIconPath(): string {
@@ -91,21 +118,72 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  const key = getEncryptionKey()
+  // Initialize store without custom encryption key — safeStorage handles sensitive values directly
   try {
-    store = new (Store as any)({ encryptionKey: key })
-    // Force a read to detect corrupted/mis-keyed data early
+    store = new (Store as any)()
+    // Force a read to detect corrupted data early
     store.store
   } catch {
-    // Store corrupted (e.g. encryption key changed) — delete and recreate
+    // Store corrupted — delete and recreate
     try {
       const storePath = path.join(app.getPath('userData'), 'config.json')
       require('fs').unlinkSync(storePath)
     } catch { /* ignore if file doesn't exist */ }
-    store = new (Store as any)({ encryptionKey: key })
+    store = new (Store as any)()
   }
+
+  // Migrate from legacy deterministic encryption to safeStorage
+  migrateLegacyEncryption()
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.warn('[Main] safeStorage is not available — sensitive values will be stored without encryption. Install a keychain (libsecret/kwallet) on Linux.')
+  }
+
   createWindow()
 })
+
+function migrateLegacyEncryption(): void {
+  // Re-encrypt all stored encrypted.* values with safeStorage
+  // Old format: plaintext values stored under deterministic encryption key
+  // New format: safeStorage.encryptString() base64 values
+  if (!safeStorage.isEncryptionAvailable()) return
+
+  try {
+    const allData = store.store
+    let migrated = false
+    for (const [key, value] of Object.entries(allData)) {
+      if (key.startsWith('encrypted.') && typeof value === 'string') {
+        // Check if already migrated (safeStorage produces base64 that's typically longer)
+        // Try to decrypt with safeStorage — if it fails, it's still in legacy format
+        try {
+          safeStorage.decryptString(Buffer.from(value, 'base64'))
+          // Already migrated — skip
+        } catch {
+          // Legacy plaintext value — re-encrypt with safeStorage
+          const encrypted = encryptValue(value)
+          store.set(key, encrypted)
+          migrated = true
+        }
+      }
+    }
+    // Also migrate aiSettings apiKey if present
+    const aiSettings = store.get('aiSettings') as any
+    if (aiSettings?.provider?.apiKey && typeof aiSettings.provider.apiKey === 'string') {
+      try {
+        safeStorage.decryptString(Buffer.from(aiSettings.provider.apiKey, 'base64'))
+      } catch {
+        aiSettings.provider.apiKey = encryptValue(aiSettings.provider.apiKey)
+        store.set('aiSettings', aiSettings)
+        migrated = true
+      }
+    }
+    if (migrated) {
+      console.log('[Main] Migrated legacy encrypted values to safeStorage')
+    }
+  } catch (err) {
+    console.error('[Main] Migration failed (non-fatal):', err)
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
@@ -136,15 +214,11 @@ ipcMain.on('cancel-scan', () => {
 
 // --- Safe External URL ---
 
-ipcMain.handle('open-external-url', async (_event, url: string) => {
-  // Only allow http and https protocols
+ipcMain.handle('open-external-url', async (_event, args) => {
+  const { url } = validate(schemas.openExternalUrl, typeof args === 'string' ? { url: args } : args, 'open-external-url')
   try {
-    const parsed = new URL(url)
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-      await shell.openExternal(url)
-      return true
-    }
-    return false
+    await shell.openExternal(url)
+    return true
   } catch {
     return false
   }
@@ -163,14 +237,16 @@ function validateRepoPath(repoPath: string): string {
 
 function encryptServiceField(serviceId: string, fieldName: string, value: string): string {
   const ref = `$encrypted:${serviceId}_${fieldName}`
-  store.set(`encrypted.${serviceId}_${fieldName}`, value)
+  store.set(`encrypted.${serviceId}_${fieldName}`, encryptValue(value))
   return ref
 }
 
 function decryptServiceField(reference: string): string | undefined {
   if (!reference.startsWith('$encrypted:')) return undefined
   const key = reference.slice('$encrypted:'.length)
-  return store.get(`encrypted.${key}`) as string | undefined
+  const stored = store.get(`encrypted.${key}`) as string | undefined
+  if (!stored) return undefined
+  return decryptValue(stored)
 }
 
 function encryptConfig(config: UserConfig): UserConfig {
@@ -204,7 +280,8 @@ function decryptConfig(config: UserConfig): UserConfig {
 
 // --- IPC Handlers ---
 
-ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
+ipcMain.handle('analyze-local', async (_event, args) => {
+  const { folderPath } = validate(schemas.analyzeLocal, typeof args === 'string' ? { folderPath: args } : args, 'analyze-local')
   const safePath = validateRepoPath(folderPath)
   const aiSettings = getAISettings()
 
@@ -273,7 +350,8 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
   return result
 })
 
-ipcMain.handle('get-stack-diff', async (_event, folderPath: string) => {
+ipcMain.handle('get-stack-diff', async (_event, args) => {
+  const { folderPath } = validate(schemas.getStackDiff, typeof args === 'string' ? { folderPath: args } : args, 'get-stack-diff')
   const safePath = validateRepoPath(folderPath)
   const previousScan = await loadPreviousScan(safePath)
   if (!previousScan) return null
@@ -300,11 +378,8 @@ ipcMain.handle('get-stack-diff', async (_event, folderPath: string) => {
 
 ipcMain.handle(
   'analyze-github',
-  async (_event, { repo, token }: { repo: string; token: string }) => {
-    // Validate repo format: owner/repo with safe characters only
-    if (!/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repo)) {
-      throw new Error(`Invalid GitHub repo format: expected "owner/repo", got "${repo}"`)
-    }
+  async (_event, args) => {
+    const { repo, token } = validate(schemas.analyzeGitHub, args, 'analyze-github')
 
     const { Octokit } = await import('@octokit/rest')
     const [owner, repoName] = repo.split('/')
@@ -426,7 +501,8 @@ ipcMain.handle('open-folder', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
-ipcMain.handle('load-config', async (_event, repoPath: string) => {
+ipcMain.handle('load-config', async (_event, args) => {
+  const { repoPath } = validate(schemas.loadConfig, typeof args === 'string' ? { repoPath: args } : args, 'load-config')
   try {
     const safePath = validateRepoPath(repoPath)
     const configPath = path.join(safePath, 'stackwatch.config.json')
@@ -442,8 +518,11 @@ ipcMain.handle(
   'save-config',
   async (
     _event,
-    { repoPath, config }: { repoPath: string; config: UserConfig }
+    args,
   ) => {
+    const validated = validate(schemas.saveConfig, args, 'save-config')
+    const repoPath = validated.repoPath
+    const config = validated.config as unknown as UserConfig
     const safePath = validateRepoPath(repoPath)
     const configPath = path.join(safePath, 'stackwatch.config.json')
     const encrypted = encryptConfig(config)
@@ -455,22 +534,36 @@ ipcMain.handle(
 
 function getAISettings(): AISettings {
   const settings = store.get('aiSettings') as AISettings | undefined
-  return settings ?? {
-    enabled: false,
-    provider: { name: 'Ollama (local, free)', baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
+  if (!settings) {
+    return {
+      enabled: false,
+      provider: { name: 'Ollama (local, free)', baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
+    }
   }
+  // Decrypt API key from safeStorage
+  if (settings.provider.apiKey) {
+    settings.provider = { ...settings.provider, apiKey: decryptValue(settings.provider.apiKey) }
+  }
+  return settings
 }
 
 ipcMain.handle('get-ai-settings', async () => {
   return getAISettings()
 })
 
-ipcMain.handle('set-ai-settings', async (_event, settings: AISettings) => {
-  store.set('aiSettings', settings)
+ipcMain.handle('set-ai-settings', async (_event, args) => {
+  const { settings } = validate(schemas.setAISettings, typeof args === 'object' && args !== null && 'settings' in args ? args : { settings: args }, 'set-ai-settings')
+  // Encrypt API key with safeStorage before storing
+  const toStore = { ...settings }
+  if (toStore.provider.apiKey) {
+    toStore.provider = { ...toStore.provider, apiKey: encryptValue(toStore.provider.apiKey) }
+  }
+  store.set('aiSettings', toStore)
 })
 
-ipcMain.handle('test-ai-connection', async (_event, provider: AIProvider) => {
-  return testConnection(provider)
+ipcMain.handle('test-ai-connection', async (_event, args) => {
+  const { provider } = validate(schemas.testAIConnection, typeof args === 'object' && args !== null && 'provider' in args ? args : { provider: args }, 'test-ai-connection')
+  return testConnection(provider as AIProvider)
 })
 
 ipcMain.handle('get-ai-presets', async () => {
@@ -495,7 +588,8 @@ ipcMain.handle('import-config-standalone', async () => {
   }
 })
 
-ipcMain.handle('export-config', async (_event, content: string) => {
+ipcMain.handle('export-config', async (_event, args) => {
+  const { content } = validate(schemas.exportConfig, typeof args === 'string' ? { content: args } : args, 'export-config')
   if (!mainWindow) return false
   const date = new Date().toISOString().split('T')[0]
   let projectName = 'stackwatch'
@@ -513,7 +607,8 @@ ipcMain.handle('export-config', async (_event, content: string) => {
   return true
 })
 
-ipcMain.handle('export-services-md', async (_event, content: string) => {
+ipcMain.handle('export-services-md', async (_event, args) => {
+  const { content } = validate(schemas.exportServicesMd, typeof args === 'string' ? { content: args } : args, 'export-services-md')
   if (!mainWindow) return false
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
     title: 'Export services as Markdown',
@@ -525,7 +620,9 @@ ipcMain.handle('export-services-md', async (_event, content: string) => {
   return true
 })
 
-ipcMain.handle('export-html', async (_event, data: import('./types').HtmlExportData) => {
+ipcMain.handle('export-html', async (_event, args) => {
+  const validated = validate(schemas.exportHtml, typeof args === 'object' && args !== null && 'data' in args ? args : { data: args }, 'export-html')
+  const data = validated.data as unknown as import('./types').HtmlExportData
   if (!mainWindow) return false
   const { generateHtmlReport } = await import('./exporters/htmlExporter')
   const html = generateHtmlReport(data)
@@ -572,8 +669,8 @@ async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
   return 'unknown'
 }
 
-ipcMain.handle('check-link-status', async (_event, config: UserConfig) => {
-  return checkLinkStatus(config)
+ipcMain.handle('check-link-status', async (_event, config) => {
+  return checkLinkStatus(config as UserConfig)
 })
 
 ipcMain.handle('relink-local', async () => {
@@ -629,35 +726,40 @@ function checkRenewalNotifications(services: Service[]): void {
   }
 }
 
-ipcMain.handle('check-renewals', async (_event, services: Service[]) => {
-  checkRenewalNotifications(services)
+ipcMain.handle('check-renewals', async (_event, args) => {
+  const { services } = validate(schemas.checkRenewals, typeof Array.isArray(args) ? { services: args } : (args && typeof args === 'object' && 'services' in args ? args : { services: args }), 'check-renewals')
+  checkRenewalNotifications(services as Service[])
 })
 
 // --- Score History ---
 
-ipcMain.handle('get-score-history', async (_event, folderPath: string) => {
+ipcMain.handle('get-score-history', async (_event, args) => {
+  const { folderPath } = validate(schemas.getScoreHistory, typeof args === 'string' ? { folderPath: args } : args, 'get-score-history')
   const safePath = validateRepoPath(folderPath)
   return loadScoreHistory(safePath)
 })
 
-ipcMain.handle('save-score-entry', async (_event, { folderPath, entry }: { folderPath: string; entry: import('./analyzers/scoreHistory').ScoreHistoryEntry }) => {
+ipcMain.handle('save-score-entry', async (_event, args) => {
+  const { folderPath, entry } = validate(schemas.saveScoreEntry, args, 'save-score-entry')
   const safePath = validateRepoPath(folderPath)
   await appendScoreEntry(safePath, entry)
 })
 
 // --- Vulnerability Scanning ---
 
-ipcMain.handle('scan-vulnerabilities', async (_event, deps: import('./types').Dependency[]) => {
-  return scanVulnerabilities(deps)
+ipcMain.handle('scan-vulnerabilities', async (_event, args) => {
+  const { deps } = validate(schemas.scanVulnerabilities, Array.isArray(args) ? { deps: args } : args, 'scan-vulnerabilities')
+  return scanVulnerabilities(deps as import('./types').Dependency[])
 })
 
 // --- SBOM Generation ---
 
-ipcMain.handle('generate-sbom', async (_event, { deps, projectName, format }: {
-  deps: import('./types').Dependency[]
-  projectName: string
-  format: 'cyclonedx' | 'spdx'
-}) => {
+ipcMain.handle('generate-sbom', async (_event, args) => {
+  const { deps, projectName, format } = validate(schemas.generateSbom, args, 'generate-sbom') as {
+    deps: import('./types').Dependency[]
+    projectName: string
+    format: 'cyclonedx' | 'spdx'
+  }
   if (format === 'cyclonedx') {
     return generateCycloneDX(deps, projectName)
   }

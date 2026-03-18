@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.8.0
+# CONTEXT.md — StackWatch v0.9.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -17,8 +17,9 @@
 | CLI          | `npx stackwatch [path]` — same heuristic engine, no Electron    |
 | GitHub Action| `alciller88/StackWatch@main` — posts PR comments with results   |
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
-| Persistence  | `electron-store` (safeStorage encrypted, typed via `Store<StoreSchema>`) |
-| Tests        | 389 tests, 27 suites — vitest + @testing-library/react + jsdom  |
+| Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
+| Validation   | `zod` schemas on all IPC handlers                                |
+| Tests        | 412 tests, 29 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -116,7 +117,7 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 | Store          | Purpose                       | Key details                                                                                                                     |
 |----------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` + `healthChecks: StackCheck[]` + `vulnResults: DepVulnResult[]` + `vulnScanned: boolean` recalculated reactively. `showScoreBreakdown` toggles ScoreBreakdown panel (mutually exclusive with ScoreHistory). Uses `ServiceBilling` (no legacy cost/renewalDate). |
-| `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock** (prevents race conditions). Uses `registerServiceGetter()` callback (no `require()`). Subscribes to node/edge count to trigger score recalculation. |
+| `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock**. Uses registered callbacks (`registerServiceGetter`, `registerServiceDeleter`, `registerRepoPathGetter`, `registerScoreRecalculator`) — no dynamic `import()`. |
 | `historyStore` | Undo/redo                     | Past/future stacks, max 50 snapshots. Captures nodes + edges + services.                                                       |
 | `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
 | `toastStore`   | Notifications                 | Auto-dismiss 4s. Animation keyframes defined in CSS (slide-in-from-right + fade-in).                                            |
@@ -137,13 +138,16 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 | Area              | Implementation                                                                                      |
 |-------------------|-----------------------------------------------------------------------------------------------------|
-| Encryption        | Deterministic key from `app.getPath('userData')` for electron-store. Auto-recovery on corruption.   |
+| Encryption        | `safeStorage` (OS keychain: macOS Keychain, Windows DPAPI, Linux libsecret/kwallet). Fallback to unencrypted with console warning if unavailable. Auto-migration from legacy deterministic key. |
+| IPC validation    | `zod` schemas validate all IPC handler arguments in `electron/validation.ts` before any logic runs. |
 | CSP               | Production-only via `session.webRequest.onHeadersReceived`. Disabled in dev for Vite HMR.           |
-| External URLs     | All via IPC `open-external-url` → `shell.openExternal()`, protocol validation (http/https only).    |
+| External URLs     | All via IPC `open-external-url` → zod-validated (http/https only) → `shell.openExternal()`.         |
 | Path validation   | `validateRepoPath()` checks for `..` traversal via regex before resolving.                          |
-| Secrets           | GitHub tokens and AI keys in encrypted electron-store, never in config JSON.                        |
-| Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) as `$encrypted:` refs in JSON; real values in electron-store. |
+| Secrets           | GitHub tokens and AI API keys encrypted with `safeStorage` in electron-store, never in config JSON. |
+| Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) as `$encrypted:` refs in JSON; real values encrypted with `safeStorage` in electron-store. |
 | Context isolation | `contextIsolation: true`, `nodeIntegration: false`, all IPC via contextBridge.                      |
+| Race conditions   | `AsyncMutex` serializes multi-store operations (add/update/delete service). Registered callbacks replace dynamic `import()` in cross-store communication. |
+| Error handling    | Global `unhandledRejection` and `uncaughtException` handlers prevent main process crashes.          |
 
 ---
 
@@ -153,7 +157,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 | File                                    | Purpose                                                                          |
 |-----------------------------------------|----------------------------------------------------------------------------------|
-| `electron/main.ts`                      | Entry, IPC handlers, safeStorage, CSP, window management                         |
+| `electron/main.ts`                      | Entry, IPC handlers, safeStorage encryption, CSP, window management, global error handlers |
+| `electron/validation.ts`                | Zod schemas + validate() helper for all IPC handler arguments                    |
 | `electron/preload.ts`                   | IPC bridge via contextBridge (StackWatchAPI)                                      |
 | `electron/analyzers/index.ts`           | Pipeline orchestrator. Monorepo-aware. Emits scan-progress. AbortSignal support. |
 | `electron/analyzers/extractor.ts`       | Evidence extraction: env vars, imports, URLs, configs, deps                      |
@@ -177,7 +182,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 |---------------------------------|-------------------------------------------------------------------|
 | `src/App.tsx`                   | Layout, panel routing, undo/redo, skeleton switching              |
 | `src/store/useStore.ts`        | Global state, analysis flow, service CRUD, theme, budget, score   |
-| `src/store/graphStore.ts`      | React Flow state, debounced persist with write lock               |
+| `src/store/graphStore.ts`      | React Flow state, debounced persist with write lock, registered callbacks |
+| `src/store/mutex.ts`           | AsyncMutex for serializing multi-store operations                 |
 | `src/store/historyStore.ts`    | Undo/redo snapshots (50 max)                                      |
 | `src/store/toastStore.ts`      | Toast notifications (4s auto-dismiss)                             |
 | `src/store/dialogStore.ts`     | Promise-based confirm dialog                                      |
@@ -213,7 +219,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (372 tests, 26 suites)                      |
+| `npm test`           | vitest (412 tests, 29 suites)                      |
 
 ### Release flow
 
@@ -242,7 +248,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-389 tests across 27 suites.
+412 tests across 29 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -253,11 +259,12 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | Deep Analyzer           | 24    | monorepo               | 12    |
 | Deduplicator            | 23    | historyStore           | 12    |
 | useStore                | 19    | ServiceCard            | 12    |
-| Flow inference          | 17    | healthScore            | 11    |
-| badge                   | 17    | alternativeSuggester   | 10    |
-| ScanProgress            | 9     | scoreHistory           | 8     |
-| scanDiff                | 7     | ContextMenu            | 7     |
-| DiscardedPanel          | 7     | Pipeline               | 7     |
+| IPC Validation          | 18    | healthScore            | 11    |
+| Flow inference          | 17    | alternativeSuggester   | 10    |
+| badge                   | 17    | ScanProgress           | 9     |
+| scoreHistory            | 8     | ContextMenu            | 7     |
+| scanDiff                | 7     | Pipeline               | 7     |
+| DiscardedPanel          | 7     | AsyncMutex             | 5     |
 | Pipeline Integration    | 4     | daysUntil              | 3     |
 
 ---
@@ -271,9 +278,10 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 4. Pipeline picks up new evidence automatically
 
 ### Adding a new IPC channel
-1. Handler in `electron/main.ts`
-2. Method in `electron/preload.ts`
-3. Type in `StackWatchAPI` in `shared/types.ts`
+1. Zod schema in `electron/validation.ts`
+2. Handler in `electron/main.ts` (call `validate()` before any logic)
+3. Method in `electron/preload.ts`
+4. Type in `StackWatchAPI` in `shared/types.ts`
 
 ### Adding a new panel
 1. Component in `src/components/NewPanel/`

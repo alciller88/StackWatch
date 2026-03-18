@@ -20,7 +20,8 @@ import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '..
 import { computeScanDiff } from '../utils/scanDiff';
 import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
-import { registerServiceGetter } from './graphStore';
+import { useGraphStore, registerServiceGetter, registerServiceDeleter, registerRepoPathGetter, registerScoreRecalculator } from './graphStore';
+import { storeMutex } from './mutex';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
@@ -591,31 +592,36 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addManualService: async (service: Service) => {
-    const currentConfig = ensureConfig(get().config);
-    const updatedConfig = {
-      ...currentConfig,
-      services: [...currentConfig.services, service],
-    };
-    await get().saveConfig(updatedConfig);
-    // Update services list instantly
-    set((state) => ({
-      services: [...state.services, service],
-    }));
-    get().recalculateScore();
+    const release = await storeMutex.acquire();
+    try {
+      const currentConfig = ensureConfig(get().config);
+      const updatedConfig = {
+        ...currentConfig,
+        services: [...currentConfig.services, service],
+      };
+      await get().saveConfig(updatedConfig);
+      set((state) => ({
+        services: [...state.services, service],
+      }));
+      get().recalculateScore();
+    } finally {
+      release();
+    }
   },
 
   updateManualService: async (service: Service) => {
-    const currentConfig = ensureConfig(get().config);
-    const updatedConfig = {
-      ...currentConfig,
-      services: currentConfig.services.map(s => s.id === service.id ? service : s),
-    };
-    await get().saveConfig(updatedConfig);
-    set((state) => ({
-      services: state.services.map(s => s.id === service.id ? service : s),
-    }));
-    // Sync graph node with updated service data
-    import('./graphStore').then(({ useGraphStore }) => {
+    const release = await storeMutex.acquire();
+    try {
+      const currentConfig = ensureConfig(get().config);
+      const updatedConfig = {
+        ...currentConfig,
+        services: currentConfig.services.map(s => s.id === service.id ? service : s),
+      };
+      await get().saveConfig(updatedConfig);
+      set((state) => ({
+        services: state.services.map(s => s.id === service.id ? service : s),
+      }));
+      // Sync graph node with updated service data
       const graphNode = useGraphStore.getState().nodes.find(
         n => n.data?.serviceId === service.id
       );
@@ -629,21 +635,28 @@ export const useStore = create<StoreState>((set, get) => ({
           note: service.notes,
         });
       }
-    });
-    get().recalculateScore();
+      get().recalculateScore();
+    } finally {
+      release();
+    }
   },
 
   deleteManualService: async (serviceId: string) => {
-    const currentConfig = ensureConfig(get().config);
-    const updatedConfig = {
-      ...currentConfig,
-      services: currentConfig.services.filter(s => s.id !== serviceId),
-    };
-    await get().saveConfig(updatedConfig);
-    set((state) => ({
-      services: state.services.filter(s => s.id !== serviceId),
-    }));
-    get().recalculateScore();
+    const release = await storeMutex.acquire();
+    try {
+      const currentConfig = ensureConfig(get().config);
+      const updatedConfig = {
+        ...currentConfig,
+        services: currentConfig.services.filter(s => s.id !== serviceId),
+      };
+      await get().saveConfig(updatedConfig);
+      set((state) => ({
+        services: state.services.filter(s => s.id !== serviceId),
+      }));
+      get().recalculateScore();
+    } finally {
+      release();
+    }
   },
 
   setBudget: async (budget) => {
@@ -844,8 +857,28 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 }));
 
-// Register service getter for graphStore (avoids circular dependency)
+// Register callbacks for graphStore (avoids circular dependency)
 registerServiceGetter(() => useStore.getState().services);
+registerRepoPathGetter(() => useStore.getState().repoPath);
+registerScoreRecalculator(() => useStore.getState().recalculateScore());
+registerServiceDeleter((serviceId: string) => {
+  const store = useStore.getState();
+  if (store.services.find((s) => s.id === serviceId)) {
+    useStore.setState({
+      services: store.services.filter((s) => s.id !== serviceId),
+      flowNodes: store.flowNodes.filter((n) => n.serviceId !== serviceId),
+      flowEdges: store.flowEdges.filter((e) => {
+        const nodeId = `svc-${serviceId}`;
+        return e.source !== nodeId && e.target !== nodeId;
+      }),
+    });
+    // Also remove from config if it's a manual service
+    const config = store.config;
+    if (config && config.services.find((s) => s.id === serviceId)) {
+      store.deleteManualService(serviceId);
+    }
+  }
+});
 
 // Debounced score history persistence — saves manual score changes to disk after 2s
 let _scoreDebounceTimer: ReturnType<typeof setTimeout> | null = null;
