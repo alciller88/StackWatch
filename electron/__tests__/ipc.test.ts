@@ -53,6 +53,7 @@ vi.mock('electron', () => ({
   },
   Menu: { setApplicationMenu: vi.fn() },
   Notification: vi.fn().mockImplementation(() => ({ show: vi.fn() })),
+  net: { isOnline: vi.fn(() => true) },
   session: {},
 }))
 
