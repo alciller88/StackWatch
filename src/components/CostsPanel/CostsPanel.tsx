@@ -405,7 +405,7 @@ export const CostsPanel: React.FC = () => {
                 />
                 <Bar dataKey="total" radius={0}>
                   {costByCategory.map((row) => (
-                    <Cell key={row.category} fill="#e2b04a" /> {/* Matches --color-accent in dark theme */}
+                    <Cell key={row.category} fill="#e2b04a" /* Recharts requires hex — matches --color-accent */ />
                   ))}
                 </Bar>
               </BarChart>
