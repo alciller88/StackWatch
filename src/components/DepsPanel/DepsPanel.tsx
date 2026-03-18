@@ -181,10 +181,10 @@ export const DepsPanel: React.FC = () => {
           <button
             onClick={scanVulns}
             disabled={vulnLoading || dependencies.length === 0}
-            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase rounded-sm transition-colors border disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] tracking-widest uppercase rounded-sm transition-colors border disabled:opacity-40 disabled:cursor-not-allowed hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
             style={{
-              borderColor: vulnScanned && totalVulns > 0 ? 'var(--color-danger)' : 'var(--color-border)',
-              color: vulnScanned && totalVulns > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-secondary)',
             }}
           >
             {vulnLoading ? (
@@ -197,10 +197,24 @@ export const DepsPanel: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-7a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            {vulnScanned
-              ? totalVulns > 0 ? `${totalVulns} vuln${totalVulns !== 1 ? 's' : ''}` : 'No vulns'
-              : 'Scan vulns'}
+            {vulnScanned ? 'Re-scan vulns' : 'Scan vulns'}
           </button>
+          {vulnScanned && totalVulns > 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-1 font-mono text-[11px] uppercase tracking-widest border"
+              style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}
+            >
+              {totalVulns} vuln{totalVulns !== 1 ? 's' : ''}
+            </span>
+          )}
+          {vulnScanned && totalVulns === 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-1 font-mono text-[11px] uppercase tracking-widest border"
+              style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}
+            >
+              No vulns
+            </span>
+          )}
         </div>
 
         <div className="flex gap-3">
