@@ -57,6 +57,7 @@ interface StoreState {
   stackScore: number;
   healthChecks: StackCheck[];
   vulnResults: DepVulnResult[];
+  vulnScanned: boolean;
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
   mode: StoreMode;
@@ -180,6 +181,7 @@ export const useStore = create<StoreState>((set, get) => ({
   stackScore: 0,
   healthChecks: [],
   vulnResults: [],
+  vulnScanned: false,
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
   mode: 'scan' as StoreMode,
@@ -194,8 +196,8 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   recalculateScore: () => {
-    const { services, flowNodes, flowEdges, vulnResults } = get();
-    const health = calculateHealthScore(services, flowNodes, flowEdges, vulnResults.length > 0 ? vulnResults : undefined);
+    const { services, flowNodes, flowEdges, vulnResults, vulnScanned } = get();
+    const health = calculateHealthScore(services, flowNodes, flowEdges, vulnScanned ? vulnResults : undefined);
     set({ stackScore: health.score, healthChecks: health.checks });
   },
 
@@ -836,9 +838,9 @@ useStore.subscribe(
     if (state.stackScore !== prev.stackScore && state.stackScore > 0 && !state.isAnalyzing) {
       if (_scoreDebounceTimer) clearTimeout(_scoreDebounceTimer);
       _scoreDebounceTimer = setTimeout(() => {
-        const { repoPath, services, dependencies, flowNodes, flowEdges, vulnResults } = useStore.getState();
+        const { repoPath, services, dependencies, flowNodes, flowEdges, vulnResults, vulnScanned } = useStore.getState();
         if (!repoPath || !window.stackwatch?.saveScoreEntry) return;
-        const health = calculateHealthScore(services, flowNodes, flowEdges, vulnResults.length > 0 ? vulnResults : undefined);
+        const health = calculateHealthScore(services, flowNodes, flowEdges, vulnScanned ? vulnResults : undefined);
         const entry: ScoreHistoryEntry = {
           timestamp: new Date().toISOString(),
           score: health.score,

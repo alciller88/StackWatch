@@ -26,23 +26,21 @@ const ecosystemUrls: Record<Dependency['ecosystem'], (name: string) => string> =
 };
 
 export const DepsPanel: React.FC = () => {
-  const { dependencies, repoPath } = useStore();
+  const { dependencies, repoPath, vulnResults, vulnScanned, recalculateScore } = useStore();
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<Dependency['type'] | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [groupByType, setGroupByType] = useState(false);
-  const [vulnResults, setVulnResults] = useState<DepVulnResult[]>([]);
   const [vulnLoading, setVulnLoading] = useState(false);
-  const [vulnScanned, setVulnScanned] = useState(false);
 
   const scanVulns = async () => {
     if (!window.stackwatch?.scanVulnerabilities || dependencies.length === 0) return;
     setVulnLoading(true);
     try {
       const results = await window.stackwatch.scanVulnerabilities(dependencies);
-      setVulnResults(results);
-      setVulnScanned(true);
+      useStore.setState({ vulnResults: results, vulnScanned: true });
+      recalculateScore();
     } catch {
       useToastStore.getState().addToast('Vulnerability scan failed', 'error');
     } finally {

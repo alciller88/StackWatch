@@ -47,12 +47,20 @@ export const DoctorModal: React.FC = () => {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  const [vulnResults, setVulnResults] = useState<DepVulnResult[] | null>(null);
-  const [vulnLoading, setVulnLoading] = useState(true);
+  const storeVulnResults = useStore(s => s.vulnResults);
+  const storeVulnScanned = useStore(s => s.vulnScanned);
+  const recalculateScore = useStore(s => s.recalculateScore);
+  const [vulnResults, setVulnResults] = useState<DepVulnResult[] | null>(storeVulnScanned ? storeVulnResults : null);
+  const [vulnLoading, setVulnLoading] = useState(!storeVulnScanned);
   const [vulnError, setVulnError] = useState<string | null>(null);
 
-  // Run vuln scan on mount
+  // Run vuln scan on mount if not already scanned
   useEffect(() => {
+    if (storeVulnScanned) {
+      setVulnResults(storeVulnResults);
+      setVulnLoading(false);
+      return;
+    }
     let cancelled = false;
     const runScan = async () => {
       if (!window.stackwatch?.scanVulnerabilities || dependencies.length === 0) {
@@ -65,6 +73,8 @@ export const DoctorModal: React.FC = () => {
         if (!cancelled) {
           setVulnResults(results);
           setVulnLoading(false);
+          useStore.setState({ vulnResults: results, vulnScanned: true });
+          recalculateScore();
         }
       } catch (err) {
         if (!cancelled) {
