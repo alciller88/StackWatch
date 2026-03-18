@@ -12,12 +12,16 @@ import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import { SENSITIVE_FIELDS } from '../shared/types'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
-interface StoreSchema {
-  aiSettings?: AISettings
-  encrypted: Record<string, string>
+// electron-store with encryption — Conf's type declarations require moduleResolution: node16+
+// which is incompatible with our tsconfig. We type with the methods we actually use.
+interface TypedStore {
+  store: Record<string, any>
+  get(key: string): any
+  set(key: string, value: any): void
+  set(object: Record<string, any>): void
 }
 
-let store: Store<StoreSchema>
+let store: TypedStore
 let mainWindow: BrowserWindow | null = null
 let scanAbortController: AbortController | null = null
 
@@ -78,7 +82,7 @@ function createWindow() {
 app.whenReady().then(() => {
   const key = getEncryptionKey()
   try {
-    store = new Store<StoreSchema>({ encryptionKey: key })
+    store = new (Store as any)({ encryptionKey: key })
     // Force a read to detect corrupted/mis-keyed data early
     store.store
   } catch {
@@ -87,7 +91,7 @@ app.whenReady().then(() => {
       const storePath = path.join(app.getPath('userData'), 'config.json')
       require('fs').unlinkSync(storePath)
     } catch { /* ignore if file doesn't exist */ }
-    store = new Store<StoreSchema>({ encryptionKey: key })
+    store = new (Store as any)({ encryptionKey: key })
   }
   createWindow()
 })
@@ -361,13 +365,13 @@ ipcMain.handle(
       const result = await analyzeGitHubRepo(fetchFile, listDir, aiSettings, onProgress, signal)
       scanAbortController = null
 
-      // Persist score history for GitHub scans (same as local scans)
+      // Compute score entry for GitHub scans (same as local scans)
+      // Note: snapshot save skipped for GitHub (no local repo to write to)
+      let scoreEntry = undefined
       try {
         const { score, servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness } =
           calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
-        // Store under a github: prefixed key using the .stackwatch/ convention
-        // Note: snapshot save skipped for GitHub (no local repo to write to)
-        result.scoreEntry = {
+        scoreEntry = {
           timestamp: new Date().toISOString(),
           score,
           breakdown: { servicesWithCost, servicesWithOwner, servicesReviewed, graphCompleteness },
@@ -379,7 +383,7 @@ ipcMain.handle(
         // Non-critical
       }
 
-      return result
+      return { ...result, scoreEntry }
     } catch (err: any) {
       scanAbortController = null
       if (err?.name === 'AbortError') {
