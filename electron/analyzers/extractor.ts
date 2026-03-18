@@ -140,7 +140,7 @@ export async function extractEvidences(
   // Emit progress periodically during file processing
   const progressInterval = Math.max(1, Math.floor(files.length / 5))
   for (let i = 0; i < files.length; i++) {
-    const filePath = files[i]
+    const filePath = files[i]! // bounded by i < files.length
     if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
     if (i > 0 && i % progressInterval === 0) {
       const filePercent = 8 + Math.round((i / files.length) * 10)
@@ -334,7 +334,7 @@ function extractFromPackageJson(
 function extractFromEnvFile(content: string, file: string, evidences: Evidence[], projectDomain: string | null): void {
   const lines = content.split('\n')
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+    const line = lines[i]?.trim() ?? ''
     if (!line || line.startsWith('#')) continue
     const eqIndex = line.indexOf('=')
     if (eqIndex <= 0) continue
@@ -368,7 +368,7 @@ function extractFromDockerCompose(content: string, file: string, evidences: Evid
   const imageRegex = /image:\s*['"]?([^\s'"#]+)/g
   let match
   while ((match = imageRegex.exec(content)) !== null) {
-    const image = match[1].split(':')[0] // strip tag
+    const image = match[1]!.split(':')[0]! // strip tag; match[1] guaranteed by regex capture group
     evidences.push({ type: 'domain', value: image, file })
   }
 
@@ -376,8 +376,8 @@ function extractFromDockerCompose(content: string, file: string, evidences: Evid
   const servicesBlock = content.match(/^services:\s*\n((?:[ \t].*\n?)*)/m)
   if (servicesBlock) {
     const svcRegex = /^\s{2}(\w[\w-]*):/gm
-    while ((match = svcRegex.exec(servicesBlock[1])) !== null) {
-      evidences.push({ type: 'config_file', value: `docker-service:${match[1]}`, file })
+    while ((match = svcRegex.exec(servicesBlock[1]!)) !== null) {
+      evidences.push({ type: 'config_file', value: `docker-service:${match[1]!}`, file })
     }
   }
 }
@@ -390,19 +390,19 @@ function extractFromCIWorkflow(content: string, file: string, evidences: Evidenc
   let match
   const secretsRegex = new RegExp(CI_SECRET_REGEX.source, 'g')
   while ((match = secretsRegex.exec(content)) !== null) {
-    evidences.push({ type: 'ci_secret', value: match[1], file })
+    evidences.push({ type: 'ci_secret', value: match[1]!, file })
   }
 
   // Extract environment variable references
   const envRegex = new RegExp(CI_ENV_VAR_REGEX.source, 'g')
   while ((match = envRegex.exec(content)) !== null) {
-    evidences.push({ type: 'ci_secret', value: match[1], file })
+    evidences.push({ type: 'ci_secret', value: match[1]!, file })
   }
 
   // Extract action uses
   const usesRegex = /uses:\s*['"]?([^@\s'"]+)/g
   while ((match = usesRegex.exec(content)) !== null) {
-    const action = match[1]
+    const action = match[1]!
     if (action.includes('/')) {
       evidences.push({ type: 'config_file', value: `action:${action}`, file })
     }
@@ -423,7 +423,7 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
   const lines = content.split('\n')
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+    const line = lines[i]! // bounded by i < lines.length
 
     // Skip content lines (comments, href=, src=, action=)
     if (!isContentLine(line)) {
@@ -431,7 +431,7 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
       for (const pattern of API_CALL_PATTERNS) {
         const match = line.match(pattern)
         if (match?.[1]) {
-          const url = match[1].replace(/[),;'"}\]]+$/, '')
+          const url = match[1]!.replace(/[),;'"}\]]+$/, '')
           const domain = extractDomainFromUrl(url)
           if (domain && !shouldIgnoreDomain(domain) && !isOwnDomain(domain, projectDomain)) {
             evidences.push({ type: 'url', value: url, file, line: i + 1 })
@@ -445,7 +445,7 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
       let envMatch
       const envRegex = new RegExp(ENV_URL_PATTERN.source, 'g')
       while ((envMatch = envRegex.exec(line)) !== null) {
-        evidences.push({ type: 'env_var', value: envMatch[0].replace('process.env.', ''), file, line: i + 1 })
+        evidences.push({ type: 'env_var', value: envMatch[0]!.replace('process.env.', ''), file, line: i + 1 })
       }
     }
 
@@ -453,14 +453,14 @@ function extractFromSourceCode(content: string, file: string, evidences: Evidenc
     let importMatch
     const importRegex = new RegExp(IMPORT_FROM_REGEX.source, 'g')
     while ((importMatch = importRegex.exec(line)) !== null) {
-      evidences.push({ type: 'import', value: importMatch[1], file, line: i + 1 })
+      evidences.push({ type: 'import', value: importMatch[1]!, file, line: i + 1 })
     }
 
     // Extract requires
     let reqMatch
     const reqRegex = new RegExp(REQUIRE_REGEX.source, 'g')
     while ((reqMatch = reqRegex.exec(line)) !== null) {
-      evidences.push({ type: 'import', value: reqMatch[1], file, line: i + 1 })
+      evidences.push({ type: 'import', value: reqMatch[1]!, file, line: i + 1 })
     }
   }
 }
@@ -501,7 +501,7 @@ function extractFromRequirementsTxt(content: string, file: string, deps: Depende
     if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('-')) continue
     const match = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*(?:[><=!~]+\s*(.+))?/)
     if (match) {
-      deps.push({ name: match[1], version: match[2] ?? '*', type: 'production', ecosystem: 'pip' })
+      deps.push({ name: match[1]!, version: match[2] ?? '*', type: 'production', ecosystem: 'pip' })
     }
   }
 }
@@ -509,12 +509,12 @@ function extractFromRequirementsTxt(content: string, file: string, deps: Depende
 function extractFromPyprojectToml(content: string, file: string, deps: Dependency[]): void {
   const depsMatch = content.match(/\[project\][\s\S]*?dependencies\s*=\s*\[([\s\S]*?)\]/)
   if (!depsMatch) return
-  const entries = depsMatch[1].match(/"([^"]+)"|'([^']+)'/g) ?? []
+  const entries = depsMatch[1]!.match(/"([^"]+)"|'([^']+)'/g) ?? []
   for (const entry of entries) {
     const clean = entry.replace(/["']/g, '')
     const match = clean.match(/^([a-zA-Z0-9_.-]+)/)
     if (match) {
-      deps.push({ name: match[1], version: '*', type: 'production', ecosystem: 'pip' })
+      deps.push({ name: match[1]!, version: '*', type: 'production', ecosystem: 'pip' })
     }
   }
 }
@@ -522,12 +522,12 @@ function extractFromPyprojectToml(content: string, file: string, deps: Dependenc
 function extractFromSetupPy(content: string, file: string, deps: Dependency[]): void {
   const match = content.match(/install_requires\s*=\s*\[([\s\S]*?)\]/)
   if (!match) return
-  const entries = match[1].match(/'([^']+)'|"([^"]+)"/g) ?? []
+  const entries = match[1]!.match(/'([^']+)'|"([^"]+)"/g) ?? []
   for (const entry of entries) {
     const clean = entry.replace(/["']/g, '')
     const nameMatch = clean.match(/^([a-zA-Z0-9_.-]+)/)
     if (nameMatch) {
-      deps.push({ name: nameMatch[1], version: '*', type: 'production', ecosystem: 'pip' })
+      deps.push({ name: nameMatch[1]!, version: '*', type: 'production', ecosystem: 'pip' })
     }
   }
 }
@@ -543,12 +543,12 @@ function extractFromCargoToml(content: string, file: string, deps: Dependency[])
   for (const section of sections) {
     let sectionMatch
     while ((sectionMatch = section.regex.exec(content)) !== null) {
-      const block = sectionMatch[1]
+      const block = sectionMatch[1]!
       const lineRegex = /^([a-zA-Z0-9_-]+)\s*=\s*(?:"([^"]+)"|\{.*?version\s*=\s*"([^"]+)".*\})/gm
       let lineMatch
       while ((lineMatch = lineRegex.exec(block)) !== null) {
         deps.push({
-          name: lineMatch[1],
+          name: lineMatch[1]!,
           version: lineMatch[2] ?? lineMatch[3] ?? '*',
           type: section.type,
           ecosystem: 'cargo',
@@ -565,11 +565,11 @@ function extractFromGoMod(content: string, file: string, deps: Dependency[]): vo
   const blockRegex = /require\s*\(([\s\S]*?)\)/g
   let blockMatch
   while ((blockMatch = blockRegex.exec(content)) !== null) {
-    const lines = blockMatch[1].split('\n')
+    const lines = blockMatch[1]!.split('\n')
     for (const line of lines) {
       const match = line.trim().match(/^(\S+)\s+(v[\d.]+\S*)/)
       if (match) {
-        deps.push({ name: match[1], version: match[2], type: 'production', ecosystem: 'go' })
+        deps.push({ name: match[1]!, version: match[2]!, type: 'production', ecosystem: 'go' })
       }
     }
   }
@@ -578,7 +578,7 @@ function extractFromGoMod(content: string, file: string, deps: Dependency[]): vo
   const singleRegex = /^require\s+(\S+)\s+(v[\d.]+\S*)/gm
   let singleMatch
   while ((singleMatch = singleRegex.exec(content)) !== null) {
-    deps.push({ name: singleMatch[1], version: singleMatch[2], type: 'production', ecosystem: 'go' })
+    deps.push({ name: singleMatch[1]!, version: singleMatch[2]!, type: 'production', ecosystem: 'go' })
   }
 }
 
@@ -589,7 +589,7 @@ function extractFromTerraform(content: string, file: string, evidences: Evidence
   const providerRegex = /provider\s+"([^"]+)"/g
   let match
   while ((match = providerRegex.exec(content)) !== null) {
-    const name = match[1]
+    const name = match[1]!
     if (!['random', 'null', 'local', 'template'].includes(name)) {
       evidences.push({ type: 'config_file', value: `terraform:${name}`, file })
     }
@@ -598,13 +598,13 @@ function extractFromTerraform(content: string, file: string, evidences: Evidence
   // Required providers
   const reqRegex = /(\w+)\s*=\s*\{[^}]*source\s*=\s*"([^"]+)"/g
   while ((match = reqRegex.exec(content)) !== null) {
-    evidences.push({ type: 'config_file', value: `terraform:${match[1]}`, file })
+    evidences.push({ type: 'config_file', value: `terraform:${match[1]!}`, file })
   }
 
   // Resource prefixes
   const resourceRegex = /resource\s+"(\w+?)_/g
   while ((match = resourceRegex.exec(content)) !== null) {
-    const prefix = match[1]
+    const prefix = match[1]!
     if (!['random', 'null', 'local', 'template'].includes(prefix)) {
       evidences.push({ type: 'config_file', value: `terraform:${prefix}`, file })
     }
@@ -718,8 +718,9 @@ async function detectProjectDomain(repoPath: string): Promise<string | null> {
       const content = await fs.readFile(path.join(repoPath, envFile), 'utf-8')
       const vars = parseEnvVars(content)
       for (const v of domainVars) {
-        if (vars[v]) {
-          const apex = extractApexDomain(vars[v])
+        const val = vars[v]
+        if (val) {
+          const apex = extractApexDomain(val)
           if (apex) return apex
         }
       }
@@ -759,7 +760,7 @@ function extractApexDomain(urlOrDomain: string): string | null {
   try {
     const url = urlOrDomain.includes('://') ? urlOrDomain : `https://${urlOrDomain}`
     const { hostname } = new URL(url)
-    return hostname.replace(/^www\./, '').split('.')[0].toLowerCase()
+    return hostname.replace(/^www\./, '').split('.')[0]!.toLowerCase()
   } catch {
     // Expected: invalid URL format
     return null
@@ -768,7 +769,7 @@ function extractApexDomain(urlOrDomain: string): string | null {
 
 function isOwnDomain(domain: string, projectDomain: string | null): boolean {
   if (!projectDomain) return false
-  const apex = domain.replace(/^www\./, '').split('.')[0].toLowerCase()
+  const apex = domain.replace(/^www\./, '').split('.')[0]!.toLowerCase()
   return apex === projectDomain.toLowerCase()
 }
 

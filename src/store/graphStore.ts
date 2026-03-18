@@ -11,6 +11,7 @@ import {
 } from 'reactflow'
 import dagre from '@dagrejs/dagre'
 import type { FlowNode, FlowEdge, GraphConfig, GraphNodeData, ServiceCategory } from '../types'
+import { DEBOUNCE_PERSIST_MS } from '../constants'
 import { getNodeColor, getEdgeColor, getConfidenceBackground } from '../components/FlowGraph/flowUtils'
 import { useHistoryStore } from './historyStore'
 
@@ -564,7 +565,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     if (!window.stackwatch) return
     if (persistTimer) clearTimeout(persistTimer)
     await new Promise<void>(resolve => {
-      persistTimer = setTimeout(resolve, 500)
+      persistTimer = setTimeout(resolve, DEBOUNCE_PERSIST_MS)
     })
 
     // Serialize writes: if already writing, queue a re-persist with latest state

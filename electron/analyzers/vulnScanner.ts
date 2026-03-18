@@ -79,7 +79,7 @@ export async function scanVulnerabilities(
     .map(d => ({
       package: {
         name: d.name,
-        ecosystem: ecosystemMap[d.ecosystem],
+        ecosystem: ecosystemMap[d.ecosystem]!, // guaranteed by .filter() above
       },
       version: d.version.replace(/^[\^~>=<]/, ''),
     }))
@@ -109,7 +109,7 @@ export async function scanVulnerabilities(
         if (vulns.length === 0) continue
 
         const dep = deps.find(
-          d => d.name === batch[j].package.name && ecosystemMap[d.ecosystem] === batch[j].package.ecosystem
+          d => d.name === batch[j]!.package.name && ecosystemMap[d.ecosystem] === batch[j]!.package.ecosystem
         )
         if (!dep) continue
 

@@ -8,8 +8,10 @@ See [SPEC.md](./SPEC.md) for full technical details.
 ### Fixed
 - All hardcoded hex colors replaced with CSS variables — light/dark mode now consistent across DepsPanel, ServiceCard, CostsPanel, FlowGraph, Settings
 - Unjustified `any` types replaced with `Record<string, unknown>` or proper types in main.ts, deepAnalyzer.ts, alternativeSuggester.ts; remaining `as any` annotated with justification
-- Magic numbers extracted to named constants: `SCORE_GREEN_THRESHOLD`, `SCORE_YELLOW_THRESHOLD`, `MAX_VULNS_PER_DEP`, `MAX_SUMMARY_LENGTH`
+- Magic numbers extracted to named constants: `SCORE_GREEN_THRESHOLD`, `SCORE_YELLOW_THRESHOLD`, `MAX_VULNS_PER_DEP`, `MAX_SUMMARY_LENGTH`, `TOAST_DURATION_MS`, `TOAST_ERROR_DURATION_MS`, `DEBOUNCE_PERSIST_MS`, `DEBOUNCE_SCORE_MS`
 - `react-hooks/exhaustive-deps` disable in FlowGraph.tsx now has justification comment
+- `noUncheckedIndexedAccess` enabled in both tsconfig files — array/object index access now type-safe at compile time
+- CI workflow now verifies version consistency on every build
 
 ### Added
 - CSS variables `--color-info`, `--color-info-bg`, `--color-info-border`, `--color-danger-bg` in both dark and light themes

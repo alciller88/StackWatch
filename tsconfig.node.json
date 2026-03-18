@@ -11,7 +11,8 @@
     "outDir": "dist-electron",
     "rootDir": ".",
     "declaration": true,
-    "composite": true
+    "composite": true,
+    "noUncheckedIndexedAccess": true
   },
   "include": ["electron/**/*.ts", "shared/**/*.ts", "src/utils/healthScore.ts", "src/utils/billing.ts", "src/utils/dates.ts"],
   "exclude": ["electron/analyzers/__tests__/fixtures/**"]

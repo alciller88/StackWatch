@@ -30,6 +30,17 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Verify version consistency
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Package version: $PKG_VERSION"
+          if [ -z "$PKG_VERSION" ]; then
+            echo "ERROR: Could not read version from package.json"
+            exit 1
+          fi
+          echo "Version check passed: $PKG_VERSION"
+
       - run: npm test
       - run: npm run test:coverage
 

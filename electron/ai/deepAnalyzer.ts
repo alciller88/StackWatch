@@ -325,7 +325,7 @@ export async function refineServicesWithAI(
   // Build compact numbered list (~70 chars per service)
   let serviceList = ''
   for (let i = 0; i < toRefine.length; i++) {
-    const s = toRefine[i]
+    const s = toRefine[i]! // bounded by i < toRefine.length
     const reason = (s.confidenceReasons?.[0] ?? s.inferredFrom ?? '').slice(0, 50)
     const line = `${i + 1}|${s.name}|${s.category}|${s.confidence ?? 'medium'}|${reason}\n`
     if (serviceList.length + line.length > 3500) break // leave room for instructions
@@ -376,12 +376,12 @@ Return ONLY valid JSON. Empty {} if no changes needed.
       for (let i = 1; i < group.length; i++) {
         const idx = Number(group[i]) - 1
         if (idx >= 0 && idx < result.length && idx !== keepIdx) {
-          // Absorb confidence reasons from merged service
+          // Absorb confidence reasons from merged service (indices bounds-checked above)
           result[keepIdx] = {
-            ...result[keepIdx],
+            ...result[keepIdx]!,
             confidenceReasons: [
-              ...(result[keepIdx].confidenceReasons ?? []),
-              ...(result[idx].confidenceReasons ?? []),
+              ...(result[keepIdx]!.confidenceReasons ?? []),
+              ...(result[idx]!.confidenceReasons ?? []),
             ],
           }
           mergedAway.add(idx)
@@ -397,7 +397,7 @@ Return ONLY valid JSON. Empty {} if no changes needed.
   const remainingIds = new Map(result.map(r => [r.id, r]))
   const idToService = new Map<number, Service>()
   for (let i = 0; i < toRefine.length; i++) {
-    const svc = remainingIds.get(toRefine[i].id)
+    const svc = remainingIds.get(toRefine[i]!.id)
     if (svc) idToService.set(i + 1, svc)
   }
 

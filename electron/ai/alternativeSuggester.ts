@@ -59,7 +59,7 @@ Rules:
       if (idx < 0 || idx >= targetServices.length) continue
       if (!Array.isArray(item.alternatives)) continue
 
-      const service = targetServices[idx]
+      const service = targetServices[idx]! // bounds-checked above
       const alternatives: Alternative[] = item.alternatives
         .slice(0, 2)
         .filter((a: Record<string, unknown>) => a.name && a.reason && a.type)

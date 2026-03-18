@@ -426,7 +426,7 @@ ipcMain.handle(
 
     try {
       const { Octokit } = await import('@octokit/rest')
-      const [owner, repoName] = repo.split('/')
+      const [owner, repoName] = repo.split('/') as [string, string]
 
       // Only pass auth if token is non-empty; empty auth header causes 403
       const hasToken = typeof token === 'string' && token.trim().length > 0
@@ -541,7 +541,7 @@ ipcMain.handle('open-folder', async () => {
     properties: ['openDirectory'],
     title: 'Select repository folder',
   })
-  return result.canceled ? null : result.filePaths[0]
+  return result.canceled ? null : result.filePaths[0] ?? null
 })
 
 ipcMain.handle('load-config', async (_event, args) => {
@@ -632,8 +632,9 @@ ipcMain.handle('import-config-standalone', async () => {
     filters: [{ name: 'JSON', extensions: ['json'] }],
     properties: ['openFile'],
   })
-  if (!filePaths[0]) return null
-  const content = await fs.readFile(filePaths[0], 'utf-8')
+  const importPath = filePaths[0]
+  if (!importPath) return null
+  const content = await fs.readFile(importPath, 'utf-8')
   try {
     return JSON.parse(content)
   } catch (err: any) {
@@ -644,7 +645,7 @@ ipcMain.handle('import-config-standalone', async () => {
 ipcMain.handle('export-config', async (_event, args) => {
   const { content } = validate(schemas.exportConfig, typeof args === 'string' ? { content: args } : args, 'export-config')
   if (!mainWindow) return false
-  const date = new Date().toISOString().split('T')[0]
+  const date = new Date().toISOString().split('T')[0]!
   let projectName = 'stackwatch'
   try {
     const parsed = JSON.parse(content)
@@ -742,7 +743,7 @@ ipcMain.handle('relink-local', async () => {
     properties: ['openDirectory'],
     title: 'Re-link to local repository',
   })
-  return result.canceled ? null : result.filePaths[0]
+  return result.canceled ? null : result.filePaths[0] ?? null
 })
 
 // --- Renewal Notifications ---

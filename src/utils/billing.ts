@@ -17,7 +17,7 @@ export function calculateNextDate(billing: ServiceBilling): string | undefined {
     } else {
       return undefined;
     }
-    return last.toISOString().split('T')[0];
+    return last.toISOString().split('T')[0]!;
   }
 
   if (billing.nextDate) return billing.nextDate;
@@ -29,7 +29,7 @@ export function calculateNextDate(billing: ServiceBilling): string | undefined {
  * Mark a service as renewed today and recalculate nextDate.
  */
 export function renewService(billing: ServiceBilling): ServiceBilling {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0]!;
   const updated: ServiceBilling = {
     ...billing,
     lastRenewed: today,

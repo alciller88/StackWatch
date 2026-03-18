@@ -249,7 +249,7 @@ function classifyUrl(url: string): HeuristicResult | null {
   // Extract readable name: remove common subdomains and TLD
   const serviceName = domain
     .replace(/^(api|app|cdn|static|assets|dashboard|console|portal|hooks|events|ws|admin|staging|dev|test|login|mail|smtp|ftp|www|docs|status|internal|preview|demo|sandbox|beta|auth|secure|my|account|panel|manage|cms|blog)\./i, '')
-    .split('.')[0]
+    .split('.')[0]!
 
   if (!serviceName || serviceName.length < 2) return null
   if (isGenericName(serviceName)) return null
@@ -273,7 +273,7 @@ function classifyNpmPackage(pkg: string): HeuristicResult | null {
   // Extract service name from package name
   const name = pkg
     .replace(/^@/, '')
-    .split('/')[0]
+    .split('/')[0]!
     .replace(/[-_](js|sdk|client|node|api|react|vue|next|browser|web|server|core|utils|helpers|lib|plugin)$/i, '')
 
   if (name.length < 2) return null
@@ -310,7 +310,7 @@ function classifyImport(importPath: string): HeuristicResult | null {
   // Extract the base package name
   const basePkg = importPath.startsWith('@')
     ? importPath.split('/').slice(0, 2).join('/')
-    : importPath.split('/')[0]
+    : importPath.split('/')[0]!
 
   const result = classifyNpmPackage(basePkg)
   if (result) {
@@ -348,7 +348,7 @@ function classifyConfigFile(value: string): HeuristicResult | null {
   // CI action references
   if (value.startsWith('action:')) {
     const action = value.replace('action:', '')
-    const org = action.split('/')[0]
+    const org = action.split('/')[0]!
     if (org === 'aws-actions') return { serviceName: 'AWS', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
     if (org === 'google-github-actions') return { serviceName: 'Google Cloud', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
     if (org === 'azure') return { serviceName: 'Azure', category: 'infra', confidence: 'high', reason: `GitHub Action "${action}"`, score: 10, evidenceType: 'config_file' }
@@ -485,7 +485,7 @@ function classifyDomain(value: string): HeuristicResult | null {
   }
 
   // Domain from URL — classify by domain name
-  const cleanDomain = n.replace(/^(api|app|cdn|www)\./i, '').split('.')[0]
+  const cleanDomain = n.replace(/^(api|app|cdn|www)\./i, '').split('.')[0]!
   if (cleanDomain && cleanDomain.length >= 2) {
     const category = inferCategory(cleanDomain)
     if (category !== 'other') {

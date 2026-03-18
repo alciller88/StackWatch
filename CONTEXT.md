@@ -336,6 +336,9 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No user strings in AI prompts without sanitize   | Use `sanitizeForPrompt()` from `electron/ai/sanitize.ts`  |
 | No `fs.readFile()` without size check            | Use `readFileSafe()` in extractor (1MB limit)              |
 | No `response.json()` on AI responses             | Read as text, check size (<10MB), then `JSON.parse()`      |
+| No magic numbers                                 | Use constants from `src/constants.ts` (frontend) or `electron/analyzers/constants.ts` (pipeline) |
+| No `eslint-disable` without justification        | Always add comment explaining exactly why the disable is needed |
+| No `!` (non-null assertion) without comment      | `noUncheckedIndexedAccess` enabled — use `?.` or `??` instead, `!` only with proof |
 
 ---
 

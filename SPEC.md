@@ -420,7 +420,11 @@ interface UserConfig {
 - **Theme**: dark/light toggle via CSS custom properties (`src/themes.ts`)
   - Dark: `#0a0c0f` primary, `#0d1017` secondary, `#e2b04a` accent
   - Light: `#f5f6f8` primary, `#ffffff` secondary, `#c4962e` accent
-  - Semantic color variables: `--color-danger`, `--color-success`, `--color-warning`, `--color-badge-bg-*`, `--color-badge-border-*` with dark/light variants
+  - Semantic color variables (all components MUST use these — no hex literals):
+    - Status: `--color-danger`, `--color-danger-bg`, `--color-success`, `--color-success-muted`, `--color-warning`
+    - Info: `--color-info`, `--color-info-bg`, `--color-info-border`
+    - Badges: `--color-badge-bg-warning`, `--color-badge-border-warning`, `--color-badge-bg-success`, `--color-badge-border-success`, `--color-badge-bg-danger`, `--color-badge-border-danger`
+    - Accent: `--color-accent`, `--color-accent-hover`
   - WCAG AA contrast: `--color-text-secondary` and `--color-text-muted` meet 4.5:1 ratio in both themes
   - Persisted in `localStorage('stackwatch-theme')`
 - **Typography**: IBM Plex Mono (primary), IBM Plex Sans (headings) — bundled locally

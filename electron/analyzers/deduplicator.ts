@@ -147,7 +147,7 @@ export function deduplicateServices(results: HeuristicResult[]): { services: Ser
       needsReview,
       confidenceReasons: group.reasons,
       evidenceSummary: Array.from(bestByType.values()),
-      inferredFrom: group.reasons[0],
+      inferredFrom: group.reasons[0]!, // always at least one reason per group
     })
   }
 
@@ -172,8 +172,8 @@ function mergeRelatedGroups(groups: Map<string, ServiceGroup>): void {
 
   for (let i = 0; i < keys.length; i++) {
     for (let j = i + 1; j < keys.length; j++) {
-      const a = keys[i]
-      const b = keys[j]
+      const a = keys[i]! // bounded by i < keys.length
+      const b = keys[j]! // bounded by j < keys.length
       if (!groups.has(a) || !groups.has(b)) continue
 
       // Check if one key is a prefix of the other
@@ -259,7 +259,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
       root.name = toTitleCaseSimple(brand)
     } else if (matching.length === 1) {
       // Single match: promote it to brand root but keep a good name
-      const first = matching[0]
+      const first = matching[0]! // length === 1 guarantees existence
       const g = groups.get(first)!
       // Use the existing name if it's a well-known variant (e.g., "Docker Hub")
       // Otherwise simplify to the brand name
@@ -270,7 +270,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
       groups.delete(first)
     } else {
       // Multiple matches: create brand root from the first, merge rest
-      const first = matching[0]
+      const first = matching[0]! // length >= 2 guarantees existence
       const g = groups.get(first)!
       const brandGroup: ServiceGroup = {
         name: toTitleCaseSimple(brand),
@@ -284,7 +284,7 @@ function collapseBrandEntries(groups: Map<string, ServiceGroup>): void {
       groups.delete(first)
 
       for (let i = 1; i < matching.length; i++) {
-        mergeInto(groups, brandKey, matching[i])
+        mergeInto(groups, brandKey, matching[i]!)
       }
     }
   }

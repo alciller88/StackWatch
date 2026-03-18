@@ -141,7 +141,7 @@ export async function detectZombieServices(
     }
 
     validDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-    const lastActivity = validDates[0]
+    const lastActivity = validDates[0]! // validDates.length > 0 checked above
     const days = daysBetween(new Date(lastActivity), new Date())
 
     results.push({

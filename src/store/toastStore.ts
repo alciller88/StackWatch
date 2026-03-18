@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { TOAST_DURATION_MS, TOAST_ERROR_DURATION_MS } from '../constants'
 
 export interface Toast {
   id: string
@@ -17,7 +18,7 @@ export const useToastStore = create<ToastState>((set) => ({
   addToast: (message, type = 'info', timeoutMs) => {
     const id = `toast-${Date.now()}`
     set((state) => ({ toasts: [...state.toasts, { id, message, type }] }))
-    const ms = timeoutMs ?? (type === 'error' ? 8000 : 4000)
+    const ms = timeoutMs ?? (type === 'error' ? TOAST_ERROR_DURATION_MS : TOAST_DURATION_MS)
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }))
     }, ms)

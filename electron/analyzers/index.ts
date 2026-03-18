@@ -57,7 +57,7 @@ async function analyzeMonorepo(
   const allDeps: Dependency[] = [...rootResult.dependencies]
 
   for (let i = 0; i < packagePaths.length; i++) {
-    const pkgPath = packagePaths[i]
+    const pkgPath = packagePaths[i]! // bounded by i < packagePaths.length
     if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
     const pkgPercent = 5 + Math.round((i / packagePaths.length) * 12)
     onProgress?.({ phase: `Scanning package ${i + 1}/${packagePaths.length}...`, percent: pkgPercent, counts: { evidences: allEvidences.length, services: 0, vulns: 0 } })

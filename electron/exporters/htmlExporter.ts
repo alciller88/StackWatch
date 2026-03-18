@@ -86,7 +86,7 @@ export function generateHtmlReport(data: HtmlExportData): string {
     score, passingChecks, totalChecks, checks, generatedAt, budget,
   } = data
 
-  const date = generatedAt.split('T')[0]
+  const date = generatedAt.split('T')[0]!
   const totalMonthly = services.reduce((sum, s) => sum + getMonthlyCost(s), 0)
   const totalYearly = totalMonthly * 12
   const paidCount = services.filter(s => s.plan === 'paid').length

@@ -22,6 +22,7 @@ import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
 import { useGraphStore, registerServiceGetter, registerServiceDeleter, registerRepoPathGetter, registerScoreRecalculator } from './graphStore';
 import { storeMutex } from './mutex';
+import { DEBOUNCE_SCORE_MS } from '../constants';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
@@ -908,7 +909,7 @@ useStore.subscribe(
         }).catch(() => {
           // Non-critical
         });
-      }, 2000);
+      }, DEBOUNCE_SCORE_MS);
     }
   }
 );
