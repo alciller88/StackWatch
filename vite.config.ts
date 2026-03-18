@@ -22,7 +22,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     globals: true,
-    exclude: ['node_modules', 'dist', 'dist-electron', 'dist-cli'],
+    exclude: ['node_modules', 'dist', 'dist-electron', 'dist-cli', 'e2e'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
