@@ -3,6 +3,21 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.7](https://github.com/alciller88/StackWatch/compare/v0.10.6...v0.10.7) (2026-03-18)
+
+### Added
+- Offline mode detection via Electron `net.isOnline()` — vulnerability scan and GitHub analysis return descriptive errors when offline
+- `get-connectivity` IPC channel for renderer to check connectivity status
+- Config schema migration system (`electron/config/migrations.ts`) — automatic migration chain applied on config load
+- Snapshot versioning in `.stackwatch/last-scan.json` — stale/incompatible snapshots ignored gracefully
+- `shared/configLoader.ts` — unified config loading for CLI and Electron (no more duplicated `fs.readFileSync`)
+
+### Fixed
+- GitHub Action example in README now pins to specific version tag instead of `@main`
+- Vuln scan offline returns `{ error: 'requires internet' }` instead of hanging 15s
+
+---
+
 ## [0.10.6](https://github.com/alciller88/StackWatch/compare/v0.10.5...v0.10.6) (2026-03-18)
 
 ### Fixed

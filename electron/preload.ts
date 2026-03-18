@@ -77,6 +77,7 @@ const api: StackWatchAPI = {
   windowClose: () => ipcRenderer.send('window-close'),
   windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
   getEncryptionStatus: () => ipcRenderer.invoke('get-encryption-status'),
+  getConnectivity: () => ipcRenderer.invoke('get-connectivity'),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

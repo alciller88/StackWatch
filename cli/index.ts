@@ -16,6 +16,7 @@ import {
 } from '../src/utils/badge'
 import { generateHtmlReport } from '../electron/exporters/htmlExporter'
 import type { AnalysisResult, UserConfig, Service, StackDiffResult, AlternativeSuggestion } from '../shared/types'
+import { loadConfigSync, saveConfigSync } from '../shared/configLoader'
 
 const args = process.argv.slice(2)
 
@@ -316,7 +317,7 @@ async function runInit() {
       accounts: [],
     }
 
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
+    saveConfigSync(resolvedPath, config)
 
     console.log(`  Services detected: ${result.services.length}`)
     console.log(`  Dependencies:      ${result.dependencies.length}`)
@@ -405,9 +406,8 @@ async function runDoctor() {
     let config: UserConfig | null = null
     if (fs.existsSync(configPath)) {
       pass('stackwatch.config.json found')
-      try {
-        config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as UserConfig
-      } catch {
+      config = loadConfigSync(resolvedPath)
+      if (!config) {
         fail('stackwatch.config.json is not valid JSON')
       }
     } else {

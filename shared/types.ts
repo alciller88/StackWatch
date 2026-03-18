@@ -361,4 +361,5 @@ export interface StackWatchAPI {
   windowClose(): void;
   windowIsMaximized(): Promise<boolean>;
   getEncryptionStatus(): Promise<boolean>;
+  getConnectivity(): Promise<{ online: boolean }>;
 }

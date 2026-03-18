@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.6
+# CONTEXT.md — StackWatch v0.10.7
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -180,6 +180,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `electron/ai/alternativeSuggester.ts`   | AI: cheaper/open-source alternative suggestions                                  |
 | `electron/ai/sanitize.ts`              | Prompt injection prevention: `sanitizeForPrompt()`                               |
 | `electron/ai/provider.ts`              | OpenAI-compatible client + 3 provider presets                                    |
+| `electron/config/migrations.ts`         | Config schema migration chain — auto-applied on load                             |
 | `electron/exporters/htmlExporter.ts`    | Self-contained HTML report (dark theme, print-friendly)                          |
 
 ### Renderer (src/)
@@ -215,6 +216,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | File           | Purpose                                                                       |
 |----------------|-------------------------------------------------------------------------------|
 | `cli/index.ts` | CLI: scan, init, badge, doctor, --diff, --sbom, --html, --all, CI gate flags |
+| `shared/configLoader.ts` | Shared config loading/saving for CLI and Electron (no encryption layer) |
 | `action.yml`   | GitHub Action (composite): install, build CLI, scan, PR comment               |
 
 ---
@@ -367,6 +369,9 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | Score history in .stackwatch/          | Same directory as stack diff, consistent pattern       |
 | HTML export as template literal        | No template engine deps, self-contained, XSS-escaped  |
 | SBOM without external deps             | CycloneDX/SPDX JSON generated directly                |
+| Config migrations                      | Explicit version field + migration chain for schema evolution |
+| Shared configLoader                    | CLI and Electron share loading logic; only Electron adds encryption |
+| Connectivity via net.isOnline()        | Offline: vuln scan/GitHub disabled; local scan + local AI still work |
 
 ---
 

@@ -3,7 +3,7 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.10.6-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.10.7-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
 [![Tests](https://img.shields.io/badge/tests-487%20passing-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -125,11 +125,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: alciller88/StackWatch@main
+      - uses: alciller88/StackWatch@v0.10.7  # pin to specific version
         with:
           path: '.'
           comment: 'true'
 ```
+
+> **Tip:** Pin the action to a specific version tag for stability. Using `@main` works for development but may break on updates.
 
 The action posts a comment on the PR with detected services and dependencies.
 

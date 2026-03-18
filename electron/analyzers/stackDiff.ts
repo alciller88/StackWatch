@@ -4,8 +4,10 @@ import type { AnalysisResult, Service, Dependency, StackDiffResult } from '../ty
 
 const STACKWATCH_DIR = '.stackwatch'
 const SNAPSHOT_FILE = 'last-scan.json'
+const SNAPSHOT_VERSION = '1'
 
 interface ScanSnapshot {
+  version?: string
   timestamp: string
   services: Service[]
   dependencies: Dependency[]
@@ -63,6 +65,7 @@ export async function saveScanSnapshot(
   const filePath = path.join(dirPath, SNAPSHOT_FILE)
 
   const snapshot: ScanSnapshot = {
+    version: SNAPSHOT_VERSION,
     timestamp: new Date().toISOString(),
     services: scanResult.services,
     dependencies: scanResult.dependencies,
@@ -79,7 +82,15 @@ export async function loadPreviousScan(
 
   try {
     const content = await fs.readFile(filePath, 'utf-8')
-    return JSON.parse(content) as ScanSnapshot
+    const data = JSON.parse(content) as ScanSnapshot
+
+    // Ignore snapshots from incompatible versions
+    if (data.version && data.version !== SNAPSHOT_VERSION) {
+      console.warn(`[StackDiff] Snapshot version mismatch: expected ${SNAPSHOT_VERSION}, got ${data.version} — ignoring`)
+      return null
+    }
+
+    return data
   } catch {
     return null
   }

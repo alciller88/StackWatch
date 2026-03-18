@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, safeStorage, shell, session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, Notification, safeStorage, shell, session } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import Store from 'electron-store'
@@ -12,6 +12,7 @@ import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import { SENSITIVE_FIELDS } from '../shared/types'
 import { schemas, validate } from './validation'
 import { rateLimiter } from './ipcRateLimiter'
+import { migrateConfig, needsMigration, CURRENT_CONFIG_VERSION } from './config/migrations'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
 // --- Global error handlers (stability) ---
@@ -221,6 +222,8 @@ ipcMain.on('window-close', () => mainWindow?.close())
 ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false)
 ipcMain.handle('get-encryption-status', () => safeStorage.isEncryptionAvailable())
 
+ipcMain.handle('get-connectivity', () => ({ online: net.isOnline() }))
+
 // --- Scan Cancellation ---
 
 // No arguments — no validation needed
@@ -419,6 +422,10 @@ ipcMain.handle(
   async (_event, args) => {
     const { repo, token } = validate(schemas.analyzeGitHub, args, 'analyze-github')
 
+    if (!net.isOnline()) {
+      throw new Error('GitHub analysis requires internet connection. Clone the repo locally to scan offline.')
+    }
+
     if (scanInProgress) {
       throw new Error('A scan is already in progress. Cancel it first or wait for it to complete.')
     }
@@ -550,8 +557,17 @@ ipcMain.handle('load-config', async (_event, args) => {
     const safePath = validateRepoPath(repoPath)
     const configPath = path.join(safePath, 'stackwatch.config.json')
     const content = await fs.readFile(configPath, 'utf-8')
-    const config = JSON.parse(content) as UserConfig
-    return decryptConfig(config)
+    let config = JSON.parse(content) as Record<string, unknown>
+
+    // Apply config migrations if needed
+    if (needsMigration(config)) {
+      config = migrateConfig(config)
+      // Save migrated config
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
+      console.info('[Config] Config migrated and saved')
+    }
+
+    return decryptConfig(config as UserConfig)
   } catch {
     // Expected: no config file yet
     return null
@@ -812,6 +828,9 @@ ipcMain.handle('save-score-entry', async (_event, args) => {
 // --- Vulnerability Scanning ---
 
 ipcMain.handle('scan-vulnerabilities', async (_event, args) => {
+  if (!net.isOnline()) {
+    return { results: [], partial: false, error: 'Vulnerability scan requires internet connection' }
+  }
   if (!rateLimiter.isAllowed('scan-vulnerabilities', { maxCalls: 1, windowMs: 30000 })) {
     return { results: [], partial: false, error: 'Rate limited — please wait before scanning again' }
   }
