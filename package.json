@@ -1,6 +1,6 @@
 {
   "name": "stackwatch",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Know your stack, own your stack. Visualize every service, dependency, and account your project depends on.",
   "main": "dist-electron/electron/main.js",
   "bin": {
