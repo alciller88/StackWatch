@@ -213,17 +213,16 @@ export const useStore = create<StoreState>((set, get) => ({
       // Config may not exist yet
     }
 
-    const hasSavedData = (existingConfig?.services?.length ?? 0) > 0 ||
-      (existingConfig?.graph?.nodes?.length ?? 0) > 0;
+    const hasBeenScanned = existingConfig !== null;
 
     let scanMode: 'merge' | 'fresh' = 'merge';
 
-    if (hasSavedData) {
+    if (hasBeenScanned) {
       const repoName = path.split(/[\\/]/).pop() || path;
       const decision = await useDialogStore.getState().confirm({
         title: `Re-scanning ${repoName}`,
-        message: 'This repo has saved data. How do you want to proceed?',
-        detail: 'Fresh scan will discard manual changes and graph positions.',
+        message: 'This project has been scanned before. How do you want to proceed?',
+        detail: 'Fresh scan will discard all previous results, manual changes and graph positions.',
         buttons: [
           { label: 'Merge (keep manual changes)', value: 'merge', primary: true },
           { label: '\u26A0\uFE0F Fresh Scan', value: 'fresh', danger: true },
@@ -354,18 +353,17 @@ export const useStore = create<StoreState>((set, get) => ({
       return;
     }
 
-    // Check for existing saved data before scanning
+    // Check if this repo has been scanned before
     const existingConfig = get().config;
-    const hasSavedData = (existingConfig?.services?.length ?? 0) > 0 ||
-      (existingConfig?.graph?.nodes?.length ?? 0) > 0;
+    const hasBeenScanned = existingConfig !== null;
 
     let scanMode: 'merge' | 'fresh' = 'merge';
 
-    if (hasSavedData) {
+    if (hasBeenScanned) {
       const decision = await useDialogStore.getState().confirm({
         title: `Re-scanning ${repo}`,
-        message: 'This repo has saved data. How do you want to proceed?',
-        detail: 'Fresh scan will discard manual changes and graph positions.',
+        message: 'This project has been scanned before. How do you want to proceed?',
+        detail: 'Fresh scan will discard all previous results, manual changes and graph positions.',
         buttons: [
           { label: 'Merge (keep manual changes)', value: 'merge', primary: true },
           { label: '\u26A0\uFE0F Fresh Scan', value: 'fresh', danger: true },
