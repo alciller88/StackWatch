@@ -25,9 +25,10 @@ function makeOsvResponse(results: any[]) {
 }
 
 describe('scanVulnerabilities', () => {
-  it('returns empty array for empty dependencies', async () => {
+  it('returns empty results for empty dependencies', async () => {
     const result = await scanVulnerabilities([])
-    expect(result).toEqual([])
+    expect(result.results).toEqual([])
+    expect(result.partial).toBe(false)
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
@@ -65,7 +66,7 @@ describe('scanVulnerabilities', () => {
   it('skips dependencies with unknown ecosystem', async () => {
     const deps = [makeDep({ name: 'test', ecosystem: 'unknown' as any })]
     const result = await scanVulnerabilities(deps)
-    expect(result).toEqual([])
+    expect(result.results).toEqual([])
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
@@ -100,14 +101,14 @@ describe('scanVulnerabilities', () => {
         }],
       }]))
 
-      const result = await scanVulnerabilities(deps)
+      const { results } = await scanVulnerabilities(deps)
 
-      expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('lodash')
-      expect(result[0].ecosystem).toBe('npm')
-      expect(result[0].version).toBe('4.17.20')
-      expect(result[0].vulnerabilities).toHaveLength(1)
-      expect(result[0].vulnerabilities[0]).toEqual({
+      expect(results).toHaveLength(1)
+      expect(results[0].name).toBe('lodash')
+      expect(results[0].ecosystem).toBe('npm')
+      expect(results[0].version).toBe('4.17.20')
+      expect(results[0].vulnerabilities).toHaveLength(1)
+      expect(results[0].vulnerabilities[0]).toEqual({
         id: 'GHSA-1234',
         summary: 'Prototype pollution',
         severity: 'high',
@@ -126,17 +127,17 @@ describe('scanVulnerabilities', () => {
       }))
       mockFetch.mockResolvedValue(makeOsvResponse([{ vulns }]))
 
-      const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
+      const { results } = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
 
-      expect(result[0].vulnerabilities).toHaveLength(5)
+      expect(results[0].vulnerabilities).toHaveLength(5)
     })
 
     it('skips deps with no vulns', async () => {
       mockFetch.mockResolvedValue(makeOsvResponse([{ vulns: [] }]))
 
-      const result = await scanVulnerabilities([makeDep({ name: 'safe-pkg', ecosystem: 'npm' })])
+      const { results } = await scanVulnerabilities([makeDep({ name: 'safe-pkg', ecosystem: 'npm' })])
 
-      expect(result).toEqual([])
+      expect(results).toEqual([])
     })
   })
 
@@ -162,9 +163,9 @@ describe('scanVulnerabilities', () => {
         }],
       }]))
 
-      const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
+      const { results } = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
 
-      expect(result[0].vulnerabilities[0].severity).toBe(expected)
+      expect(results[0].vulnerabilities[0].severity).toBe(expected)
     })
 
     it('returns unknown for empty severity array', async () => {
@@ -177,35 +178,50 @@ describe('scanVulnerabilities', () => {
         }],
       }]))
 
-      const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
+      const { results } = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
 
-      expect(result[0].vulnerabilities[0].severity).toBe('unknown')
+      expect(results[0].vulnerabilities[0].severity).toBe('unknown')
     })
   })
 
   describe('error handling', () => {
-    it('handles network error gracefully', async () => {
+    it('returns partial result on network error', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'))
 
       const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
 
-      expect(result).toEqual([])
+      expect(result.results).toEqual([])
+      expect(result.partial).toBe(true)
+      expect(result.error).toContain('1/1 batches failed')
     })
 
-    it('skips batch on non-200 response', async () => {
+    it('returns partial result on non-200 response', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 500 })
 
       const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
 
-      expect(result).toEqual([])
+      expect(result.results).toEqual([])
+      expect(result.partial).toBe(true)
     })
 
-    it('handles timeout gracefully', async () => {
+    it('returns partial result on timeout', async () => {
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted', 'AbortError'))
 
       const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
 
-      expect(result).toEqual([])
+      expect(result.results).toEqual([])
+      expect(result.partial).toBe(true)
+    })
+
+    it('retries on HTTP 429', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 429 })
+        .mockResolvedValueOnce(makeOsvResponse([{ vulns: [] }]))
+
+      const result = await scanVulnerabilities([makeDep({ name: 'pkg', ecosystem: 'npm' })])
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(result.partial).toBe(false)
     })
   })
 })

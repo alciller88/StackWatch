@@ -721,7 +721,7 @@ async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
 
 ipcMain.handle('check-link-status', async (_event, args) => {
   const { config } = validate(schemas.checkLinkStatus, typeof args === 'object' && args !== null && 'config' in args ? args : { config: args }, 'check-link-status')
-  return checkLinkStatus(config as UserConfig)
+  return checkLinkStatus(config as unknown as UserConfig)
 })
 
 // No arguments — no validation needed
