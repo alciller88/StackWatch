@@ -567,7 +567,7 @@ ipcMain.handle('load-config', async (_event, args) => {
       console.info('[Config] Config migrated and saved')
     }
 
-    return decryptConfig(config as UserConfig)
+    return decryptConfig(config as unknown as UserConfig)
   } catch {
     // Expected: no config file yet
     return null
