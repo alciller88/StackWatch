@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { SERVICE_CATEGORIES } from '../../shared/types'
+import { sanitizeForPrompt } from './sanitize'
 import type {
   Service,
   Evidence,
@@ -53,7 +54,18 @@ export async function callAI(provider: AIProvider, prompt: string, maxTokens: nu
 
   if (!response.ok) throw new Error(`AI HTTP ${response.status}`)
 
-  const data = await response.json()
+  const MAX_RESPONSE_BYTES = 10 * 1024 * 1024 // 10MB
+  const contentLength = response.headers.get('content-length')
+  if (contentLength && parseInt(contentLength) > MAX_RESPONSE_BYTES) {
+    throw new Error(`AI response too large: ${contentLength} bytes (max ${MAX_RESPONSE_BYTES})`)
+  }
+
+  const rawText = await response.text()
+  if (rawText.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`AI response too large: ${rawText.length} bytes (max ${MAX_RESPONSE_BYTES})`)
+  }
+
+  const data = JSON.parse(rawText)
   if (!Array.isArray(data.choices) || data.choices.length === 0) {
     throw new Error('AI returned empty response')
   }
@@ -152,8 +164,8 @@ async function analyzeServiceContext(
 
   const prompt = `You are analyzing a software project.
 
-Service detected: ${service.name} (category: ${service.category})
-Inferred from: ${service.inferredFrom ?? 'code analysis'}
+Service detected: ${sanitizeForPrompt(service.name)} (category: ${sanitizeForPrompt(service.category)})
+Inferred from: ${sanitizeForPrompt(service.inferredFrom ?? 'code analysis')}
 
 Relevant code files where this service appears:
 ${truncatedFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}
@@ -197,7 +209,7 @@ async function detectHiddenServices(
   codeFiles: { path: string; content: string }[],
   provider: AIProvider,
 ): Promise<Service[]> {
-  const knownNames = existingServices.map((s) => s.name.toLowerCase())
+  const knownNames = existingServices.map((s) => sanitizeForPrompt(s.name).toLowerCase())
 
   // Truncate code to fit within prompt budget
   const truncatedFiles = truncateFilesToBudget(codeFiles, MAX_PROMPT_CHARS - 1000)
@@ -259,7 +271,7 @@ async function inferEdgeTypes(
 ): Promise<{ serviceId: string; flowType: FlowEdge['flowType']; reason: string }[]> {
   const serviceDescriptions = contexts.map((ctx) => {
     const svc = services.find((s) => s.id === ctx.serviceId)
-    return `- ${svc?.name ?? ctx.serviceId} (${svc?.category ?? 'other'}): ${ctx.usage}`
+    return `- ${sanitizeForPrompt(svc?.name ?? ctx.serviceId)} (${sanitizeForPrompt(svc?.category ?? 'other')}): ${ctx.usage}`
   })
 
   const prompt = `Given these services and how they are used in a software project, determine the correct connection type between the app and each service.
@@ -644,7 +656,7 @@ async function analyzeAllServiceContexts(
         if (relevantFiles.length === 0) {
           return {
             serviceId: svc.id,
-            usage: `${svc.name} detected from ${svc.inferredFrom ?? 'code analysis'}`,
+            usage: `${sanitizeForPrompt(svc.name)} detected from ${sanitizeForPrompt(svc.inferredFrom ?? 'code analysis')}`,
             criticalityLevel: 'optional' as const,
             usageLocations: [],
           }
@@ -655,7 +667,7 @@ async function analyzeAllServiceContexts(
         } catch {
           return {
             serviceId: svc.id,
-            usage: `${svc.name} detected from ${svc.inferredFrom ?? 'code analysis'}`,
+            usage: `${sanitizeForPrompt(svc.name)} detected from ${sanitizeForPrompt(svc.inferredFrom ?? 'code analysis')}`,
             criticalityLevel: 'optional' as const,
             usageLocations: [],
           }

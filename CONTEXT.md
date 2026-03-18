@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.4
+# CONTEXT.md — StackWatch v0.10.5
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -147,6 +147,10 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) as `$encrypted:` refs in JSON; real values encrypted with `safeStorage` in electron-store. |
 | Context isolation | `contextIsolation: true`, `nodeIntegration: false`, all IPC via contextBridge.                      |
 | Race conditions   | `AsyncMutex` serializes multi-store operations (add/update/delete service). Registered callbacks replace dynamic `import()` in cross-store communication. |
+| AI provider SSRF  | `baseUrl` blocks cloud metadata IPs (169.254.x.x, GCP, Alibaba). Localhost allowed for Ollama/LM Studio. |
+| File size limits  | Extractor skips files >1MB. AI responses capped at 10MB.                                            |
+| Symlink traversal | `walkRepo` resolves symlinks, skips those outside root, detects circular links via visited set.      |
+| Prompt injection  | `sanitizeForPrompt()` strips control chars and truncates before AI prompt interpolation.              |
 | Error handling    | Global `unhandledRejection` and `uncaughtException` handlers prevent main process crashes.          |
 
 ---
@@ -174,6 +178,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `electron/analyzers/scoreHistory.ts`    | Persist health scores to .stackwatch/score-history.json                           |
 | `electron/ai/deepAnalyzer.ts`           | AI: filter, refine, context, hidden detection, edge types                        |
 | `electron/ai/alternativeSuggester.ts`   | AI: cheaper/open-source alternative suggestions                                  |
+| `electron/ai/sanitize.ts`              | Prompt injection prevention: `sanitizeForPrompt()`                               |
 | `electron/ai/provider.ts`              | OpenAI-compatible client + 3 provider presets                                    |
 | `electron/exporters/htmlExporter.ts`    | Self-contained HTML report (dark theme, print-friendly)                          |
 
@@ -328,6 +333,9 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No `.passthrough()` without justification comment | Document why extra fields are needed in Zod schemas       |
 | No empty `catch {}` blocks                       | Always `console.warn`/`console.error` or justification comment |
 | No concurrent scans                              | Check `scanInProgress` flag before starting a new scan    |
+| No user strings in AI prompts without sanitize   | Use `sanitizeForPrompt()` from `electron/ai/sanitize.ts`  |
+| No `fs.readFile()` without size check            | Use `readFileSafe()` in extractor (1MB limit)              |
+| No `response.json()` on AI responses             | Read as text, check size (<10MB), then `JSON.parse()`      |
 
 ---
 

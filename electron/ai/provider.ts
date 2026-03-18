@@ -54,7 +54,16 @@ export async function testConnection(provider: AIProvider): Promise<{ ok: boolea
       return { ok: false, error: `HTTP ${response.status}: ${body.slice(0, 200)}` }
     }
 
-    const data = await response.json()
+    const responseText = await response.text()
+    if (responseText.length > 10 * 1024 * 1024) {
+      return { ok: false, error: 'AI response too large' }
+    }
+    let data
+    try {
+      data = JSON.parse(responseText)
+    } catch {
+      return { ok: false, error: 'Invalid JSON response from AI provider' }
+    }
     if (data.choices?.[0]?.message?.content) {
       return { ok: true }
     }

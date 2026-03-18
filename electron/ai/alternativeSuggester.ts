@@ -1,5 +1,6 @@
 import type { Service, AIProvider, AlternativeSuggestion, Alternative } from '../types'
 import { callAI, safeParseJSON } from './deepAnalyzer'
+import { sanitizeForPrompt } from './sanitize'
 
 export async function suggestAlternatives(
   services: Service[],
@@ -13,7 +14,7 @@ export async function suggestAlternatives(
   if (targetServices.length === 0) return []
 
   const serviceList = targetServices
-    .map((s, i) => `${i + 1}. ${s.name} (${s.category}, ${s.plan})`)
+    .map((s, i) => `${i + 1}. ${sanitizeForPrompt(s.name)} (${sanitizeForPrompt(s.category)}, ${s.plan})`)
     .join('\n')
 
   const prompt = `You are a software infrastructure advisor. Given these services used by a project, suggest 1-2 cheaper or open-source alternatives for each.

@@ -15,6 +15,18 @@ const CODE_EXTENSIONS = new Set([
   '.java', '.kt', '.swift', '.dart', '.cs', '.php',
 ])
 
+const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024 // 1MB — skip large files to prevent memory exhaustion
+
+async function readFileSafe(filePath: string): Promise<string | null> {
+  try {
+    const stat = await fs.stat(filePath)
+    if (stat.size > MAX_FILE_SIZE_BYTES) return null
+    return await fs.readFile(filePath, 'utf-8')
+  } catch {
+    return null
+  }
+}
+
 const IGNORED_DOMAINS = new Set([
   'localhost', '127.0.0.1', '0.0.0.0',
   // Documentation and standards
@@ -141,34 +153,34 @@ export async function extractEvidences(
     try {
       // package.json files
       if (basename === 'package.json') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromPackageJson(content, relPath, evidences, dependencies)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromPackageJson(content, relPath, evidences, dependencies)
         continue
       }
 
       // .env files
       if (basename.startsWith('.env')) {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromEnvFile(content, relPath, evidences, projectDomain)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromEnvFile(content, relPath, evidences, projectDomain)
         continue
       }
 
       // Docker compose
       if (basename === 'docker-compose.yml' || basename === 'docker-compose.yaml') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromDockerCompose(content, relPath, evidences)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromDockerCompose(content, relPath, evidences)
         continue
       }
 
       // CI/CD workflow files
       if (relPath.includes('.github/workflows/') && (ext === '.yml' || ext === '.yaml')) {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromCIWorkflow(content, relPath, evidences)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromCIWorkflow(content, relPath, evidences)
         continue
       }
       if (basename === '.gitlab-ci.yml' || basename === '.circleci') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromCIWorkflow(content, relPath, evidences)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromCIWorkflow(content, relPath, evidences)
         continue
       }
 
@@ -180,46 +192,46 @@ export async function extractEvidences(
 
       // Python deps
       if (basename === 'requirements.txt') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromRequirementsTxt(content, relPath, dependencies)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromRequirementsTxt(content, relPath, dependencies)
         continue
       }
       if (basename === 'pyproject.toml') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromPyprojectToml(content, relPath, dependencies)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromPyprojectToml(content, relPath, dependencies)
         continue
       }
       if (basename === 'setup.py') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromSetupPy(content, relPath, dependencies)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromSetupPy(content, relPath, dependencies)
         continue
       }
 
       // Rust deps
       if (basename === 'Cargo.toml') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromCargoToml(content, relPath, dependencies)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromCargoToml(content, relPath, dependencies)
         continue
       }
 
       // Go deps
       if (basename === 'go.mod') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromGoMod(content, relPath, dependencies)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromGoMod(content, relPath, dependencies)
         continue
       }
 
       // Terraform files
       if (ext === '.tf') {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromTerraform(content, relPath, evidences)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromTerraform(content, relPath, evidences)
         continue
       }
 
       // Source code files — extract URLs, imports, domains
       if (CODE_EXTENSIONS.has(ext)) {
-        const content = await fs.readFile(filePath, 'utf-8')
-        extractFromSourceCode(content, relPath, evidences, projectDomain)
+        const content = await readFileSafe(filePath)
+        if (content) extractFromSourceCode(content, relPath, evidences, projectDomain)
       }
     } catch {
       // Skip unreadable files
@@ -236,10 +248,22 @@ async function walkRepo(
   dir: string,
   ig: ReturnType<typeof ignore>,
   depth: number = 0,
+  visitedDirs: Set<string> = new Set(),
 ): Promise<string[]> {
   if (depth > MAX_WALK_DEPTH) return []
 
   const results: string[] = []
+
+  // Detect circular symlinks by tracking visited real paths
+  let realDir: string
+  try {
+    realDir = await fs.realpath(dir)
+  } catch {
+    return results
+  }
+  if (visitedDirs.has(realDir)) return results
+  visitedDirs.add(realDir)
+
   let entries
   try {
     entries = await fs.readdir(dir, { withFileTypes: true })
@@ -260,7 +284,19 @@ async function walkRepo(
     if (ig.ignores(relPath)) continue
 
     if (entry.isDirectory()) {
-      const nested = await walkRepo(root, fullPath, ig, depth + 1)
+      // Check if symlink escapes root
+      if (entry.isSymbolicLink()) {
+        try {
+          const realTarget = await fs.realpath(fullPath)
+          const realRoot = await fs.realpath(root)
+          if (!realTarget.startsWith(realRoot + path.sep) && realTarget !== realRoot) {
+            continue // Symlink points outside repo root — skip
+          }
+        } catch {
+          continue // Broken symlink — skip
+        }
+      }
+      const nested = await walkRepo(root, fullPath, ig, depth + 1, visitedDirs)
       results.push(...nested)
     } else if (entry.isFile()) {
       // Skip test files — they contain example URLs/env vars that produce false positives

@@ -3,6 +3,21 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.5](https://github.com/alciller88/StackWatch/compare/v0.10.4...v0.10.5) (2026-03-18)
+
+### Security
+- AI provider `baseUrl` now blocks cloud metadata IPs (169.254.x.x, GCP metadata, Alibaba) — localhost still allowed for Ollama/LM Studio
+- Symlink traversal prevention: symlinks outside repo root detected and skipped; circular symlinks detected via visited paths set
+- Service names sanitized before AI prompt interpolation to prevent prompt injection (`electron/ai/sanitize.ts`)
+- File size limit: files >1MB skipped in extractor to prevent memory exhaustion
+- AI response size capped at 10MB — `response.json()` replaced with `response.text()` + size check + `JSON.parse()`
+- Rate limiting extended to `test-ai-connection` (3/10s), `check-link-status` (5/10s), `export-html` (5/10s)
+
+### Added
+- `electron/ai/sanitize.ts`: `sanitizeForPrompt()` strips control chars, truncates to 200 chars
+
+---
+
 ## [0.10.4](https://github.com/alciller88/StackWatch/compare/v0.10.3...v0.10.4) (2026-03-18)
 
 ### Fixed

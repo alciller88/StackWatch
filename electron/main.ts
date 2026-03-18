@@ -608,6 +608,9 @@ ipcMain.handle('set-ai-settings', async (_event, args) => {
 })
 
 ipcMain.handle('test-ai-connection', async (_event, args) => {
+  if (!rateLimiter.isAllowed('test-ai-connection', { maxCalls: 3, windowMs: 10000 })) {
+    return { ok: false, error: 'Rate limited — please wait before testing again' }
+  }
   const { provider } = validate(schemas.testAIConnection, typeof args === 'object' && args !== null && 'provider' in args ? args : { provider: args }, 'test-ai-connection')
   return testConnection(provider as AIProvider)
 })
@@ -669,6 +672,9 @@ ipcMain.handle('export-services-md', async (_event, args) => {
 })
 
 ipcMain.handle('export-html', async (_event, args) => {
+  if (!rateLimiter.isAllowed('export-html', { maxCalls: 5, windowMs: 10000 })) {
+    throw new Error('Rate limited — please wait before exporting again')
+  }
   const validated = validate(schemas.exportHtml, typeof args === 'object' && args !== null && 'data' in args ? args : { data: args }, 'export-html')
   const data = validated.data as unknown as import('./types').HtmlExportData
   if (!mainWindow) return false
@@ -721,6 +727,9 @@ async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
 
 ipcMain.handle('check-link-status', async (_event, args) => {
   const { config } = validate(schemas.checkLinkStatus, typeof args === 'object' && args !== null && 'config' in args ? args : { config: args }, 'check-link-status')
+  if (!rateLimiter.isAllowed('check-link-status', { maxCalls: 5, windowMs: 10000 })) {
+    return 'unknown' as import('../shared/types').LinkStatus
+  }
   return checkLinkStatus(config as unknown as UserConfig)
 })
 

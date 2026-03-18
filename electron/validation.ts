@@ -1,5 +1,22 @@
 import { z } from 'zod'
 
+const BLOCKED_HOSTS = new Set([
+  '169.254.169.254',     // AWS EC2 metadata
+  '169.254.170.2',       // AWS ECS metadata
+  'metadata.google.internal', // GCP metadata
+  '100.100.100.200',     // Alibaba Cloud metadata
+])
+
+const aiBaseUrl = z.string().url().refine(url => {
+  try {
+    const parsed = new URL(url)
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false
+    if (BLOCKED_HOSTS.has(parsed.hostname)) return false
+    if (parsed.hostname.startsWith('169.254.')) return false
+    return true
+  } catch { return false }
+}, 'Cloud metadata and link-local addresses are blocked')
+
 export const schemas = {
   analyzeLocal: z.object({
     folderPath: z.string().min(1).max(4096),
@@ -32,7 +49,7 @@ export const schemas = {
       enabled: z.boolean(),
       provider: z.object({
         name: z.string(),
-        baseUrl: z.string().url(),
+        baseUrl: aiBaseUrl,
         model: z.string(),
         apiKey: z.string().optional(),
       }),
@@ -85,7 +102,7 @@ export const schemas = {
   testAIConnection: z.object({
     provider: z.object({
       name: z.string(),
-      baseUrl: z.string().url(),
+      baseUrl: aiBaseUrl,
       model: z.string(),
       apiKey: z.string().optional(),
     }),

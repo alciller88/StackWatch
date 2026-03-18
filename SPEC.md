@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.4 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
+> Version: v0.10.5 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -595,6 +595,10 @@ interface StackWatchAPI {
 | Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) stored as `$encrypted:` references in JSON; real values encrypted with `safeStorage` in electron-store |
 | Context isolation | `contextIsolation: true`, `nodeIntegration: false`, all IPC via contextBridge |
 | Race conditions | `AsyncMutex` (`src/store/mutex.ts`) serializes multi-store mutations (addService, updateService, deleteService). Cross-store communication uses registered callbacks instead of dynamic `import()` to prevent re-initialization races. |
+| SSRF protection | AI provider `baseUrl` blocks cloud metadata IPs (169.254.x.x, GCP, Alibaba) via Zod refine. Localhost allowed for local AI. |
+| Symlink traversal | `walkRepo` resolves symlinks via `fs.realpath`, skips those outside root, detects circular links via visited paths set. |
+| Prompt injection | `sanitizeForPrompt()` strips control chars and truncates to 200 chars before AI prompt interpolation. |
+| File size limits | Extractor skips files >1MB (`readFileSafe`). AI responses capped at 10MB (text + size check + JSON.parse). |
 | Error handling | Global `unhandledRejection` and `uncaughtException` handlers in main process prevent crashes; errors logged and shown to user via dialog. |
 
 ---
@@ -695,7 +699,15 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.4 (current)
+### v0.10.5 (current)
+- **Security**: SSRF protection — AI provider `baseUrl` blocks cloud metadata IPs; localhost allowed for Ollama/LM Studio
+- **Security**: Symlink traversal prevention — `walkRepo` resolves symlinks, skips outside root, detects circular via visited set
+- **Security**: Prompt injection prevention — `sanitizeForPrompt()` strips control chars before AI prompt interpolation
+- **Security**: File size limit — extractor skips files >1MB; AI responses capped at 10MB
+- **Security**: Rate limiting on `test-ai-connection` (3/10s), `check-link-status` (5/10s), `export-html` (5/10s)
+- 487 tests across 36 suites
+
+### v0.10.4
 - **Stability**: Concurrent scan guard — `scanInProgress` flag rejects second scan with error message
 - **Stability**: OSV.dev vulnerability scanner uses exponential backoff on 429, 200ms batch delay, `VulnScanResult` with `partial` flag
 - **Stability**: All silent `catch {}` blocks replaced with `console.warn`/`console.error` or justification comments
