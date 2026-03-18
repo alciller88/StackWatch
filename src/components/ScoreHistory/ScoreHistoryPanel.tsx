@@ -9,6 +9,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { useStore } from '../../store/useStore';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import type { ScoreHistoryEntry } from '../../types';
 
 function formatDate(timestamp: string): string {
@@ -67,25 +68,26 @@ const CustomTooltip = ({
       <div style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
         {entry.serviceCount} services, {entry.depCount} deps
       </div>
-      <div style={{ color: entry.source === 'manual' ? '#60a5fa' : '#e2b04a', marginTop: 4 }}>
+      <div style={{ color: entry.source === 'manual' ? 'var(--color-info)' : 'var(--color-accent)', marginTop: 4 }}>
         Source: {sourceLabel}
       </div>
     </div>
   );
 };
 
-// Custom dot: scan = solid gold circle, manual = blue circle with dashed border
+// Custom dot: scan = solid accent circle, manual = info circle with dashed border
 const CustomDot = (props: { cx?: number; cy?: number; payload?: ChartEntry }) => {
   const { cx, cy, payload } = props;
   if (cx == null || cy == null || !payload) return null;
   const isManual = payload.source === 'manual';
+  const colors = useThemeColors();
   return (
     <circle
       cx={cx}
       cy={cy}
       r={3}
-      fill={isManual ? '#60a5fa' : '#e2b04a'}
-      stroke={isManual ? '#60a5fa' : '#e2b04a'}
+      fill={isManual ? colors.info : colors.accent}
+      stroke={isManual ? colors.info : colors.accent}
       strokeWidth={isManual ? 1.5 : 0}
       strokeDasharray={isManual ? '2 2' : undefined}
     />
@@ -96,13 +98,14 @@ const CustomActiveDot = (props: { cx?: number; cy?: number; payload?: ChartEntry
   const { cx, cy, payload } = props;
   if (cx == null || cy == null || !payload) return null;
   const isManual = payload.source === 'manual';
+  const colors = useThemeColors();
   return (
     <circle
       cx={cx}
       cy={cy}
       r={5}
-      fill={isManual ? '#60a5fa' : '#e2b04a'}
-      stroke="#0d1017"
+      fill={isManual ? colors.info : colors.accent}
+      stroke={colors.bgPrimary}
       strokeWidth={2}
     />
   );
@@ -113,6 +116,7 @@ export const ScoreHistoryPanel: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const colors = useThemeColors();
 
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement | null;
@@ -262,7 +266,7 @@ export const ScoreHistoryPanel: React.FC = () => {
                         fontFamily: 'IBM Plex Mono',
                         fontSize: 10,
                       }}
-                      axisLine={{ stroke: '#2a3040' }}
+                      axisLine={{ stroke: colors.border }}
                       tickLine={false}
                     />
                     <YAxis
@@ -272,30 +276,30 @@ export const ScoreHistoryPanel: React.FC = () => {
                         fontFamily: 'IBM Plex Mono',
                         fontSize: 10,
                       }}
-                      axisLine={{ stroke: '#2a3040' }}
+                      axisLine={{ stroke: colors.border }}
                       tickLine={false}
                       width={30}
                     />
                     <Tooltip
                       content={<CustomTooltip />}
-                      cursor={{ stroke: '#2a3040' }}
+                      cursor={{ stroke: colors.border }}
                     />
                     <ReferenceLine
                       y={80}
-                      stroke="#22c55e"
+                      stroke={colors.success}
                       strokeDasharray="4 4"
                       strokeOpacity={0.4}
                     />
                     <ReferenceLine
                       y={50}
-                      stroke="#eab308"
+                      stroke={colors.warning}
                       strokeDasharray="4 4"
                       strokeOpacity={0.4}
                     />
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke="#e2b04a"
+                      stroke={colors.accent}
                       strokeWidth={2}
                       dot={<CustomDot />}
                       activeDot={<CustomActiveDot />}
@@ -310,13 +314,14 @@ export const ScoreHistoryPanel: React.FC = () => {
                   {/* Latest score + trend */}
                   <div className="flex items-center gap-4 mb-4">
                     <div
-                      className={`font-mono text-2xl font-bold ${
-                        stats.latest >= 80
-                          ? 'text-green-400'
+                      className="font-mono text-2xl font-bold"
+                      style={{
+                        color: stats.latest >= 80
+                          ? 'var(--color-success)'
                           : stats.latest >= 50
-                            ? 'text-[var(--color-accent)]'
-                            : 'text-red-400'
-                      }`}
+                            ? 'var(--color-accent)'
+                            : 'var(--color-danger)',
+                      }}
                     >
                       {stats.latest}
                     </div>
@@ -333,9 +338,9 @@ export const ScoreHistoryPanel: React.FC = () => {
                           style={{
                             color:
                               stats.diff > 0
-                                ? '#22c55e'
+                                ? 'var(--color-success)'
                                 : stats.diff < 0
-                                  ? '#ef4444'
+                                  ? 'var(--color-danger)'
                                   : 'var(--color-text-muted)',
                           }}
                         >

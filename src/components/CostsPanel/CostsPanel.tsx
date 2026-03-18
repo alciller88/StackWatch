@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore';
 import type { Service } from '../../types';
 import { daysUntil } from '../../utils/dates';
 import { getMonthlyAmount } from '../../utils/billing';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 function getMonthlyCost(service: Service): number {
   if (!service.billing) return 0;
@@ -35,6 +36,7 @@ function getBudgetBgClass(percentage: number, threshold: number): string {
 
 export const CostsPanel: React.FC = () => {
   const { services, config, setBudget } = useStore();
+  const themeColors = useThemeColors();
 
   const budget = config?.budget ?? null;
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -405,7 +407,7 @@ export const CostsPanel: React.FC = () => {
                 />
                 <Bar dataKey="total" radius={0}>
                   {costByCategory.map((row) => (
-                    <Cell key={row.category} fill="#e2b04a" /* Recharts requires hex — matches --color-accent */ />
+                    <Cell key={row.category} fill={themeColors.accent} />
                   ))}
                 </Bar>
               </BarChart>

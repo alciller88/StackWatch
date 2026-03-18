@@ -33,7 +33,7 @@ const StatusIcon: React.FC<{ status: CheckStatus }> = ({ status }) => {
     );
   }
   return (
-    <svg className="w-3.5 h-3.5 text-[#c8a040] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-3.5 h-3.5 text-[var(--color-warning)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
     </svg>
   );
@@ -377,7 +377,7 @@ export const DoctorModal: React.FC = () => {
               </span>
             )}
             {summary.warnings > 0 && (
-              <span className="text-[#c8a040]">
+              <span className="text-[var(--color-warning)]">
                 {summary.warnings} warning{summary.warnings !== 1 ? 's' : ''}
               </span>
             )}

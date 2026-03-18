@@ -199,7 +199,7 @@ function flowEdgesToRFEdges(flowEdges: FlowEdge[]): Edge[] {
     animated: true,
     data: { flowType: edge.flowType },
     style: buildEdgeStyle(edge.flowType),
-    labelStyle: { fill: '#9ca3af', fontSize: 11 },
+    labelStyle: { fill: 'var(--color-text-muted)', fontSize: 11 },
   }))
 }
 
@@ -356,7 +356,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
             animated: true,
             data: { flowType: ge.type },
             style: buildEdgeStyle(ge.type),
-            labelStyle: { fill: '#9ca3af', fontSize: 11 },
+            labelStyle: { fill: 'var(--color-text-muted)', fontSize: 11 },
           })
         }
       }
@@ -391,7 +391,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       animated: true,
       data: { flowType: 'data' as FlowEdge['flowType'] },
       style: buildEdgeStyle('data'),
-      labelStyle: { fill: '#9ca3af', fontSize: 11 },
+      labelStyle: { fill: 'var(--color-text-muted)', fontSize: 11 },
     }
     set((state) => ({
       edges: rfAddEdge(newEdge, state.edges),
@@ -477,7 +477,7 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       animated: true,
       data: { flowType },
       style: buildEdgeStyle(flowType),
-      labelStyle: { fill: '#9ca3af', fontSize: 11 },
+      labelStyle: { fill: 'var(--color-text-muted)', fontSize: 11 },
     }
     set((state) => ({ edges: [...state.edges, newEdge] }))
     get().persistToConfig()
