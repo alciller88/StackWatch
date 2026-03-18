@@ -34,11 +34,11 @@ const testProvider: AIProvider = {
 }
 
 function mockFetchResponse(content: string) {
+  const body = JSON.stringify({ choices: [{ message: { content } }] })
   return {
     ok: true,
-    json: async () => ({
-      choices: [{ message: { content } }],
-    }),
+    headers: new Map([['content-length', String(body.length)]]),
+    text: async () => body,
   }
 }
 
