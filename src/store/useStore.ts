@@ -614,6 +614,22 @@ export const useStore = create<StoreState>((set, get) => ({
     set((state) => ({
       services: state.services.map(s => s.id === service.id ? service : s),
     }));
+    // Sync graph node with updated service data
+    import('./graphStore').then(({ useGraphStore }) => {
+      const graphNode = useGraphStore.getState().nodes.find(
+        n => n.data?.serviceId === service.id
+      );
+      if (graphNode) {
+        useGraphStore.getState().updateNode(graphNode.id, {
+          label: service.name,
+          category: service.category,
+          plan: service.plan,
+          confidence: service.confidence,
+          url: service.url,
+          note: service.notes,
+        });
+      }
+    });
     get().recalculateScore();
   },
 

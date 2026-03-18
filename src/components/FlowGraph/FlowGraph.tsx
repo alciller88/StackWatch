@@ -349,13 +349,22 @@ export const FlowGraph: React.FC = () => {
         url: data.url,
         note: data.note,
       })
-      // Update billing on the linked service if it exists
+      // Sync ALL fields to the linked service so ServicesPanel stays in sync
       const node = nodes.find(n => n.id === editPanel.nodeId)
-      if (node?.data?.serviceId && data.billing) {
+      if (node?.data?.serviceId) {
         const { useStore } = require('../../store/useStore')
         const svc = useStore.getState().services.find((s: import('../../types').Service) => s.id === node.data.serviceId)
         if (svc) {
-          useStore.getState().updateManualService({ ...svc, billing: data.billing, plan: data.plan ?? svc.plan })
+          useStore.getState().updateManualService({
+            ...svc,
+            name: data.label,
+            category: data.category ?? svc.category,
+            plan: data.plan ?? svc.plan,
+            confidence: data.confidence ?? svc.confidence,
+            url: data.url ?? svc.url,
+            notes: data.note ?? svc.notes,
+            billing: data.billing ?? svc.billing,
+          })
         }
       }
     } else {
