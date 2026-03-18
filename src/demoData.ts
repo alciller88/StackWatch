@@ -1,4 +1,5 @@
 import type { Service, Dependency, FlowNode, FlowEdge } from './types';
+import { DEFAULT_GRAPH_STYLES } from './styles/defaults';
 
 export const demoServices: Service[] = [
   {
@@ -85,10 +86,10 @@ export const demoDependencies: Dependency[] = [
 ];
 
 export const demoFlowNodes: FlowNode[] = [
-  { id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' },
+  { id: 'user', label: 'User', type: 'layer', layerColor: DEFAULT_GRAPH_STYLES.layerColors.user },
   { id: 'svc-cloudflare', label: 'Cloudflare CDN', type: 'cdn', serviceId: 'cloudflare' },
-  { id: 'frontend', label: 'Frontend', type: 'layer', layerColor: '#4a8ab0' },
-  { id: 'api', label: 'Backend', type: 'layer', layerColor: '#6b4ab0' },
+  { id: 'frontend', label: 'Frontend', type: 'layer', layerColor: DEFAULT_GRAPH_STYLES.layerColors.frontend },
+  { id: 'api', label: 'Backend', type: 'layer', layerColor: DEFAULT_GRAPH_STYLES.layerColors.backend },
   { id: 'svc-vercel', label: 'Vercel (Next.js)', type: 'external', serviceId: 'vercel' },
   { id: 'svc-supabase', label: 'Supabase DB', type: 'database', serviceId: 'supabase' },
   { id: 'svc-stripe', label: 'Stripe', type: 'external', serviceId: 'stripe' },

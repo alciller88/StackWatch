@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.10
+# CONTEXT.md — StackWatch v0.11.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -13,7 +13,7 @@
 | Layer        | Stack                                                            |
 |------------- |------------------------------------------------------------------|
 | Desktop      | Electron 35, React 19, Vite 6, TypeScript 5.7, Tailwind 4       |
-| State        | Zustand 5 (5 stores + 4 selector hooks), React Flow 11, Recharts 3 |
+| State        | Zustand 5 (6 stores + 4 selector hooks), React Flow 11, Recharts 3 |
 | CLI          | `npx stackwatch [path]` — same heuristic engine, no Electron    |
 | GitHub Action| `alciller88/StackWatch@main` — posts PR comments with results   |
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
@@ -104,8 +104,9 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 │  └── contextBridge — exposes StackWatchAPI   │
 ├──────────────────────────────────────────────┤
 │ Renderer (src/)                              │
-│  ├── 5 stores: useStore, graphStore,         │
-│  │   dialogStore, toastStore, historyStore   │
+│  ├── 6 stores: useStore, graphStore,         │
+│  │   dialogStore, toastStore, historyStore,  │
+│  │   stylesStore                             │
 │  ├── 6 panels + settings + scan progress     │
 │  ├── Theme system (dark/light via CSS vars)  │
 │  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)      │
@@ -121,6 +122,7 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 | `historyStore` | Undo/redo                     | Past/future stacks, dynamic limit (50/25/10 for small/medium/large graphs). Captures nodes + edges + services.                 |
 | `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
 | `toastStore`   | Notifications                 | Auto-dismiss 4s. Animation keyframes defined in CSS (slide-in-from-right + fade-in).                                            |
+| `stylesStore`  | Graph + theme color customization | `graphStyles` → config (team-shared). `themeOverrides` → localStorage (personal). Applied via CSS vars + graphStore rebuild. |
 
 ### Type system
 
@@ -199,6 +201,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `src/store/historyStore.ts`    | Undo/redo snapshots (50 max)                                      |
 | `src/store/toastStore.ts`      | Toast notifications (4s auto-dismiss)                             |
 | `src/store/dialogStore.ts`     | Promise-based confirm dialog                                      |
+| `src/store/stylesStore.ts`   | Color customization store: graph styles + theme overrides              |
+| `src/styles/defaults.ts`     | Default color palette (edges, nodes, layers)                           |
 | `src/utils/healthScore.ts`     | Stack Score via 8 binary checks (security + completeness). Score = passing/applicable × 100 |
 | `src/utils/billing.ts`         | ServiceBilling utilities: calculateNextDate, renewService, getRenewalThreshold, getMonthlyAmount |
 | `src/themes.ts`                | Dark/light theme CSS variable definitions + semantic colors       |
@@ -340,6 +344,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No `fs.readFile()` without size check            | Use `readFileSafe()` in extractor (1MB limit)              |
 | No `response.json()` on AI responses             | Read as text, check size (<10MB), then `JSON.parse()`      |
 | No magic numbers                                 | Use constants from `src/constants.ts` (frontend) or `electron/analyzers/constants.ts` (pipeline) |
+| No hex hardcoded in flowUtils.ts               | Use GraphStyles from stylesStore                |
+| No hex hardcoded for layer nodes               | Use stylesStore.graphStyles.layerColors          |
 | No `eslint-disable` without justification        | Always add comment explaining exactly why the disable is needed |
 | No `!` (non-null assertion) without comment      | `noUncheckedIndexedAccess` enabled — use `?.` or `??` instead, `!` only with proof |
 
@@ -374,6 +380,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | Shared configLoader                    | CLI and Electron share loading logic; only Electron adds encryption |
 | Connectivity via net.isOnline()        | Offline: vuln scan/GitHub disabled; local scan + local AI still work |
 | Splash screen                          | Standalone HTML + inline SVG. Main window show:false until ready-to-show |
+| Style persistence split        | Graph styles → config (team-shared). Theme overrides → localStorage (personal). |
 
 ---
 

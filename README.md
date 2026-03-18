@@ -3,7 +3,7 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.10.10-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
 [![Tests](https://img.shields.io/badge/tests-520%20passing-brightgreen)]()
 [![Security Policy](https://img.shields.io/badge/security-policy-brightgreen)](SECURITY.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -66,6 +66,7 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 | **Stack Diff** | Compare scans to track how your stack changes over time |
 | **Monorepo Support** | npm workspaces, pnpm, Lerna, Turborepo, Nx |
 | **Dark/Light Theme** | Full theme toggle with WCAG AA contrast compliance |
+| **Style Editor** | Customize colors for graph nodes, edges, and layers with real-time preview |
 | **Blank Stack Mode** | Build your architecture manually without scanning a repo |
 
 ---
@@ -79,7 +80,7 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 | **Discarded** | Items filtered during analysis -- searchable, filterable, restorable |
 | **Flow Graph** | Interactive architecture graph with drag-and-drop, custom connections, and context menus |
 | **Costs** | Cost breakdown by category with bar chart, renewal alerts, and budget mode |
-| **Settings** | AI provider config, scan mode, theme toggle |
+| **Settings** | AI provider config, scan mode, theme toggle, Style Editor (custom colors for nodes, edges and layers) |
 
 ---
 

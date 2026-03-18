@@ -22,6 +22,7 @@ import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
 import { useGraphStore, registerServiceGetter, registerServiceDeleter, registerRepoPathGetter, registerScoreRecalculator } from './graphStore';
 import { storeMutex } from './mutex';
+import { useStylesStore, registerGraphStylesSaver } from './stylesStore';
 import { DEBOUNCE_SCORE_MS } from '../constants';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
@@ -730,7 +731,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
       // Ensure 'user' node exists
       if (!flowNodes.find(n => n.id === 'user')) {
-        flowNodes.unshift({ id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' });
+        flowNodes.unshift({ id: 'user', label: 'User', type: 'layer', layerColor: useStylesStore.getState().graphStyles.layerColors.user });
       }
 
       set({
@@ -801,7 +802,7 @@ export const useStore = create<StoreState>((set, get) => ({
     set({
       services: [],
       dependencies: [],
-      flowNodes: [{ id: 'user', label: 'User', type: 'layer', layerColor: '#e2b04a' }],
+      flowNodes: [{ id: 'user', label: 'User', type: 'layer', layerColor: useStylesStore.getState().graphStyles.layerColors.user }],
       flowEdges: [],
       repoPath: null,
       config: blankConfig,
@@ -910,6 +911,17 @@ registerServiceDeleter((serviceId: string) => {
       store.deleteManualService(serviceId);
     }
   }
+});
+
+// Register graphStyles saver with stylesStore (avoids circular dependency)
+registerGraphStylesSaver(async (styles) => {
+  const store = useStore.getState();
+  const repoPath = store.repoPath;
+  if (!repoPath || repoPath.startsWith('github:') || !window.stackwatch) return;
+  const config = store.config;
+  if (!config) return;
+  const updatedConfig = { ...config, graphStyles: styles };
+  await store.saveConfig(updatedConfig);
 });
 
 // Debounced score history persistence — saves manual score changes to disk after 2s

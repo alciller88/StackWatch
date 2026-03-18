@@ -141,6 +141,39 @@ export interface StackSource {
 
 export type LinkStatus = 'linked' | 'unlinked' | 'unknown';
 
+export interface GraphStyles {
+  edgeColors: {
+    data: string;
+    auth: string;
+    payment: string;
+    webhook: string;
+  };
+  nodeColors: {
+    user: string;
+    cdn: string;
+    frontend: string;
+    api: string;
+    database: string;
+    external: string;
+    layer: string;
+    fallback: string;
+  };
+  layerColors: {
+    user: string;
+    frontend: string;
+    backend: string;
+    custom: string;
+  };
+}
+
+export interface ThemeOverrides {
+  accent?: string;
+  bgPrimary?: string;
+  bgSecondary?: string;
+  textPrimary?: string;
+  textSecondary?: string;
+}
+
 export interface UserConfig {
   version: string;
   source?: StackSource;
@@ -162,6 +195,7 @@ export interface UserConfig {
     currency: string;
     alertThreshold?: number;
   };
+  graphStyles?: GraphStyles;
 }
 
 export interface Evidence {

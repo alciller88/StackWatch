@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.10 | Last updated: 2026-03-18 | Tests: 520+ across 38 suites
+> Version: v0.11.0 | Last updated: 2026-03-18 | Tests: 523+ across 38 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -408,8 +408,25 @@ interface UserConfig {
   project?: { name?: string; description?: string }
   services: Service[]; accounts?: { service: string; email?: string; notes?: string }[]
   graph?: GraphConfig; budget?: { monthly: number; currency: string; alertThreshold?: number }
+  graphStyles?: GraphStyles;
 }
 ```
+
+### 5.9 Graph Styles
+
+```typescript
+interface GraphStyles {
+  edgeColors: { data: string; auth: string; payment: string; webhook: string }
+  nodeColors: { user: string; cdn: string; frontend: string; api: string; database: string; external: string; layer: string; fallback: string }
+  layerColors: { user: string; frontend: string; backend: string; custom: string }
+}
+
+interface ThemeOverrides {
+  accent?: string; bgPrimary?: string; bgSecondary?: string; textPrimary?: string; textSecondary?: string
+}
+```
+
+**Persistence**: `graphStyles` saved in `stackwatch.config.json` (shared with team). `themeOverrides` saved in `localStorage` (personal preference). Applied via CSS custom properties on `:root` + graph node/edge style rebuild.
 
 ---
 
@@ -427,6 +444,7 @@ interface UserConfig {
     - Accent: `--color-accent`, `--color-accent-hover`
   - WCAG AA contrast: `--color-text-secondary` and `--color-text-muted` meet 4.5:1 ratio in both themes
   - Persisted in `localStorage('stackwatch-theme')`
+- **Style Editor** (Settings panel): customizable colors for graph edges, nodes, and layers. Real-time preview via CSS vars + `graphStore` rebuild. Theme overrides (accent, backgrounds, text) per dark/light mode.
 - **Typography**: IBM Plex Mono (primary), IBM Plex Sans (headings) — bundled locally
 - **Border radius**: `rounded-none` (industrial aesthetic)
 - **Hover**: Tailwind `hover:` classes only (no JS handlers)
@@ -442,7 +460,7 @@ interface UserConfig {
 | Discarded | `DiscardedPanel/` | Virtualized list, search, reason filter, restore to manual service |
 | Flow | `FlowGraph/` | React Flow canvas, minimap, controls, legend, context menus, inline node edit, dagre layout |
 | Costs | `CostsPanel/` | Monthly/yearly totals, category breakdown, bar chart, renewal alerts, budget mode |
-| Settings | `Settings/` | AI provider config, theme toggle, share, about |
+| Settings | `Settings/` | AI provider config, theme toggle, **Style Editor** (custom colors for nodes, edges, layers), share, about |
 
 ### 6.3 Shared Components
 
@@ -703,7 +721,18 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.10 (current)
+### v0.11.0 (current)
+- **Feature**: Style Editor in Settings — full graph color customization with real-time preview
+  - Connection type colors (data, auth, payment, webhook) saved in config
+  - Node type colors (user, cdn, frontend, api, database, external) saved in config
+  - Layer node colors (user, frontend, backend, custom) saved in config
+  - Theme overrides (accent, background, text) saved locally per user
+- **Architecture**: `stylesStore` (6th Zustand store) for centralized color state
+- **Refactor**: `flowUtils.ts` `getNodeColor()`/`getEdgeColor()` accept `GraphStyles` parameter — zero hardcoded colors
+- **Refactor**: `graphStore` `buildNodeStyle()`/`buildEdgeStyle()` read from `stylesStore`
+- 523+ tests across 38 suites
+
+### v0.10.10
 - **Polish**: Splash screen with inline SVG logo and animated loading dots — eliminates blank window during startup
 - **Polish**: Main window `show: false` until `ready-to-show` fires, then splash closes + main shows
 - **Community**: SECURITY.md with vulnerability reporting policy, scope, and known limitations

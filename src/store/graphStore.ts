@@ -14,6 +14,8 @@ import type { FlowNode, FlowEdge, GraphConfig, GraphNodeData, ServiceCategory } 
 import { DEBOUNCE_PERSIST_MS } from '../constants'
 import { getNodeColor, getEdgeColor, getConfidenceBackground } from '../components/FlowGraph/flowUtils'
 import { useHistoryStore } from './historyStore'
+import { useStylesStore, registerGraphRebuilder } from './stylesStore'
+import { DEFAULT_GRAPH_STYLES } from '../styles/defaults'
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 60
@@ -81,9 +83,14 @@ function getCurrentServices(): import('../types').Service[] {
 
 // ── helpers ──
 
+function getCurrentGraphStyles() {
+  return useStylesStore.getState().graphStyles;
+}
+
 function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'medium' | 'low', layerColor?: string) {
+  const styles = getCurrentGraphStyles();
   if (nodeType === 'layer') {
-    const color = layerColor || '#e2b04a'
+    const color = layerColor || styles.layerColors.user
     return {
       width: LAYER_NODE_WIDTH,
       height: LAYER_NODE_HEIGHT,
@@ -105,7 +112,7 @@ function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'mediu
     width: NODE_WIDTH,
     height: NODE_HEIGHT,
     background: getConfidenceBackground(confidence),
-    border: `2px solid ${getNodeColor(nodeType)}`,
+    border: `2px solid ${getNodeColor(nodeType, styles)}`,
     borderRadius: '12px',
     color: 'var(--color-text-primary)',
     fontSize: '13px',
@@ -117,8 +124,9 @@ function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'mediu
 }
 
 function buildEdgeStyle(flowType: FlowEdge['flowType']) {
+  const styles = getCurrentGraphStyles();
   return {
-    stroke: getEdgeColor(flowType),
+    stroke: getEdgeColor(flowType, styles),
     strokeWidth: 2,
   }
 }
@@ -629,6 +637,23 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
     }
   },
 }))
+
+// Register rebuildGraph with stylesStore so color changes re-render the graph
+registerGraphRebuilder(() => {
+  const { nodes, edges } = useGraphStore.getState()
+  useGraphStore.setState({
+    nodes: nodes.map((n) => {
+      const nodeType = n.data.nodeType ?? 'external'
+      const confidence = n.data.confidence
+      const layerColor = n.data.layerColor
+      return { ...n, style: buildNodeStyle(nodeType, confidence, layerColor) }
+    }),
+    edges: edges.map((e) => ({
+      ...e,
+      style: buildEdgeStyle(e.data?.flowType ?? 'data'),
+    })),
+  })
+})
 
 // Recalculate score when graph structure changes (node/edge add/remove)
 useGraphStore.subscribe(

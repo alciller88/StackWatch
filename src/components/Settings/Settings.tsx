@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import type { AIProvider, AISettings, ScanMode } from '../../types';
 import { APP_VERSION } from '../../constants';
+import { StyleEditor } from './StyleEditor';
 
 const LEGACY_PRESET_MAP: Record<string, string> = {
   'Groq': 'Cloud (Groq)',
@@ -158,6 +159,9 @@ export const Settings: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Style Editor */}
+        <StyleEditor />
 
         {/* AI Enhancement Toggle */}
         <div className="border rounded-sm p-5 space-y-5" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>

@@ -24,6 +24,7 @@ import { DoctorModal } from './components/Doctor/DoctorModal'
 import { ScanProgress } from './components/ScanProgress/ScanProgress'
 import { ServicesPanelSkeleton, DepsPanelSkeleton, DiscardedPanelSkeleton, FlowGraphSkeleton, CostsPanelSkeleton } from './components/Skeleton'
 import { useTheme } from './hooks/useTheme'
+import { useStylesStore } from './store/stylesStore'
 
 export default function App() {
   const { repoPath, activePanel, showTutorial, showScoreHistory, showScoreBreakdown, showDoctor, services, config, isAnalyzing, scanProgress } = useStore()
@@ -58,6 +59,42 @@ export default function App() {
     window.addEventListener('keydown', handleUndoRedo)
     return () => window.removeEventListener('keydown', handleUndoRedo)
   }, [handleUndoRedo])
+
+  // Load style overrides on startup
+  const theme = useStore(s => s.theme)
+  useEffect(() => {
+    const stylesStore = useStylesStore.getState()
+    // Theme overrides from localStorage
+    const stored = localStorage.getItem('stackwatch-theme-overrides')
+    if (stored) {
+      try {
+        stylesStore.loadThemeOverrides(JSON.parse(stored))
+      } catch {
+        console.warn('[App] Failed to parse stored theme overrides')
+      }
+    }
+    // Graph styles from config
+    const graphStyles = config?.graphStyles
+    if (graphStyles) {
+      stylesStore.loadGraphStyles(graphStyles)
+    }
+    stylesStore.applyStyles(theme as 'dark' | 'light')
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time init on mount, config may not be loaded yet
+  }, [])
+
+  // Re-apply styles when theme changes
+  useEffect(() => {
+    useStylesStore.getState().applyStyles(theme as 'dark' | 'light')
+  }, [theme])
+
+  // Load graph styles when config loads (e.g. after scan)
+  useEffect(() => {
+    if (config?.graphStyles) {
+      const stylesStore = useStylesStore.getState()
+      stylesStore.loadGraphStyles(config.graphStyles)
+      stylesStore.applyStyles(theme as 'dark' | 'light')
+    }
+  }, [config?.graphStyles, theme])
 
   const renderPanel = () => {
     if (activePanel === 'settings') return <Settings />

@@ -1,26 +1,20 @@
-import type { FlowNode, FlowEdge } from '../../types'
+import type { FlowNode, FlowEdge, GraphStyles } from '../../types'
+import { DEFAULT_GRAPH_STYLES } from '../../styles/defaults'
 
-export function getNodeColor(type: FlowNode['type']): string {
-  const colors: Record<FlowNode['type'], string> = {
-    user: '#3b82f6',
-    cdn: '#14b8a6',
-    frontend: '#22c55e',
-    api: '#a855f7',
-    database: '#f97316',
-    external: '#ec4899',
-    layer: '#e2b04a',
-  }
-  return colors[type] ?? '#6b7280'
+export function getNodeColor(
+  type: FlowNode['type'],
+  styles: GraphStyles = DEFAULT_GRAPH_STYLES,
+): string {
+  return styles.nodeColors[type as keyof GraphStyles['nodeColors']]
+    ?? styles.nodeColors.fallback
 }
 
-export function getEdgeColor(flowType: FlowEdge['flowType']): string {
-  const colors: Record<FlowEdge['flowType'], string> = {
-    data: '#3b82f6',
-    auth: '#22c55e',
-    payment: '#f59e0b',
-    webhook: '#ef4444',
-  }
-  return colors[flowType] ?? '#6b7280'
+export function getEdgeColor(
+  flowType: FlowEdge['flowType'],
+  styles: GraphStyles = DEFAULT_GRAPH_STYLES,
+): string {
+  return styles.edgeColors[flowType as keyof GraphStyles['edgeColors']]
+    ?? styles.edgeColors.data
 }
 
 export function getConfidenceBackground(confidence: 'high' | 'medium' | 'low' | undefined): string {

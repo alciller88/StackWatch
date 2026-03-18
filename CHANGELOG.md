@@ -3,6 +3,27 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.11.0](https://github.com/alciller88/StackWatch/compare/v0.10.10...v0.11.0) (2026-03-18)
+
+### Features
+- **Style Editor** in Settings — full graph color customization with real-time preview
+  - Connection type colors (data, auth, payment, webhook) saved in config
+  - Node type colors (user, cdn, frontend, api, database, external) saved in config
+  - Layer node colors (user, frontend, backend, custom) saved in config
+  - Theme overrides (accent, background, text) saved locally per user
+
+### Architecture
+- `stylesStore` (6th Zustand store) for centralized color state
+
+### Refactor
+- `flowUtils.ts` `getNodeColor()`/`getEdgeColor()` accept `GraphStyles` parameter — zero hardcoded colors
+- `graphStore` `buildNodeStyle()`/`buildEdgeStyle()` read from `stylesStore`
+
+### Tests
+- 523+ tests across 38 suites
+
+---
+
 ## [0.10.10](https://github.com/alciller88/StackWatch/compare/v0.10.9...v0.10.10) (2026-03-18)
 
 ### Added
