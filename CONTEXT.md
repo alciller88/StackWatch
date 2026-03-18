@@ -1,58 +1,83 @@
-# CONTEXT.md — StackWatch
+# CONTEXT.md — StackWatch v0.7.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
+> Full spec: `SPEC.md` · User docs: `README.md`
 
 ---
 
-## What this project is
+## Project overview
 
-**StackWatch** scans codebases and maps every external service, dependency, and paid account. Electron desktop app + CLI + GitHub Action.
+**StackWatch** scans codebases and maps every external service, dependency, and paid account. Ships as Electron desktop app + CLI + GitHub Action.
 
-- **Desktop app**: Electron 35 + React 19 + Vite 6 + TypeScript 5.7 + Tailwind 4 + Zustand 5 + React Flow 11
-- **CLI**: `npx stackwatch [path] [--json|--md|--diff|--sbom cyclonedx|spdx|--fail-on-vulns|--fail-on-unreviewed]`. Subcommands: `init` (generate config), `badge` (generate README badges), `doctor` (health check). Same heuristic engine, no Electron dependency.
-- **GitHub Action**: `alciller88/StackWatch@main` — posts PR comments with scan results
-- **Config file**: `stackwatch.config.json` in the scanned repo (not this repo)
-
-Full spec: `SPEC.md` · User docs: `README.md`
+| Layer        | Stack                                                            |
+|------------- |------------------------------------------------------------------|
+| Desktop      | Electron 35, React 19, Vite 6, TypeScript 5.7, Tailwind 4       |
+| State        | Zustand 5 (5 stores), React Flow 11, Recharts 3                 |
+| CLI          | `npx stackwatch [path]` — same heuristic engine, no Electron    |
+| GitHub Action| `alciller88/StackWatch@main` — posts PR comments with results   |
+| Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
+| Persistence  | `electron-store` (safeStorage encrypted, typed via `Store<StoreSchema>`) |
+| Tests        | 372 tests, 26 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
-## How the app works
+## Entry modes
 
-### Three ways to use it
+| Mode              | Behavior                                                                                              |
+|-------------------|-------------------------------------------------------------------------------------------------------|
+| **Scan**          | Analyze from code. Saved data triggers ScanModeDialog: Merge (keep manual + graph) or Fresh Scan. Detects monorepos. |
+| **Blank Stack**   | Empty canvas with USER layer node. No repo. Manual architecture building. TopBar shows "Untitled Stack". |
+| **Import config** | Full restore from exported JSON — services, graph layout, edges, positions.                           |
+| **CLI / Action**  | Headless scan. `--fail-on-vulns` (exit 1), `--fail-on-unreviewed` (exit 2) for CI gates.             |
 
-| Mode | What happens |
-|------|-------------|
-| **Scan (Open folder / GitHub)** | Analysis from code. If saved data exists, shows ScanModeDialog: **Merge** (keep manual services + graph positions) or **Fresh Scan** (discard all). No saved data → skips dialog, goes to Merge. Detects monorepos automatically. |
-| **Blank Stack** | No scan. Initializes empty state with only a USER layer node. Opens Flow Graph panel. User builds architecture manually. TopBar shows "Untitled Stack". No repoPath — config saved via Export only. |
-| **Import config** | Full restore from exported JSON. All services, graph layout, positions, edges restored exactly. Works without a repo. |
-| **CLI / GitHub Action** | Headless scan, outputs JSON or Markdown. `--fail-on-vulns` (exit 1) and `--fail-on-unreviewed` (exit 2) for CI gates. `stackwatch init` generates config. |
+---
 
-### Analysis pipeline
+## Analysis pipeline
 
 ```
-extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine] → [AI deep analysis + alternatives] → zombieDetector.ts → flowInference.ts     (emits scan-progress IPC at each phase)
-     │                                                                                                          │
-     ├── Evidences (env vars, imports, URLs, configs)                                                           ├── FlowNodes
-     ├── Dependencies (npm, pip, cargo, go, etc.)                                                               └── FlowEdges
+extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine] → [AI deep + alternatives] → zombieDetector.ts → flowInference.ts
+     │                                                                                                        │
+     ├── Evidences (env vars, imports, URLs, configs)                                                         ├── FlowNodes
+     ├── Dependencies (npm, pip, cargo, go, etc.)                                                             └── FlowEdges
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
-- **Heuristic mode** (default): fast, offline, ~80% coverage, semantic evidence scoring (best score per unique evidence type, not additive per instance), thresholds: <6 discard, 6-10 low/AI-validated, >10 high
-- **Hybrid mode**: heuristics → AI filter (≤100 services, reviews ALL — removes generic names even at high confidence) → AI refine (medium/low only) → AI deep analysis (~95% coverage)
-- AI is always optional — silent fallback to heuristic results on failure
+Pipeline emits `scan-progress` IPC at each phase. Supports `AbortSignal` for cancellation.
 
-### Critical invariant: Service ↔ Graph Node 1:1
+**Heuristic scoring** (no hardcoded service maps):
 
-Every service MUST have a corresponding graph node. This is enforced by:
+| Evidence type                 | Base score | Penalties                                         |
+|-------------------------------|:----------:|---------------------------------------------------|
+| `config_file`                 | 10         | Config suffix (_ENABLED, _INTERVAL, etc.): -5     |
+| `ci_secret`                   | 8          | Descriptive phrase (>2 words): -3                  |
+| `env_var` credential          | 7          | Project name match: -10                            |
+| `env_var` endpoint            | 6          |                                                    |
+| `url`                         | 5          |                                                    |
+| `env_var` generic             | 2          |                                                    |
+| `import` / `npm_package`      | 1          |                                                    |
+
+**Thresholds**: <6 discard, 6-10 low/needsReview (AI validates), >10 high confidence.
+**Deduplication**: best-score-per-unique-evidence-type (not additive per instance), brand collapse, generic entry removal.
+
+**AI mode** (optional, silent fallback on failure):
+- Filter false positives (all services, catches generic names even at high confidence)
+- Refine (medium/low only)
+- Deep analysis: usage context, hidden services, edge types, alternative suggestions
+- GitHub scans return `scoreEntry` (parity with local scans)
+
+---
+
+## Critical invariant: Service <-> Graph Node 1:1
+
+Every service MUST have a corresponding graph node. Enforced by:
 1. `flowInference.ts` creates a node per service
-2. `useStore.ensureFlowNodes()` adds extra nodes for manual services missing from pipeline
-3. Deleting a graph node also removes the linked service from useStore and config
+2. `useStore.ensureFlowNodes()` adds nodes for manual services missing from pipeline
+3. Deleting a graph node removes the linked service from useStore and config
 
-Never filter services out of the graph. Never create services without nodes.
+**Never** filter services out of the graph. **Never** create services without nodes.
 
-Layer nodes (type: 'layer') are organizational — they do NOT represent services. The 1:1 invariant only applies to service nodes. All structural nodes (User, Frontend, Backend, grouping nodes like Auth Layer/Data Layer) now use type: 'layer' with layerColor. The old types 'user', 'frontend', 'api' are kept in the union for backward compatibility with saved configs but are no longer produced by flowInference or demo data.
+Layer nodes (type: `'layer'`) are organizational — they do NOT represent services. The 1:1 invariant only applies to service nodes. Old types `'user'`, `'frontend'`, `'api'` kept in union for backward compat but are no longer produced.
 
 ---
 
@@ -61,239 +86,186 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 ### Process model
 
 ```
-┌─────────────────────────────────────────────┐
-│ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (25 channels)             │
-│  ├── electron-store (safeStorage encrypted) │
-│  ├── Analyzers (pure Node.js)               │
-│  ├── AI client (OpenAI-compatible)          │
-│  ├── Vuln scanner (OSV.dev API)             │
-│  ├── SBOM generator (CycloneDX/SPDX)       │
-│  ├── Stack Diff (snapshot compare)          │
-│  ├── Zombie detector (git log activity)     │
-│  ├── Score history (.stackwatch/)           │
-│  ├── HTML exporter (self-contained report)  │
-│  ├── Renewal notifications (Electron)       │
-│  └── CSP headers (production only)          │
-├─────────────────────────────────────────────┤
-│ Preload (electron/preload.ts)               │
-│  └── contextBridge — exposes StackWatchAPI  │
-├─────────────────────────────────────────────┤
-│ Renderer (src/)                             │
-│  ├── Stores: useStore, graphStore,          │
-│  │   dialogStore, toastStore, historyStore  │
-│  ├── 5 panels: Services, Deps, Discarded,  │
-│  │   Flow, Costs                           │
-│  ├── Score history modal (Recharts line)   │
-│  ├── Doctor modal (health checklist)       │
-│  ├── Theme system (dark/light via CSS vars)│
-│  ├── Skeleton loaders during analysis       │
-│  ├── Scan progress screen (replaces panel)  │
-│  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)     │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ Main Process (electron/main.ts)              │
+│  ├── IPC handlers (25 channels)              │
+│  ├── electron-store (typed: Store<StoreSchema>) │
+│  ├── Analyzers (pure Node.js)                │
+│  ├── AI client (OpenAI-compatible)           │
+│  ├── Vuln scanner (OSV.dev API)              │
+│  ├── SBOM generator (CycloneDX/SPDX)        │
+│  ├── Stack Diff, Zombie detector, Score history │
+│  ├── HTML exporter (self-contained report)   │
+│  ├── Renewal notifications (Electron)        │
+│  └── CSP headers (production only)           │
+├──────────────────────────────────────────────┤
+│ Preload (electron/preload.ts)                │
+│  └── contextBridge — exposes StackWatchAPI   │
+├──────────────────────────────────────────────┤
+│ Renderer (src/)                              │
+│  ├── 5 stores: useStore, graphStore,         │
+│  │   dialogStore, toastStore, historyStore   │
+│  ├── 6 panels + settings + scan progress     │
+│  ├── Theme system (dark/light via CSS vars)  │
+│  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)      │
+└──────────────────────────────────────────────┘
 ```
 
 ### Stores
 
-| Store | Purpose | Key details |
-|-------|---------|-------------|
-| `useStore` | Global state: services, deps, config, AI settings, analysis state, theme, score history, budget, mode (scan/blank), stackScore | Merged services = inferred + manual + confidence overrides. Theme persisted in localStorage. `stackScore` is recalculated reactively after every service/graph mutation via `recalculateScore()`. Score changes are debounced (2s) and persisted to `.stackwatch/score-history.json` with `source: 'manual'`. Scan diff cleanup timer is properly cancelled on re-scan. Registers service getter with graphStore to avoid circular dependency. |
-| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with serialized write lock (prevents race conditions). Pushes to historyStore before mutations. Uses `registerServiceGetter()` callback from useStore instead of `require()` to avoid circular dependency. Subscribes to node/edge count changes to trigger `useStore.recalculateScore()`. |
-| `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots. Captures nodes + edges + services. |
-| `dialogStore` | Promise-based confirm dialogs | Returns button value string |
-| `toastStore` | Notifications | Auto-dismiss after 4s |
-
-### Security model
-
-- **Encryption**: Deterministic machine-unique key derived from `app.getPath('userData')` for `electron-store` (typed as `Store<StoreSchema>`). Auto-recovery on corrupted store (key mismatch → delete and recreate).
-- **CSP**: `Content-Security-Policy` via `session.webRequest.onHeadersReceived`. Production only (disabled in dev for Vite HMR).
-- **External URLs**: all opened via IPC `open-external-url` → `shell.openExternal()` with protocol validation (http/https only). No `window.open()`.
-- **Path validation**: `validateRepoPath()` checks raw input for `..` traversal via regex before resolving.
-- **Secrets**: GitHub tokens and AI API keys stored in encrypted electron-store, never in config JSON.
-- **Sensitive config fields**: `accountEmail`, `owner`, `notes` are replaced with `$encrypted:` references in `stackwatch.config.json`. Real values stored in electron-store. Transparent to the renderer — `loadConfig` decrypts, `saveConfig` encrypts.
+| Store          | Purpose                       | Key details                                                                                                                     |
+|----------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` recalculated reactively via `recalculateScore()`. Score changes debounced 2s, persisted with `source: 'manual'`. Registers service getter with graphStore via `registerServiceGetter()`. Scan diff timer properly cancelled on re-scan. |
+| `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock** (prevents race conditions). Uses `registerServiceGetter()` callback (no `require()`). Subscribes to node/edge count to trigger score recalculation. |
+| `historyStore` | Undo/redo                     | Past/future stacks, max 50 snapshots. Captures nodes + edges + services.                                                       |
+| `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
+| `toastStore`   | Notifications                 | Auto-dismiss 4s. Animation keyframes defined in CSS (slide-in-from-right + fade-in).                                            |
 
 ### Type system
 
 ```
-shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all interfaces
-  ↗ src/types.ts         ← re-exports + declares Window.stackwatch
+shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
+  ↗ src/types.ts         ← re-exports + Window.stackwatch
   ↗ electron/types.ts    ← re-exports
 ```
 
-`SERVICE_CATEGORIES` is a `const` array — the `ServiceCategory` union type is derived from it. All consumers import from `shared/types.ts` (or its re-exports). There is NO duplicated category list anywhere. `Vulnerability` and `DepVulnResult` interfaces live in `shared/types.ts` only — `vulnScanner.ts` imports from there.
+`SERVICE_CATEGORIES` is a `const` array — the `ServiceCategory` union is derived from it. NO duplicated category list. `Vulnerability` and `DepVulnResult` live in `shared/types.ts` only.
 
-**Build artifact warning**: Vite resolves `shared/types.ts` directly. If a stale `shared/types.js` exists in the repo root, Vite will pick it up instead → app breaks. This file is gitignored. If it appears, delete it.
+**Build artifact warning**: if stale `shared/types.js` appears in repo root, delete it (gitignored, breaks Vite).
+
+### Security model
+
+| Area              | Implementation                                                                                      |
+|-------------------|-----------------------------------------------------------------------------------------------------|
+| Encryption        | Deterministic key from `app.getPath('userData')` for electron-store. Auto-recovery on corruption.   |
+| CSP               | Production-only via `session.webRequest.onHeadersReceived`. Disabled in dev for Vite HMR.           |
+| External URLs     | All via IPC `open-external-url` → `shell.openExternal()`, protocol validation (http/https only).    |
+| Path validation   | `validateRepoPath()` checks for `..` traversal via regex before resolving.                          |
+| Secrets           | GitHub tokens and AI keys in encrypted electron-store, never in config JSON.                        |
+| Config encryption | Sensitive fields (`accountEmail`, `owner`, `notes`) as `$encrypted:` refs in JSON; real values in electron-store. |
+| Context isolation | `contextIsolation: true`, `nodeIntegration: false`, all IPC via contextBridge.                      |
 
 ---
 
 ## Key files
 
 ### Electron (main process)
-| File | Purpose |
-|------|---------|
-| `electron/main.ts` | Entry point, IPC handlers, safeStorage, CSP, window management |
-| `electron/preload.ts` | IPC bridge via contextBridge (StackWatchAPI) |
-| `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. Emits scan-progress IPC events at each phase. Supports AbortSignal for cancellation. |
-| `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
-| `electron/analyzers/heuristic.ts` | Semantic scoring classification into 19 categories (config_file: 10, ci_secret: 8, env_var credential: 7, env_var endpoint: 6, url: 5, env_var generic: 2, npm/import: 1) + hard filters (CI vars, feature flags, browser APIs) + score penalties (config suffixes: -5, descriptive phrases: -3, project name: -10) |
-| `electron/analyzers/deduplicator.ts` | Service grouping, best-score-per-unique-evidence-type (not additive per instance), thresholds (<6: discard, 6-10: low/needsReview for AI, >10: high), brand collapse, generic entry removal |
-| `electron/analyzers/flowInference.ts` | 4-layer hierarchical graph: user → frontend/backend → grouping nodes (Auth Layer, Data Layer for 2+ services) → individual services. User/Frontend/Backend/grouping nodes use type: 'layer' with layerColor. Category routing: frontend-bound (hosting, cdn, auth, analytics, support), backend-bound (database, storage, payments, email, monitoring, messaging, cicd, infra). Layer nodes only when relevant services exist. |
-| `electron/analyzers/monorepo.ts` | Detects workspaces, pnpm, lerna, turbo, nx |
-| `electron/analyzers/vulnScanner.ts` | OSV.dev batch API (8 ecosystems, groups of 100) |
-| `electron/analyzers/stackDiff.ts` | Stack Diff: compare scans, save/load snapshots (.stackwatch/last-scan.json) |
-| `electron/analyzers/sbom.ts` | SBOM generator: CycloneDX 1.5 and SPDX 2.3 JSON from dependencies |
-| `electron/analyzers/zombieDetector.ts` | Zombie detection: git log activity per service, stale/zombie classification |
-| `electron/analyzers/scoreHistory.ts` | Score history: persist health scores to `.stackwatch/score-history.json` |
-| `electron/ai/deepAnalyzer.ts` | AI: false-positive filter (≤100 services, reviews ALL including high — catches generic names like OAuth2/Connect), refine services (medium/low only, high skipped), usage context, hidden detection, edge types, alternative suggestions |
-| `electron/ai/alternativeSuggester.ts` | AI: suggest cheaper/open-source alternatives for detected services |
-| `electron/exporters/htmlExporter.ts` | Self-contained HTML report generator (dark theme, print-friendly) |
-| `electron/ai/provider.ts` | OpenAI-compatible client + 3 provider presets (Local, Cloud, Custom) |
+
+| File                                    | Purpose                                                                          |
+|-----------------------------------------|----------------------------------------------------------------------------------|
+| `electron/main.ts`                      | Entry, IPC handlers, safeStorage, CSP, window management                         |
+| `electron/preload.ts`                   | IPC bridge via contextBridge (StackWatchAPI)                                      |
+| `electron/analyzers/index.ts`           | Pipeline orchestrator. Monorepo-aware. Emits scan-progress. AbortSignal support. |
+| `electron/analyzers/extractor.ts`       | Evidence extraction: env vars, imports, URLs, configs, deps                      |
+| `electron/analyzers/heuristic.ts`       | Semantic scoring, 19 categories, hard filters, penalties                         |
+| `electron/analyzers/deduplicator.ts`    | Service grouping, best-score-per-type, brand collapse, discarded tracking        |
+| `electron/analyzers/flowInference.ts`   | 4-layer hierarchical graph with dagre layout                                     |
+| `electron/analyzers/monorepo.ts`        | Detects npm/pnpm/lerna/turbo/nx workspaces                                       |
+| `electron/analyzers/vulnScanner.ts`     | OSV.dev batch API (8 ecosystems, groups of 100)                                  |
+| `electron/analyzers/stackDiff.ts`       | Snapshot compare (.stackwatch/last-scan.json)                                    |
+| `electron/analyzers/sbom.ts`            | CycloneDX 1.5 / SPDX 2.3 JSON from dependencies                                |
+| `electron/analyzers/zombieDetector.ts`  | Git log activity per service, stale/zombie classification                        |
+| `electron/analyzers/scoreHistory.ts`    | Persist health scores to .stackwatch/score-history.json                           |
+| `electron/ai/deepAnalyzer.ts`           | AI: filter, refine, context, hidden detection, edge types                        |
+| `electron/ai/alternativeSuggester.ts`   | AI: cheaper/open-source alternative suggestions                                  |
+| `electron/ai/provider.ts`              | OpenAI-compatible client + 3 provider presets                                    |
+| `electron/exporters/htmlExporter.ts`    | Self-contained HTML report (dark theme, print-friendly)                          |
 
 ### Renderer (src/)
-| File | Purpose |
-|------|---------|
-| `src/App.tsx` | Layout, panel routing, undo/redo keyboard handler, skeleton switching, score history modal |
-| `src/store/useStore.ts` | Global state, analysis flow, service CRUD, import/export, theme, budget, score history, blank stack mode |
-| `src/store/graphStore.ts` | React Flow state, debounced persist, history integration |
-| `src/store/historyStore.ts` | Undo/redo snapshot stacks (50 max) |
-| `src/store/toastStore.ts` | Toast notifications (4s auto-dismiss) |
-| `src/store/dialogStore.ts` | Promise-based confirm dialog |
-| `src/utils/healthScore.ts` | Stack Score 0-100 (cost 30%, owner 25%, reviewed 25%, graph 20%) |
-| `src/utils/badge.ts` | SVG badge + shields.io URLs: score, services, vulns, deps, scanned date |
-| `src/utils/dates.ts` | Shared `daysUntil()` utility |
-| `src/utils/scanDiff.ts` | Computes added/removed service IDs between scans for graph diff highlight |
-| `src/hooks/useDebounce.ts` | Generic debounce hook |
-| `src/hooks/useTheme.ts` | Applies theme CSS variables to document root |
-| `src/themes.ts` | Dark/light theme CSS variable definitions |
-| `src/components/Skeleton.tsx` | Skeleton loaders for all 4 panels |
-| `src/components/Toast.tsx` | Toast notification container |
-| `src/components/DepsPanel/` | Virtualized table (@tanstack/react-virtual), vuln scanning |
-| `src/components/DiscardedPanel/` | Virtualized list of items discarded during analysis, search, reason filter, restore to manual service |
-| `src/components/CostsPanel/` | Cost breakdown by category, renewal alerts, bar chart (Recharts), budget mode |
-| `src/components/Doctor/` | Doctor modal: health checklist (config, services, costs, vulns, score) |
-| `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
-| `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
-| `src/components/ServicesPanel/` | Service cards with zombie badges, form with htmlFor labels, confidence badges, activity filter, evidence info popover |
-| `src/components/ScanProgress/` | Real-time scan progress screen: phase text, animated progress bar (CRT effect), counters, cancel button. Replaces active panel during scan. |
-| `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze. Shows "Untitled Stack" in blank mode. |
+
+| File                            | Purpose                                                           |
+|---------------------------------|-------------------------------------------------------------------|
+| `src/App.tsx`                   | Layout, panel routing, undo/redo, skeleton switching              |
+| `src/store/useStore.ts`        | Global state, analysis flow, service CRUD, theme, budget, score   |
+| `src/store/graphStore.ts`      | React Flow state, debounced persist with write lock               |
+| `src/store/historyStore.ts`    | Undo/redo snapshots (50 max)                                      |
+| `src/store/toastStore.ts`      | Toast notifications (4s auto-dismiss)                             |
+| `src/store/dialogStore.ts`     | Promise-based confirm dialog                                      |
+| `src/utils/healthScore.ts`     | Stack Score 0-100 (cost 30%, owner 25%, reviewed 25%, graph 20%)  |
+| `src/themes.ts`                | Dark/light theme CSS variable definitions + semantic colors       |
+| `src/components/ServicesPanel/` | Cards, zombie badges, confidence, evidence popover, activity filter |
+| `src/components/DepsPanel/`    | Virtualized table (@tanstack/react-virtual), vuln scanning        |
+| `src/components/DiscardedPanel/`| Virtualized list, reason filter, restore to manual service        |
+| `src/components/FlowGraph/`    | React Flow canvas, context menu (arrow key nav), node edit        |
+| `src/components/CostsPanel/`   | Cost breakdown, renewal alerts, bar chart, budget mode            |
+| `src/components/ScanProgress/` | Real-time progress: CRT effect bar, phase text, cancel button     |
+| `src/components/TopBar/`       | Import/export, share (dynamic badges), GitHub, re-analyze         |
 
 ### CLI & CI
-| File | Purpose |
-|------|---------|
-| `cli/index.ts` | CLI entry: scan, init, badge, doctor, --diff, --sbom, --html, --all, --fail-on-vulns, --fail-on-unreviewed. Built to `dist-cli/` |
-| `action.yml` | GitHub Action (composite): install, build CLI, scan, comment on PR |
 
-### Build & validation
-| File | Purpose |
-|------|---------|
-| `electron-builder.yml` | macOS dmg+zip, Windows nsis+portable, Linux AppImage+deb. Icon path: `build/icon` (no extension — electron-builder resolves `.icns`/`.ico`/`icons/` per platform) |
-| `build/` | icon.svg (source), icon.png (512x512), icon.icns (macOS), icon.ico (Windows), icons/ (Linux PNGs 16-512), entitlements.mac.plist |
-| `scripts/generate-icons.js` | Generates all icon formats from `build/icon.svg` using sharp + png2icons. Run: `node scripts/generate-icons.js` |
-| `scripts/validate-build.js` | 29-point production build checker |
-| `.github/workflows/build.yml` | CI: test → build → validate → upload artifacts (3 platforms). On version tags (v*): also creates GitHub Release with all platform assets. |
+| File           | Purpose                                                                       |
+|----------------|-------------------------------------------------------------------------------|
+| `cli/index.ts` | CLI: scan, init, badge, doctor, --diff, --sbom, --html, --all, CI gate flags |
+| `action.yml`   | GitHub Action (composite): install, build CLI, scan, PR comment               |
 
 ---
 
 ## Build & run
 
-| Command | What it does |
-|---------|-------------|
-| `npm run dev` | Vite + Electron in dev mode with HMR |
-| `npm run build:prod` | TSC + Vite only (fast, no packaging) |
-| `npm run build:dist` | Full electron-builder (distributable) |
-| `npm run build` | Alias for `build:dist` |
-| `npm run build:cli` | Build CLI to `dist-cli/` |
-| `npm run validate` | 29-point build validation |
-| `npm run release` | Validate build, create git tag from package.json version, push tag (triggers CI release) |
-| `npm test` | vitest (372 tests, 26 suites) |
-| `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
-
-**Common pitfalls**:
-- Stale `dist-electron/tsconfig.node.tsbuildinfo` → delete and rebuild
-- Stale `shared/types.js` in repo root → delete (gitignored, breaks Vite)
-- `dist-cli/` must be excluded from vitest config
+| Command              | What it does                                      |
+|----------------------|---------------------------------------------------|
+| `npm run dev`        | Vite + Electron in dev mode with HMR              |
+| `npm run build:prod` | TSC + Vite only (fast, no packaging)               |
+| `npm run build:dist` | Full electron-builder (distributable)              |
+| `npm run build`      | Alias for `build:dist`                             |
+| `npm run build:cli`  | Build CLI to `dist-cli/`                           |
+| `npm run validate`   | 29-point build validation                          |
+| `npm run release`    | Validate, create git tag from package.json, push   |
+| `npm test`           | vitest (372 tests, 26 suites)                      |
 
 ### Release flow
 
-1. Update `version` in `package.json` (e.g., `0.5.0` → `0.6.0`)
-2. Commit: `chore: bump version to v0.6.0`
-3. Run `npm run release` — validates build, creates git tag `v0.6.0`, pushes tag
-4. CI workflow detects the `v*` tag → runs test → build (3 platforms) → creates GitHub Release with all platform binaries attached
+1. Update `version` in `package.json`
+2. Commit: `chore: bump version to vX.Y.Z`
+3. `npm run release` — validates, tags, pushes
+4. CI detects `v*` tag → test → build (3 platforms) → GitHub Release with binaries
 
-The `release` job uses `softprops/action-gh-release@v2` with `generate_release_notes: true` (auto-generates changelog from commits since the previous tag).
+| Platform | Assets                               |
+|----------|--------------------------------------|
+| macOS    | `.dmg` (universal), `.zip` (universal)|
+| Windows  | `.exe` (NSIS installer), `.exe` (portable) |
+| Linux    | `.AppImage`, `.deb`                  |
 
-**Available releases**: https://github.com/alciller88/StackWatch/releases
+### Common pitfalls
 
-**Platform assets per release**:
-| Platform | Assets |
-|----------|--------|
-| macOS | `.dmg` (universal), `.zip` (universal) |
-| Windows | `.exe` (NSIS installer), `.exe` (portable) |
-| Linux | `.AppImage`, `.deb` |
-
-### Release troubleshooting (lessons learned)
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| `GH_TOKEN not set` in CI build step | `electron-builder.yml` has a `publish` section → electron-builder tries to auto-publish | Use `npx electron-builder --publish never` in CI. The release job handles publishing separately via `softprops/action-gh-release` |
-| `icon directory doesn't contain icons` (Linux) | `build/icons/` was empty — no PNGs | Run `node scripts/generate-icons.js` to regenerate all icon formats from SVG |
-| `Please specify author 'email'` (.deb) | Missing `author` field with email in `package.json` | Set `"author": "name <email>"` in `package.json` |
-| Blank screen on launch (packaged app) | `loadFile` path wrong — `__dirname` is `dist-electron/electron/`, needs `../..` to reach app root, not `..` | `mainWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'index.html'))` |
-| Missing `.icns` / `.ico` | Only SVG existed, no platform-specific icon formats | Run `node scripts/generate-icons.js` — generates `.icns` (macOS), `.ico` (Windows), PNGs (Linux) from SVG via sharp + png2icons |
-
-### Icon generation
-
-All icons are generated from `build/icon.svg` via `scripts/generate-icons.js`:
-
-```bash
-node scripts/generate-icons.js
-```
-
-Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after changing the SVG. All generated files (`icon.png`, `icon.icns`, `icon.ico`, `icons/*.png`) are committed to the repo so CI builds don't need to run the script.
+| Problem                                  | Fix                                                   |
+|------------------------------------------|-------------------------------------------------------|
+| Stale `dist-electron/tsconfig.node.tsbuildinfo` | Delete and rebuild                              |
+| Stale `shared/types.js` in repo root     | Delete (gitignored, breaks Vite)                      |
+| `GH_TOKEN not set` in CI build           | Use `--publish never` in CI; release job handles it   |
+| Blank screen on launch (packaged)        | `loadFile` needs `../..` from `__dirname` to app root |
+| Missing `.icns`/`.ico`                   | Run `node scripts/generate-icons.js`                  |
 
 ---
 
 ## Tests
 
-372 tests across 26 suites. vitest + @testing-library/react + jsdom.
+372 tests across 26 suites.
 
-| Suite | Count | Coverage |
-|-------|-------|----------|
-| graphStore | 27 | initFromAnalysis, node/edge CRUD, connect, exclude, resetLayout, persistToConfig |
-| vulnScanner | 27 | Ecosystem mapping, batching, OSV parsing, severity, error handling |
-| Extractor | 26 | File types, URL/env/import patterns |
-| Deep Analyzer | 24 | refineServicesWithAI (medium/low only), filterFalsePositivesWithAI (≤40, low/needsReview), safeParseJSON, malformed responses |
-| badge | 17 | SVG generation, shields.io URLs, markdown/HTML formats, color thresholds |
-| htmlExporter | 13 | HTML structure, sections, XSS escaping, budget, print styles |
-| Deep Analyzer (runDeep) | 13 | Usage context, hidden services, edge types |
-| Heuristic | 32 | Category mapping, semantic scoring (base scores + penalties), name extraction, config suffix penalty, CI var filtering, feature flag filtering, generic names, project name exclusion |
-| TopBar | 13 | Buttons, repo path, error, analyzing state, link status |
-| zombieDetector | 12 | Classification thresholds, caching, enrichment, git failure handling |
-| monorepo | 12 | npm/pnpm/lerna/turbo/nx detection, glob resolution, manifest check |
-| historyStore | 12 | push/undo/redo, canUndo/canRedo, clear, 50-snapshot limit |
-| healthScore | 11 | Scoring formula weights, perfect/partial/zero scores, edge cases |
-| alternativeSuggester | 10 | AI response parsing, filtering, error handling, ID mapping |
-| ServiceCard | 12 | Rendering, interactions, confidence, a11y, evidence info popover |
-| scanDiff | 7 | Added/removed detection, empty lists, both empty, first scan |
-| useStore | 19 | mergeServices, ensureConfig, ensureFlowNodes, CRUD, ScanModeDialog (merge/fresh/cancel), reactive stackScore (add/update/delete/graph) |
-| Flow inference | 17 | 4-layer hierarchy (user → frontend/backend → grouping → services), virtual nodes, category routing, edge generation |
-| scoreHistory | 8 | Load/append, trimming, directory creation, invalid JSON |
-| ContextMenu | 7 | ARIA roles, click/Escape, dividers |
-| DiscardedPanel | 7 | Rendering, reason badges, restore button, scores, empty state |
-| Deduplicator | 23 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal, discarded tracking |
-| Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
-| Pipeline Integration | 4 | Fixture repo: Stripe/Sentry/PostgreSQL detection, no false positives, flow graph, evidenceSummary |
-| ScanProgress | 9 | Rendering, phase text, repo name (local/GitHub), counters, cancel button, Done state |
-| daysUntil | 3 | Today, future, past |
+| Suite                   | Count | Suite                  | Count |
+|-------------------------|:-----:|------------------------|:-----:|
+| Heuristic               | 32    | htmlExporter           | 13    |
+| graphStore              | 27    | TopBar                 | 13    |
+| vulnScanner             | 27    | Deep Analyzer (runDeep)| 13    |
+| Extractor               | 26    | zombieDetector         | 12    |
+| Deep Analyzer           | 24    | monorepo               | 12    |
+| Deduplicator            | 23    | historyStore           | 12    |
+| useStore                | 19    | ServiceCard            | 12    |
+| Flow inference          | 17    | healthScore            | 11    |
+| badge                   | 17    | alternativeSuggester   | 10    |
+| ScanProgress            | 9     | scoreHistory           | 8     |
+| scanDiff                | 7     | ContextMenu            | 7     |
+| DiscardedPanel          | 7     | Pipeline               | 7     |
+| Pipeline Integration    | 4     | daysUntil              | 3     |
 
 ---
 
 ## Patterns to follow
 
 ### Adding a new analyzer
-1. Add extraction in `electron/analyzers/extractor.ts`
-2. Add classification in `electron/analyzers/heuristic.ts` if needed
-3. Add tests in `electron/analyzers/__tests__/`
+1. Extraction logic in `electron/analyzers/extractor.ts`
+2. Classification in `electron/analyzers/heuristic.ts` if needed
+3. Tests in `electron/analyzers/__tests__/`
 4. Pipeline picks up new evidence automatically
 
 ### Adding a new IPC channel
@@ -309,57 +281,52 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 5. Skeleton in `Skeleton.tsx`
 
 ### Adding undo support
-1. `useHistoryStore.getState().pushSnapshot(label, { nodes, edges, services })` BEFORE the mutation
-2. Skip high-frequency ops (drag, resize, init)
+- `useHistoryStore.getState().pushSnapshot(label, { nodes, edges, services })` BEFORE the mutation
+- Skip high-frequency ops (drag, resize, init)
 
 ---
 
-## Architecture decisions (do not reopen without reason)
+## Anti-patterns (do NOT do these)
 
-| Decision | Reason |
-|----------|--------|
-| Semantic scoring heuristics, not fixed maps | Detects new services without code changes; evidence quality scoring determines confidence |
-| Optional AI with silent fallback | Must work 100% offline |
-| OpenAI-compatible API format | One format covers all providers |
-| Separate graphStore from useStore | Different lifecycle, interactive state |
-| safeStorage for encryption | Machine-unique, no key in source |
-| CSP production-only | Vite HMR needs inline scripts |
-| shell.openExternal via IPC | Protocol validation, security |
-| Local fonts bundled | Works offline, no FOUC |
-| Zustand selectors in FlowGraph | Prevents re-renders on drag |
-| Debounced persistToConfig with write lock | Reduces disk I/O, prevents race conditions from overlapping writes |
-| History snapshots for undo | Captures graph + services together |
-| OSV.dev for vulns | Free, no API key, 8 ecosystems |
-| @tanstack/react-virtual | Handles 500+ rows efficiently |
-| Composite GitHub Action | Faster than Docker, reuses CLI |
-| Stack Diff via .stackwatch/last-scan.json | Simple file-based, no DB needed, gitignore-able |
-| Zombie detection via git log | Leverages existing evidence files, no external deps |
-| Score history in .stackwatch/ | Same directory as stack diff, consistent pattern |
-| Doctor as CLI subcommand | Reuses existing pipeline + vuln scanner, no new deps |
-| SBOM without external deps | CycloneDX/SPDX JSON generated directly, no library overhead |
-| Recharts for cost visualization | Lightweight, React-native, good dark theme support |
-| CSS variables for theming | Least invasive approach, swap vars at root, no component rewrites. Semantic colors (danger, success, warning, badge-bg/border) with dark/light variants for full theme adaptation. |
-| Theme in localStorage, not config | User preference, not project-level setting |
-| Budget in UserConfig | Project-level setting, shared via config file |
-| Score history as modal, not panel | Secondary content, doesn't justify a full panel slot |
-| HTML export as template literal | No template engine deps, self-contained, XSS-escaped |
-| AI alternatives as Step D in deep analysis | Reuses existing AI pipeline, silent fallback, no new deps |
+| Rule                                         | Reason                                         |
+|----------------------------------------------|------------------------------------------------|
+| No hardcoded service maps                    | Semantic heuristics detect new services without code changes |
+| No `nodeIntegration: true`                   | All IPC via contextBridge                      |
+| No `window.open()`                           | Use `shell.openExternal` via IPC               |
+| No Google Fonts CDN                          | Fonts bundled in `src/assets/fonts/`           |
+| No JS hover handlers                         | Use Tailwind `hover:` classes                  |
+| No hardcoded hex colors in components        | Use CSS variables from `themes.ts` (--color-danger, --color-success, etc.) |
+| No `shared/types.js` in repo root            | Delete if it appears (breaks Vite)             |
+| No full Zustand store subscriptions          | Use selectors in perf-critical components      |
+| No synchronous fs in main process            | Use `fs.promises`                              |
+| No assuming AI is available                  | Always fallback to heuristics                  |
+| No skipping tsbuildinfo cleanup              | Stale cache breaks builds                      |
 
 ---
 
-## What NOT to do
+## Architecture decisions (settled — do not reopen without reason)
 
-- **No hardcoded service maps** — semantic heuristics only
-- **No `nodeIntegration: true`** — all IPC via contextBridge
-- **No `window.open()`** — use shell.openExternal via IPC
-- **No Google Fonts CDN** — fonts bundled in `src/assets/fonts/`
-- **No JS hover handlers** — use Tailwind `hover:` classes (all onMouseEnter/onMouseLeave removed)
-- **No hardcoded hex colors in components** — use CSS variables from `themes.ts` (--color-danger, --color-success, --color-badge-bg-*, etc.)
-- **No `shared/types.js` in repo root** — delete if it appears (breaks Vite)
-- **No full Zustand store subscriptions** in perf-critical components — use selectors
-- **No synchronous fs** in main process — use `fs.promises`
-- **No assuming AI is available** — always fallback to heuristics
-- **No skipping tsbuildinfo cleanup** — stale cache breaks builds
+| Decision                               | Rationale                                              |
+|----------------------------------------|--------------------------------------------------------|
+| Semantic scoring, not fixed maps       | Detects new services without code changes              |
+| Optional AI with silent fallback       | Must work 100% offline                                 |
+| OpenAI-compatible API format           | One format covers all providers                        |
+| Separate graphStore from useStore      | Different lifecycle, interactive state                 |
+| `registerServiceGetter()` callback     | Breaks circular dependency (no `require()`)            |
+| Serialized write lock on persistToConfig| Prevents race conditions from overlapping writes      |
+| safeStorage for encryption             | Machine-unique, no key in source                       |
+| CSP production-only                    | Vite HMR needs inline scripts                          |
+| Local fonts bundled                    | Works offline, no FOUC                                 |
+| Zustand selectors in FlowGraph         | Prevents re-renders on drag                            |
+| Semantic CSS variables for theming     | Swap vars at root, no component rewrites. WCAG AA contrast. |
+| Theme in localStorage, not config      | User preference, not project-level setting             |
+| Budget in UserConfig                   | Project-level setting, shared via config file          |
+| OSV.dev for vulns                      | Free, no API key, 8 ecosystems                         |
+| @tanstack/react-virtual               | Handles 500+ rows efficiently                          |
+| Composite GitHub Action               | Faster than Docker, reuses CLI                         |
+| Score history in .stackwatch/          | Same directory as stack diff, consistent pattern       |
+| HTML export as template literal        | No template engine deps, self-contained, XSS-escaped  |
+| SBOM without external deps             | CycloneDX/SPDX JSON generated directly                |
 
 ---
 
@@ -367,14 +334,12 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 
 - **Target user**: developer or small team managing a software project
 - **Pain point**: not knowing which services are active, paid, or expiring
-- **Primary use**: daily check on project infrastructure status
-- **Secondary use**: onboarding new developers to a codebase
-- **Tertiary use**: CI/CD scanning and PR reporting
+- **Primary**: daily check on project infrastructure status
+- **Secondary**: onboarding new developers to a codebase
+- **Tertiary**: CI/CD scanning and PR reporting
 
 ---
 
 ## Open questions
 
 - Multi-project dashboard (multiple repos at once)?
-- ~~Light theme?~~ ✔ Implemented (dark/light toggle via CSS variables)
-- ~~Encrypt sensitive fields in `stackwatch.config.json`?~~ ✔ Implemented ($encrypted: references in JSON, real values in electron-store)

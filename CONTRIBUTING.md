@@ -1,46 +1,114 @@
 # Contributing to StackWatch
 
-Thanks for your interest in contributing. StackWatch is a community project — all contributions are welcome.
+Thank you for your interest in contributing to StackWatch. Whether you are reporting a bug, suggesting a feature, or submitting code, your contribution is valued.
 
-## Before you start
+## Reporting Bugs
 
-Read `SPEC.md` and `CONTEXT.md` first. They contain the full technical specification and the current state of the project.
+Open a [GitHub Issue](https://github.com/alciller88/StackWatch/issues) with the following details:
 
-## How to contribute
+- Your operating system and version
+- Node.js version (`node -v`)
+- Steps to reproduce the issue
+- Expected behavior vs. actual behavior
+- Screenshots or error output, if applicable
 
-### Report a bug
-Open an issue using the **Bug report** template. Include your OS, Node.js version, and steps to reproduce.
+## Suggesting Features
 
-### Suggest a feature
-Open an issue using the **Feature request** template. Explain the problem it solves, not just the solution.
+Open a [GitHub Issue](https://github.com/alciller88/StackWatch/issues) and describe:
 
-### Submit a pull request
-1. Fork the repo
-2. Create a branch: `git checkout -b feat/your-feature` or `fix/your-fix`
-3. Make your changes
-4. Run tests: `npm test`
-5. Commit using conventional commits: `feat:`, `fix:`, `docs:`, `chore:`
-6. Open a PR against `main` with a clear description
+- The problem the feature would solve
+- Your proposed solution (if any)
+- Any alternatives you have considered
 
-## Adding a new service detector
+## Development Setup
 
-1. Add the pattern to `electron/analyzers/envFile.ts`
-2. Add a test in `electron/analyzers/__tests__/envFile.test.ts`
-3. Open a PR — these are always welcome
+### Prerequisites
 
-## Adding a new file analyzer
+- Node.js >= 20
+- npm
 
-1. Create `electron/analyzers/yourAnalyzer.ts`
-2. Export a pure function: `analyze(content: string): Partial<AnalysisResult>`
-3. Register it in `electron/analyzers/index.ts`
-4. Add tests in `electron/analyzers/__tests__/yourAnalyzer.test.ts`
+### Getting Started
 
-## Code style
+```bash
+git clone https://github.com/alciller88/StackWatch.git
+cd StackWatch
+npm install
+npm run dev
+```
 
-- TypeScript strict mode — no `any`
-- Functional style for analyzers — pure functions, no side effects
-- `npm test` must pass before opening a PR
+### Running Tests
+
+```bash
+npm test
+```
+
+The test suite contains 372 tests. All tests must pass before submitting a pull request.
+
+## Project Structure
+
+```
+src/           — React front-end (Vite + TypeScript)
+electron/      — Electron main process and file analyzers
+cli/           — CLI entry point
+```
+
+For a detailed breakdown of the architecture, see [CONTEXT.md](./CONTEXT.md).
+
+## Code Style Guidelines
+
+### TypeScript
+
+- Strict mode is enabled. Do not use `any`.
+- Write pure functions for analyzers — no side effects.
+
+### Styling
+
+- Use **Tailwind CSS** utility classes for all styling.
+- Do not use inline styles or JavaScript-based hover handlers.
+- Use CSS variables defined in `themes.ts` for colors. Do not hardcode hex values.
+
+### Testing
+
+- Use **Vitest** for all tests.
+- Co-locate test files in `__tests__/` directories next to the source.
+- Every new analyzer or feature should include tests.
+
+### Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` — new feature
+- `fix:` — bug fix
+- `docs:` — documentation changes
+- `chore:` — maintenance tasks
+- `test:` — adding or updating tests
+- `refactor:` — code restructuring without behavior change
+
+## Pull Request Process
+
+1. **Fork** the repository and create a branch:
+   ```bash
+   git checkout -b feat/your-feature
+   ```
+2. **Commit** your changes using conventional commit messages.
+3. **Verify** before pushing:
+   - All 372 tests pass (`npm test`)
+   - TypeScript compiles without errors (`npx tsc --noEmit`)
+   - Your code follows the existing patterns and conventions
+4. **Open a pull request** against `main` with a clear description of what changed and why.
+5. Address any review feedback promptly.
+
+## Adding a New Analyzer
+
+1. Create `electron/analyzers/yourAnalyzer.ts` exporting a pure function.
+2. Register it in `electron/analyzers/index.ts`.
+3. Add tests in `electron/analyzers/__tests__/yourAnalyzer.test.ts`.
+4. Open a PR — new analyzers are always welcome.
+
+## Code of Conduct
+
+All participants are expected to treat each other with respect and professionalism. Harassment, discrimination, and disruptive behavior will not be tolerated. Maintainers reserve the right to remove contributions or ban participants who violate these standards.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing to StackWatch, you agree that your contributions will be licensed under the [MIT License](./LICENSE).
