@@ -92,6 +92,7 @@ export interface AnalysisResult {
     type: string;
     packages: string[];
   };
+  cancelled?: boolean;
 }
 
 export interface GraphNodeData {
@@ -268,6 +269,18 @@ export interface ScoreHistoryEntry {
   source?: 'scan' | 'manual';
 }
 
+export interface ScanProgressData {
+  phase: string;
+  percent: number;
+  counts: {
+    evidences: number;
+    services: number;
+    vulns: number;
+  };
+}
+
+export type ProgressCallback = (data: ScanProgressData) => void;
+
 export interface HtmlExportData {
   projectName: string;
   services: Service[];
@@ -306,6 +319,8 @@ export interface StackWatchAPI {
   saveScoreEntry(folderPath: string, entry: ScoreHistoryEntry): Promise<void>;
   checkRenewals(services: Service[]): Promise<void>;
   exportHtml(data: HtmlExportData): Promise<boolean>;
+  onScanProgress(callback: (data: ScanProgressData) => void): () => void;
+  cancelScan(): void;
   openExternalUrl(url: string): Promise<boolean>;
   windowMinimize(): void;
   windowMaximize(): void;

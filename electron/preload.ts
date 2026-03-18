@@ -61,6 +61,14 @@ const api: StackWatchAPI = {
   checkRenewals: (services: import('../shared/types').Service[]) =>
     ipcRenderer.invoke('check-renewals', services),
 
+  onScanProgress: (callback: (data: import('../shared/types').ScanProgressData) => void) => {
+    const handler = (_event: any, data: import('../shared/types').ScanProgressData) => callback(data)
+    ipcRenderer.on('scan-progress', handler)
+    return () => { ipcRenderer.removeListener('scan-progress', handler) }
+  },
+
+  cancelScan: () => ipcRenderer.send('cancel-scan'),
+
   openExternalUrl: (url: string) =>
     ipcRenderer.invoke('open-external-url', url),
 

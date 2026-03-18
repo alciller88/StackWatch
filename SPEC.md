@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification document. Source of truth for AI agents and developers.
-> Last updated: 2026-03-17 | Status: v0.4.0
+> Last updated: 2026-03-18 | Status: v0.4.0
 
 ---
 
@@ -405,6 +405,20 @@ interface ScoreHistoryEntry {
 }
 ```
 
+### ScanProgressData
+
+```typescript
+interface ScanProgressData {
+  phase: string     // 'Initializing...' | 'Extracting evidences...' | 'Classifying services...' | 'Deduplicating...' | 'Running AI filter...' | 'Analyzing services...' | 'Building graph...' | 'Done'
+  percent: number   // 0-100
+  counts: {
+    evidences: number
+    services: number
+    vulns: number
+  }
+}
+```
+
 ### AIProvider / AISettings
 
 ```typescript
@@ -505,6 +519,7 @@ interface UserConfig {
 | `ConfirmDialog` | Promise-based modal with focus trap, ARIA roles |
 | `Toast` | Auto-dismiss notifications (success/error/info), 4s timeout |
 | `Skeleton` | Skeleton loaders for all panels during analysis |
+| `ScanProgress` | Real-time scan progress screen: repo name, animated progress bar (CRT scan line), phase text with blinking cursor, evidence/service/vuln counters, cancel button. Replaces active panel during scan. Uses theme CSS variables. |
 | `ErrorBoundary` | React error boundary with fallback UI |
 | `OnboardingTutorial` | 6-step walkthrough after first scan |
 | `GitHubModal` | GitHub repo connection with real-time format validation |
@@ -555,7 +570,7 @@ Every service MUST have a corresponding graph node. Enforced by:
 
 ## 7. IPC communication (main ↔ renderer)
 
-24 methods exposed via `contextBridge`:
+26 methods exposed via `contextBridge`:
 
 ```typescript
 interface StackWatchAPI {
@@ -589,6 +604,10 @@ interface StackWatchAPI {
   setAISettings(settings: AISettings): Promise<void>
   testAIConnection(provider: AIProvider): Promise<{ ok: boolean; error?: string }>
   getAIPresets(): Promise<AIProvider[]>
+
+  // Scan progress
+  onScanProgress(callback: (data: ScanProgressData) => void): () => void
+  cancelScan(): void
 
   // Window
   windowMinimize(): void
@@ -732,7 +751,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 
 ## 14. Testing
 
-363 tests across 25 suites. Vitest + @testing-library/react + jsdom.
+372 tests across 26 suites. Vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Location |
 |---|---|---|
@@ -760,6 +779,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 | Deduplicator | 23 | `electron/analyzers/__tests__/` |
 | Pipeline | 7 | `electron/analyzers/__tests__/` |
 | Pipeline Integration | 4 | `electron/analyzers/__tests__/` |
+| ScanProgress | 9 | `src/components/ScanProgress/__tests__/` |
 | daysUntil | 3 | `src/utils/__tests__/` |
 
 ---
@@ -821,3 +841,7 @@ Available as SVG (inline), shields.io URLs, Markdown, and HTML formats. CLI comm
 - [x] Release automation: CI creates GitHub Release with platform binaries on version tag push (v*)
 - [x] `npm run release` convenience script: validate → git tag → push tag
 - [x] Blank Stack mode: empty canvas with USER layer node, no repo required, manual architecture building, "Untitled Stack" in TopBar
+- [x] Scan progress screen: replaces active panel during scan with real-time progress bar (CRT scan line effect), phase text with blinking cursor, evidence/service/vuln counters, cancel button with AbortController support
+- [x] Pipeline emits scan-progress IPC events at each phase (Initializing → Extracting → Classifying → Deduplicating → AI filter → Analyzing → Building graph → Done)
+- [x] Scan cancellation via cancel-scan IPC + AbortSignal propagation through pipeline
+- [x] 9 new tests: ScanProgress component (rendering, phases, counters, cancel, Done state)

@@ -12,6 +12,7 @@ import type {
   LinkStatus,
   ScoreHistoryEntry,
   DiscardedItem,
+  ScanProgressData,
 } from '../types';
 import { demoServices, demoDependencies, demoFlowNodes, demoFlowEdges } from '../demoData';
 import { computeScanDiff } from '../utils/scanDiff';
@@ -50,8 +51,10 @@ interface StoreState {
   scoreHistory: ScoreHistoryEntry[];
   theme: ThemeName;
   mode: StoreMode;
+  scanProgress: ScanProgressData | null;
 
   recalculateScore: () => void;
+  cancelScan: () => void;
   analyzeLocal: (path: string) => Promise<void>;
   analyzeGitHub: (repo: string, token: string) => Promise<void>;
   reanalyze: () => Promise<void>;
@@ -166,6 +169,15 @@ export const useStore = create<StoreState>((set, get) => ({
   scoreHistory: [],
   theme: (localStorage.getItem('stackwatch-theme') as ThemeName) || 'dark',
   mode: 'scan' as StoreMode,
+  scanProgress: null,
+
+  cancelScan: () => {
+    if (window.stackwatch?.cancelScan) {
+      window.stackwatch.cancelScan();
+    }
+    set({ scanProgress: null, isAnalyzing: false, analysisPhase: null });
+    useToastStore.getState().addToast('Scan cancelled', 'info');
+  },
 
   recalculateScore: () => {
     const { services, flowNodes, flowEdges } = get();
@@ -208,10 +220,20 @@ export const useStore = create<StoreState>((set, get) => ({
       scanMode = decision as 'merge' | 'fresh';
     }
 
-    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan' });
+    set({ isAnalyzing: true, error: null, repoPath: path, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan', scanProgress: { phase: 'Initializing...', percent: 0, counts: { evidences: 0, services: 0, vulns: 0 } } });
     try {
       const result = await window.stackwatch.analyzeLocal(path);
-      set({ analysisPhase: 'Loading configuration...' });
+
+      // Handle cancellation
+      if (result.cancelled) {
+        set({ isAnalyzing: false, analysisPhase: null, scanProgress: null });
+        if (result.services.length > 0) {
+          useToastStore.getState().addToast('Scan cancelled — showing partial results', 'info');
+        }
+        return;
+      }
+
+      set({ analysisPhase: 'Loading configuration...', scanProgress: null });
 
       let config = existingConfig;
 
@@ -304,6 +326,7 @@ export const useStore = create<StoreState>((set, get) => ({
       set({
         isAnalyzing: false,
         analysisPhase: null,
+        scanProgress: null,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -337,10 +360,17 @@ export const useStore = create<StoreState>((set, get) => ({
       scanMode = decision as 'merge' | 'fresh';
     }
 
-    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan' });
+    set({ isAnalyzing: true, error: null, repoPath: `github:${repo}`, deepAnalysis: null, analysisPhase: 'Scanning repository...', mode: 'scan', scanProgress: { phase: 'Initializing...', percent: 0, counts: { evidences: 0, services: 0, vulns: 0 } } });
     try {
       const result = await window.stackwatch.analyzeGitHub(repo, token);
-      set({ analysisPhase: 'Loading configuration...' });
+
+      // Handle cancellation
+      if (result.cancelled) {
+        set({ isAnalyzing: false, analysisPhase: null, scanProgress: null });
+        return;
+      }
+
+      set({ analysisPhase: 'Loading configuration...', scanProgress: null });
 
       let config = existingConfig;
 
@@ -409,6 +439,7 @@ export const useStore = create<StoreState>((set, get) => ({
       set({
         isAnalyzing: false,
         analysisPhase: null,
+        scanProgress: null,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -804,3 +835,10 @@ useStore.subscribe(
     }
   }
 );
+
+// Listen for scan-progress IPC events from main process
+if (typeof window !== 'undefined' && window.stackwatch?.onScanProgress) {
+  window.stackwatch.onScanProgress((data) => {
+    useStore.setState({ scanProgress: data });
+  });
+}

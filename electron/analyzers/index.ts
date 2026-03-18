@@ -1,5 +1,5 @@
 import path from 'path'
-import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult, DiscardedItem } from '../types'
+import type { Service, AnalysisResult, Evidence, Dependency, AISettings, DeepAnalysisResult, DiscardedItem, ProgressCallback } from '../types'
 import { extractEvidences, extractEvidencesFromGitHub } from './extractor'
 import { classifyEvidences } from './heuristic'
 import { deduplicateServices, confidenceRank } from './deduplicator'
@@ -12,18 +12,23 @@ export async function analyzeLocalRepo(
   folderPath: string,
   aiSettings?: AISettings,
   excludedServices?: string[],
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<AnalysisResult> {
   // Check for monorepo structure
   const mono = await detectMonorepo(folderPath)
 
   if (mono.type && mono.packages.length > 1) {
     // Monorepo: scan root + each package, merge results
-    return analyzeMonorepo(folderPath, mono.packages, mono.type, aiSettings, excludedServices)
+    return analyzeMonorepo(folderPath, mono.packages, mono.type, aiSettings, excludedServices, onProgress, signal)
   }
 
   // Single repo
+  onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
+  if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
   const { evidences, dependencies, projectName } = await extractEvidences(folderPath)
-  return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath)
+  onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+  return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath, onProgress, signal)
 }
 
 async function analyzeMonorepo(
@@ -32,6 +37,8 @@ async function analyzeMonorepo(
   monoType: string,
   aiSettings?: AISettings,
   excludedServices?: string[],
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<AnalysisResult> {
   const rootName = path.basename(rootPath)
 
@@ -60,7 +67,8 @@ async function analyzeMonorepo(
   // Deduplicate dependencies (same name+ecosystem across packages)
   const uniqueDeps = deduplicateDeps(allDeps)
 
-  const result = await runPipeline(allEvidences, uniqueDeps, aiSettings, rootName, excludedServices, rootPath)
+  onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: allEvidences.length, services: 0, vulns: 0 } })
+  const result = await runPipeline(allEvidences, uniqueDeps, aiSettings, rootName, excludedServices, rootPath, onProgress, signal)
   result.monorepo = {
     type: monoType,
     packages: packagePaths.map(p => path.basename(p)),
@@ -87,9 +95,14 @@ export async function analyzeGitHubRepo(
   fetchFile: (path: string) => Promise<string | null>,
   listDir: (path: string) => Promise<string[]>,
   aiSettings?: AISettings,
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<AnalysisResult> {
+  onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
+  if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
   const { evidences, dependencies, projectName } = await extractEvidencesFromGitHub(fetchFile, listDir)
-  return runPipeline(evidences, dependencies, aiSettings, projectName)
+  onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+  return runPipeline(evidences, dependencies, aiSettings, projectName, undefined, undefined, onProgress, signal)
 }
 
 async function runPipeline(
@@ -99,14 +112,24 @@ async function runPipeline(
   projectName: string,
   excludedServices?: string[],
   repoPath?: string,
+  onProgress?: ProgressCallback,
+  signal?: AbortSignal,
 ): Promise<AnalysisResult> {
   const useAI = aiSettings?.enabled && aiSettings.provider && aiSettings.scanMode === 'hybrid'
 
+  function checkAbort() {
+    if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
+  }
+
   // Step 1: Heuristic classification (always runs)
+  onProgress?.({ phase: 'Classifying services...', percent: 40, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+  checkAbort()
   const heuristicResults = classifyEvidences(evidences, projectName)
   const dedupResult = deduplicateServices(heuristicResults)
   let services = dedupResult.services
   const discardedItems: DiscardedItem[] = [...dedupResult.discarded]
+  onProgress?.({ phase: 'Deduplicating...', percent: 55, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+  checkAbort()
 
   // Note: excludedServices only affects the graph (filtered in graphStore.initFromAnalysis),
   // NOT the services list — users should see all detected services in the Services panel.
@@ -124,6 +147,8 @@ async function runPipeline(
   // Step 2.5: AI false-positive filter (hybrid mode, before full refinement)
   let aiFilteredCount: number | undefined
   if (useAI) {
+    onProgress?.({ phase: 'Running AI filter...', percent: 70, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+    checkAbort()
     const preFilterServices = [...services]
     try {
       services = await withTimeout(
@@ -153,6 +178,8 @@ async function runPipeline(
   let deepAnalysis: DeepAnalysisResult | undefined
   let aiError: string | undefined
   if (useAI) {
+    onProgress?.({ phase: 'Analyzing services...', percent: 80, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+    checkAbort()
     const originalServices = [...services]
     try {
       // Step 3a: AI validates/refines heuristic results
@@ -190,6 +217,13 @@ async function runPipeline(
     return true
   })
 
+  // If no AI, jump progress to 80%
+  if (!useAI) {
+    onProgress?.({ phase: 'Analyzing services...', percent: 80, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+  }
+
+  checkAbort()
+
   // Step 3.5: Zombie detection (local repos only)
   if (repoPath && !repoPath.startsWith('github:')) {
     try {
@@ -204,6 +238,8 @@ async function runPipeline(
   }
 
   // Step 4: Infer flow graph
+  onProgress?.({ phase: 'Building graph...', percent: 90, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+  checkAbort()
   const flow = inferFlowGraph(services, dependencies, projectName)
 
   // Step 4.5: Apply AI-inferred edge types
@@ -216,6 +252,8 @@ async function runPipeline(
       }
     }
   }
+
+  onProgress?.({ phase: 'Done', percent: 100, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
 
   return {
     services,

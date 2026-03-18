@@ -14,6 +14,7 @@ import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './
 
 let store: any
 let mainWindow: BrowserWindow | null = null
+let scanAbortController: AbortController | null = null
 
 function getEncryptionKey(): string {
   // Deterministic machine-unique key from userData path.
@@ -104,6 +105,15 @@ ipcMain.on('window-maximize', () => {
 ipcMain.on('window-close', () => mainWindow?.close())
 ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false)
 
+// --- Scan Cancellation ---
+
+ipcMain.on('cancel-scan', () => {
+  if (scanAbortController) {
+    scanAbortController.abort()
+    scanAbortController = null
+  }
+})
+
 // --- Safe External URL ---
 
 ipcMain.handle('open-external-url', async (_event, url: string) => {
@@ -189,7 +199,33 @@ ipcMain.handle('analyze-local', async (_event, folderPath: string) => {
     // No config yet
   }
 
-  const result = await analyzeLocalRepo(safePath, aiSettings, excludedServices)
+  // Set up abort controller for cancellation
+  scanAbortController = new AbortController()
+  const { signal } = scanAbortController
+
+  const onProgress = (data: import('../shared/types').ScanProgressData) => {
+    mainWindow?.webContents.send('scan-progress', data)
+  }
+
+  let result
+  try {
+    result = await analyzeLocalRepo(safePath, aiSettings, excludedServices, onProgress, signal)
+  } catch (err: any) {
+    scanAbortController = null
+    if (err?.name === 'AbortError') {
+      // Return partial results on cancellation
+      return {
+        services: [],
+        dependencies: [],
+        flowNodes: [],
+        flowEdges: [],
+        discardedItems: [],
+        cancelled: true,
+      }
+    }
+    throw err
+  }
+  scanAbortController = null
 
   // Save snapshot for future diff comparisons
   try {
@@ -308,9 +344,30 @@ ipcMain.handle(
     }
 
     const aiSettings = getAISettings()
+
+    scanAbortController = new AbortController()
+    const { signal } = scanAbortController
+
+    const onProgress = (data: import('../shared/types').ScanProgressData) => {
+      mainWindow?.webContents.send('scan-progress', data)
+    }
+
     try {
-      return await analyzeGitHubRepo(fetchFile, listDir, aiSettings)
+      const result = await analyzeGitHubRepo(fetchFile, listDir, aiSettings, onProgress, signal)
+      scanAbortController = null
+      return result
     } catch (err: any) {
+      scanAbortController = null
+      if (err?.name === 'AbortError') {
+        return {
+          services: [],
+          dependencies: [],
+          flowNodes: [],
+          flowEdges: [],
+          discardedItems: [],
+          cancelled: true,
+        }
+      }
       // Sanitize error message to avoid leaking the full token
       let message = err?.message ?? String(err)
       if (token && token.length > 4) {

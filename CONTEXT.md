@@ -32,7 +32,7 @@ Full spec: `SPEC.md` · User docs: `README.md`
 ### Analysis pipeline
 
 ```
-extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine] → [AI deep analysis + alternatives] → zombieDetector.ts → flowInference.ts
+extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine] → [AI deep analysis + alternatives] → zombieDetector.ts → flowInference.ts     (emits scan-progress IPC at each phase)
      │                                                                                                          │
      ├── Evidences (env vars, imports, URLs, configs)                                                           ├── FlowNodes
      ├── Dependencies (npm, pip, cargo, go, etc.)                                                               └── FlowEdges
@@ -63,7 +63,7 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 ```
 ┌─────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (23 channels)             │
+│  ├── IPC handlers (25 channels)             │
 │  ├── electron-store (safeStorage encrypted) │
 │  ├── Analyzers (pure Node.js)               │
 │  ├── AI client (OpenAI-compatible)          │
@@ -88,6 +88,7 @@ Layer nodes (type: 'layer') are organizational — they do NOT represent service
 │  ├── Doctor modal (health checklist)       │
 │  ├── Theme system (dark/light via CSS vars)│
 │  ├── Skeleton loaders during analysis       │
+│  ├── Scan progress screen (replaces panel)  │
 │  └── Undo/redo (Ctrl+Z / Ctrl+Shift+Z)     │
 └─────────────────────────────────────────────┘
 ```
@@ -132,7 +133,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 |------|---------|
 | `electron/main.ts` | Entry point, IPC handlers, safeStorage, CSP, window management |
 | `electron/preload.ts` | IPC bridge via contextBridge (StackWatchAPI) |
-| `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. |
+| `electron/analyzers/index.ts` | Pipeline orchestrator. Monorepo-aware. Emits scan-progress IPC events at each phase. Supports AbortSignal for cancellation. |
 | `electron/analyzers/extractor.ts` | Evidence extraction: env vars, imports, URLs, configs, deps |
 | `electron/analyzers/heuristic.ts` | Semantic scoring classification into 19 categories (config_file: 10, ci_secret: 8, env_var credential: 7, env_var endpoint: 6, url: 5, env_var generic: 2, npm/import: 1) + hard filters (CI vars, feature flags, browser APIs) + score penalties (config suffixes: -5, descriptive phrases: -3, project name: -10) |
 | `electron/analyzers/deduplicator.ts` | Service grouping, best-score-per-unique-evidence-type (not additive per instance), thresholds (<6: discard, 6-10: low/needsReview for AI, >10: high), brand collapse, generic entry removal |
@@ -173,6 +174,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `src/components/ScoreHistory/` | Score history modal with Recharts line chart, trend stats |
 | `src/components/FlowGraph/` | React Flow graph, Zustand selectors, context menu, node edit |
 | `src/components/ServicesPanel/` | Service cards with zombie badges, form with htmlFor labels, confidence badges, activity filter, evidence info popover |
+| `src/components/ScanProgress/` | Real-time scan progress screen: phase text, animated progress bar (CRT effect), counters, cancel button. Replaces active panel during scan. |
 | `src/components/TopBar/` | Import/export, share (dynamic badges), GitHub, re-analyze. Shows "Untitled Stack" in blank mode. |
 
 ### CLI & CI
@@ -203,7 +205,7 @@ shared/types.ts          ← canonical source: SERVICE_CATEGORIES const, all int
 | `npm run build:cli` | Build CLI to `dist-cli/` |
 | `npm run validate` | 29-point build validation |
 | `npm run release` | Validate build, create git tag from package.json version, push tag (triggers CI release) |
-| `npm test` | vitest (359 tests, 25 suites) |
+| `npm test` | vitest (372 tests, 26 suites) |
 | `npx stackwatch doctor [path]` | Health check: services, costs, vulns, score |
 
 **Common pitfalls**:
@@ -253,7 +255,7 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 
 ## Tests
 
-363 tests across 25 suites. vitest + @testing-library/react + jsdom.
+372 tests across 26 suites. vitest + @testing-library/react + jsdom.
 
 | Suite | Count | Coverage |
 |-------|-------|----------|
@@ -281,6 +283,7 @@ Dependencies: `sharp`, `png2icons` (both in devDependencies). Regenerate after c
 | Deduplicator | 23 | Grouping, merging, best-score-per-unique-type (no additive inflation), thresholds (<6 discard, 6-10 low, >10 high), brand collapse, generic entry removal, discarded tracking |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | Pipeline Integration | 4 | Fixture repo: Stripe/Sentry/PostgreSQL detection, no false positives, flow graph, evidenceSummary |
+| ScanProgress | 9 | Rendering, phase text, repo name (local/GitHub), counters, cancel button, Done state |
 | daysUntil | 3 | Today, future, past |
 
 ---

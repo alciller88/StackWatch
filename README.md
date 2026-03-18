@@ -91,7 +91,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Start in development mode with hot reload |
 | `npm run build` | Build production binaries |
-| `npm test` | Run unit tests (363 tests across 25 suites) |
+| `npm test` | Run unit tests (372 tests across 26 suites) |
 | `npm run release` | Validate, tag current version, push tag (triggers CI release) |
 
 ### Your first scan in 4 steps
@@ -422,6 +422,7 @@ StackWatch/
 │   │   ├── CostsPanel/      # Cost breakdown, bar chart (Recharts), renewal alerts, budget mode
 │   │   ├── Doctor/          # Doctor modal (health checklist: config, services, costs, vulns, score)
 │   │   ├── FlowGraph/       # Interactive graph, context menu, node edit panel
+│   │   ├── ScanProgress/   # Real-time scan progress (progress bar, phases, cancel)
 │   │   ├── ScoreHistory/    # Score history modal (Recharts line chart, trend stats)
 │   │   ├── Settings/        # AI provider config (3 presets), scan mode, theme toggle, share, about
 │   │   ├── TitleBar.tsx     # Custom frameless titlebar (minimize/maximize/close)
@@ -460,7 +461,7 @@ StackWatch/
 
 ### Test suites
 
-363 tests across 25 suites:
+372 tests across 26 suites:
 
 | Suite | Tests | Coverage |
 |---|---|---|
@@ -488,6 +489,7 @@ StackWatch/
 | Deduplicator | 23 | Grouping, merging, best-per-type scoring, thresholds, brand collapse, discarded tracking |
 | Pipeline | 7 | End-to-end, AI checkpoint/restore, npm-only discard |
 | Pipeline Integration | 4 | Fixture repo: Stripe/Sentry/PostgreSQL detection, no false positives |
+| ScanProgress | 9 | Rendering, phases, counters, cancel, Done state |
 | daysUntil | 3 | Today, future, past |
 
 ---
@@ -575,6 +577,8 @@ StackWatch/
 - [x] User docs: 4-step first scan guide, AI setup guide, CLI/GitHub Action examples
 - [x] Blank Stack mode: start with empty canvas + USER node, build architecture manually, no repo required
 - [x] Reactive Stack Score: recalculates in real-time after every service/graph mutation, debounced history persistence with scan/manual source differentiation
+- [x] Scan progress screen: real-time progress bar with CRT effect, phase text with blinking cursor, counters, cancel with AbortController
+- [x] 372 tests across 26 suites (+9 ScanProgress tests)
 
 ---
 

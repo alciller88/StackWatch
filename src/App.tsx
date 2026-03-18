@@ -19,11 +19,12 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
 import { ScoreHistoryPanel } from './components/ScoreHistory/ScoreHistoryPanel'
 import { DoctorModal } from './components/Doctor/DoctorModal'
+import { ScanProgress } from './components/ScanProgress/ScanProgress'
 import { ServicesPanelSkeleton, DepsPanelSkeleton, DiscardedPanelSkeleton, FlowGraphSkeleton, CostsPanelSkeleton } from './components/Skeleton'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
-  const { repoPath, activePanel, showTutorial, showScoreHistory, showDoctor, services, config, isAnalyzing } = useStore()
+  const { repoPath, activePanel, showTutorial, showScoreHistory, showDoctor, services, config, isAnalyzing, scanProgress } = useStore()
   useTheme()
   const dialog = useDialogStore()
 
@@ -58,6 +59,10 @@ export default function App() {
 
   const renderPanel = () => {
     if (activePanel === 'settings') return <Settings />
+
+    // Show scan progress screen when actively scanning with progress data
+    if (isAnalyzing && scanProgress) return <ScanProgress />
+
     const hasData = !!repoPath || services.length > 0 || !!config
     if (!hasData && !isAnalyzing) return <Dashboard />
 
