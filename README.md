@@ -51,7 +51,7 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 
 | Feature | Description |
 |---------|-------------|
-| **Semantic Detection** | Detects services from env vars, imports, URLs, configs, and CI secrets -- no hardcoded service maps |
+| **Heuristic Detection** | Detects services from env vars, imports, URLs, configs, and CI secrets -- no hardcoded service maps |
 | **19 Categories** | Domain, hosting, CI/CD, database, auth, payments, email, analytics, monitoring, CDN, storage, infra, AI, mobile, gaming, data, messaging, support, other |
 | **9 Ecosystems** | npm, pip, Cargo, Go, Composer, Gem, Maven, Gradle, Pub |
 | **Interactive Flow Graph** | Draggable architecture visualization with auto-layout, context menus, custom connections, and node editing |
