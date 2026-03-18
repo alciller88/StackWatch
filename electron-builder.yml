@@ -17,6 +17,10 @@ extraMetadata:
 
 asar: true
 
+extraResources:
+  - from: electron/splash.html
+    to: splash.html
+
 mac:
   target:
     - target: dmg

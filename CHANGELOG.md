@@ -3,6 +3,19 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.10](https://github.com/alciller88/StackWatch/compare/v0.10.9...v0.10.10) (2026-03-18)
+
+### Added
+- Splash screen shown during app startup — eliminates blank window while renderer loads. Inline SVG logo with animated loading indicator, no external dependencies.
+- SECURITY.md with vulnerability reporting process, scope, security features and known limitations
+- GitHub security policy badge in README
+
+### Fixed
+- App name "StackWatch" verified across all platforms (taskbar, title, dock, about)
+- Main window uses `show: false` until `ready-to-show` — no flash of blank window
+
+---
+
 ## [0.10.9](https://github.com/alciller88/StackWatch/compare/v0.10.8...v0.10.9) (2026-03-18)
 
 ### Added

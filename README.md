@@ -3,8 +3,9 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.10.9-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
-[![Tests](https://img.shields.io/badge/tests-487%20passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-0.10.10-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Tests](https://img.shields.io/badge/tests-520%20passing-brightgreen)]()
+[![Security Policy](https://img.shields.io/badge/security-policy-brightgreen)](SECURITY.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project depends on -- with costs, renewal dates, and an interactive architecture graph. Zero config, works offline, and delivers results in seconds.

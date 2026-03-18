@@ -73,6 +73,30 @@ function getIconPath(): string {
   try { require('fs').accessSync(prodPath); return prodPath } catch { /* Expected: icon may not exist in prod path */ return devPath }
 }
 
+function createSplashWindow(): BrowserWindow {
+  const splash = new BrowserWindow({
+    width: 400,
+    height: 300,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    center: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  })
+
+  const splashPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'splash.html')
+    : path.join(__dirname, '..', '..', 'electron', 'splash.html')
+
+  splash.loadFile(splashPath)
+  return splash
+}
+
 function createWindow() {
   Menu.setApplicationMenu(null)
 
@@ -82,6 +106,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'StackWatch',
+    show: false,
     icon: getIconPath(),
     frame: false,
     titleBarStyle: 'hidden',
@@ -108,7 +133,6 @@ function createWindow() {
   }
 
   mainWindow.removeMenu()
-  mainWindow.maximize()
 
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     mainWindow.loadURL('http://localhost:5173')
@@ -142,7 +166,18 @@ app.whenReady().then(() => {
   // Migrate from legacy deterministic encryption to safeStorage
   migrateLegacyEncryption()
 
+  const splash = createSplashWindow()
+
   createWindow()
+
+  mainWindow!.once('ready-to-show', () => {
+    setTimeout(() => {
+      splash.destroy()
+      mainWindow!.show()
+      mainWindow!.maximize()
+      mainWindow!.focus()
+    }, 300)
+  })
 
   if (!safeStorage.isEncryptionAvailable()) {
     console.warn('[Main] safeStorage is not available — sensitive values will be stored without encryption.')

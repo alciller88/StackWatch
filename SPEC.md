@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.9 | Last updated: 2026-03-18 | Tests: 520+ across 38 suites
+> Version: v0.10.10 | Last updated: 2026-03-18 | Tests: 520+ across 38 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -703,7 +703,13 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.9 (current)
+### v0.10.10 (current)
+- **Polish**: Splash screen with inline SVG logo and animated loading dots — eliminates blank window during startup
+- **Polish**: Main window `show: false` until `ready-to-show` fires, then splash closes + main shows
+- **Community**: SECURITY.md with vulnerability reporting policy, scope, and known limitations
+- 520+ tests across 38+ suites
+
+### v0.10.9
 - **Accessibility**: `aria-sort` on sortable headers, `aria-live` for filtered counts, `role="alert"` on errors, `aria-label` on icon buttons, `aria-pressed` on filter toggles
 - **Testing**: Playwright E2E infrastructure (`playwright.config.ts`, `e2e/app.test.ts`)
 - **DX**: `data-testid` on critical elements (stack-score, service-card, scan-progress, nav items)

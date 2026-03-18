@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 400px;
+      height: 300px;
+      background: #0a0c0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      user-select: none;
+    }
+    .logo { margin-bottom: 24px; }
+    .title {
+      color: #e2b04a;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .tagline {
+      color: #666;
+      font-size: 11px;
+      letter-spacing: 2px;
+      margin-bottom: 32px;
+    }
+    .loading { display: flex; gap: 6px; }
+    .dot {
+      width: 4px;
+      height: 4px;
+      background: #e2b04a;
+      border-radius: 50%;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" fill="#0a0c0f"/>
+      <rect x="12" y="12" width="96" height="96" rx="12" fill="#0d1017" stroke="#e2b04a" stroke-width="1.5"/>
+      <text x="60" y="64" font-family="Courier New, monospace" font-size="42" font-weight="700" fill="#e2b04a" text-anchor="middle" dominant-baseline="middle" letter-spacing="-2">SW</text>
+      <line x1="24" y1="76" x2="96" y2="76" stroke="#e2b04a" stroke-width="0.5" opacity="0.4"/>
+      <text x="60" y="86" font-family="Courier New, monospace" font-size="6" fill="#e2b04a" text-anchor="middle" opacity="0.6" letter-spacing="2">STACKWATCH</text>
+    </svg>
+  </div>
+  <div class="title">STACKWATCH</div>
+  <div class="tagline">Know your stack, own your stack</div>
+  <div class="loading">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</body>
+</html>

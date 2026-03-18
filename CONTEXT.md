@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.9
+# CONTEXT.md — StackWatch v0.10.10
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -164,6 +164,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `electron/main.ts`                      | Entry, IPC handlers, safeStorage encryption, CSP, window management, global error handlers |
 | `electron/validation.ts`                | Zod schemas + validate() helper for all IPC handler arguments                    |
 | `electron/ipcRateLimiter.ts`            | Rate limiter for high-frequency IPC channels (save-config, scan-vulnerabilities) |
+| `electron/splash.html`                  | Splash screen — standalone HTML with inline SVG, no external deps                |
 | `electron/preload.ts`                   | IPC bridge via contextBridge (StackWatchAPI)                                      |
 | `electron/analyzers/index.ts`           | Pipeline orchestrator. Monorepo-aware. Emits scan-progress. AbortSignal support. |
 | `electron/analyzers/extractor.ts`       | Evidence extraction: env vars, imports, URLs, configs, deps                      |
@@ -372,6 +373,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | Config migrations                      | Explicit version field + migration chain for schema evolution |
 | Shared configLoader                    | CLI and Electron share loading logic; only Electron adds encryption |
 | Connectivity via net.isOnline()        | Offline: vuln scan/GitHub disabled; local scan + local AI still work |
+| Splash screen                          | Standalone HTML + inline SVG. Main window show:false until ready-to-show |
 
 ---
 
