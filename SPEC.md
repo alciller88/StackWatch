@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.7 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
+> Version: v0.10.8 | Last updated: 2026-03-18 | Tests: 520+ across 38 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -703,7 +703,13 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.7 (current)
+### v0.10.8 (current)
+- **Testing**: 18 previously uncovered IPC handlers now tested (window controls, AI, exports, link status, SBOM, score history, connectivity)
+- **Testing**: toastStore and dialogStore test suites added
+- **Testing**: Coverage scope expanded to `electron/config/**` and `shared/**`
+- 520+ tests across 38+ suites
+
+### v0.10.7
 - **Architecture**: Offline mode detection via `net.isOnline()` — vuln scan and GitHub analysis return descriptive errors when offline
 - **Architecture**: Config schema migration system (`electron/config/migrations.ts`) — automatic migration chain applied on load
 - **Architecture**: Snapshot versioning in `.stackwatch/last-scan.json` — incompatible snapshots ignored

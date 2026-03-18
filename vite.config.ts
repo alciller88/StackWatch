@@ -35,12 +35,16 @@ export default defineConfig({
       include: [
         'electron/analyzers/**',
         'electron/ai/**',
+        'electron/config/**',
         'electron/validation.ts',
+        'shared/**',
         'src/store/**',
         'src/utils/**',
       ],
       exclude: [
+        // electron/main.ts requires Electron runtime — IPC logic covered via electron/__tests__/ipc.test.ts
         'electron/main.ts',
+        'electron/preload.ts',
         'src/components/**',
       ],
     },

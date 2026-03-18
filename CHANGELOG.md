@@ -3,6 +3,18 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.8](https://github.com/alciller88/StackWatch/compare/v0.10.7...v0.10.8) (2026-03-18)
+
+### Added
+- Tests for 18 previously uncovered IPC handlers (window controls, AI settings, exports, check-link-status, generate-sbom, score history, connectivity)
+- Tests for toastStore and dialogStore (auto-dismiss, custom timeout, promise resolution)
+- Coverage scope expanded to include `electron/config/**` and `shared/**`
+
+### Changed
+- Coverage exclusion of `electron/main.ts` documented with justification (requires Electron runtime; IPC logic covered via mocked handlers)
+
+---
+
 ## [0.10.7](https://github.com/alciller88/StackWatch/compare/v0.10.6...v0.10.7) (2026-03-18)
 
 ### Added

@@ -94,7 +94,7 @@ vi.mock('../analyzers/index', () => ({
 }))
 
 vi.mock('../analyzers/vulnScanner', () => ({
-  scanVulnerabilities: vi.fn(() => Promise.resolve([])),
+  scanVulnerabilities: vi.fn(() => Promise.resolve({ results: [], partial: false })),
 }))
 
 vi.mock('../analyzers/sbom', () => ({
@@ -124,6 +124,12 @@ vi.mock('../ai/provider', () => ({
 
 vi.mock('../../shared/types', () => ({
   SENSITIVE_FIELDS: ['accountEmail', 'owner', 'notes'],
+}))
+
+vi.mock('../config/migrations', () => ({
+  migrateConfig: vi.fn((config: any) => config),
+  needsMigration: vi.fn(() => false),
+  CURRENT_CONFIG_VERSION: '1',
 }))
 
 vi.mock('@octokit/rest', () => ({
@@ -340,6 +346,264 @@ describe('IPC Handlers', () => {
       expect(listener).toBeDefined()
       // Should not throw
       expect(() => listener!()).not.toThrow()
+    })
+  })
+
+  describe('window controls', () => {
+    it('window-minimize calls minimize', async () => {
+      const listener = listeners.get('window-minimize')
+      expect(listener).toBeDefined()
+      listener!()
+    })
+
+    it('window-maximize toggles maximize', async () => {
+      const listener = listeners.get('window-maximize')
+      expect(listener).toBeDefined()
+      listener!()
+    })
+
+    it('window-close calls close', async () => {
+      const listener = listeners.get('window-close')
+      expect(listener).toBeDefined()
+      listener!()
+    })
+
+    it('window-is-maximized returns boolean', async () => {
+      const handler = getHandler('window-is-maximized')
+      const result = await handler(fakeEvent)
+      expect(typeof result).toBe('boolean')
+    })
+  })
+
+  describe('get-ai-settings', () => {
+    it('returns default settings when none configured', async () => {
+      const handler = getHandler('get-ai-settings')
+      const result = await handler(fakeEvent)
+      expect(result).toBeDefined()
+    })
+  })
+
+  describe('set-ai-settings', () => {
+    it('accepts valid AI settings', async () => {
+      const handler = getHandler('set-ai-settings')
+      await handler(fakeEvent, {
+        settings: {
+          enabled: true,
+          provider: {
+            name: 'Test',
+            baseUrl: 'http://localhost:11434/v1',
+            model: 'llama3',
+          },
+        },
+      })
+      // Should not throw
+    })
+
+    it('rejects metadata IP in baseUrl', async () => {
+      const handler = getHandler('set-ai-settings')
+      await expect(handler(fakeEvent, {
+        settings: {
+          enabled: true,
+          provider: {
+            name: 'Test',
+            baseUrl: 'http://169.254.169.254/v1',
+            model: 'test',
+          },
+        },
+      })).rejects.toThrow(/Invalid arguments/)
+    })
+  })
+
+  describe('get-ai-presets', () => {
+    it('returns array of presets', async () => {
+      const handler = getHandler('get-ai-presets')
+      const result = await handler(fakeEvent)
+      expect(Array.isArray(result)).toBe(true)
+    })
+  })
+
+  describe('test-ai-connection', () => {
+    it('returns ok for valid provider', async () => {
+      const handler = getHandler('test-ai-connection')
+      const result = await handler(fakeEvent, {
+        provider: {
+          name: 'Test',
+          baseUrl: 'http://localhost:11434/v1',
+          model: 'test',
+        },
+      })
+      expect(result).toHaveProperty('ok')
+    })
+  })
+
+  describe('export-config', () => {
+    it('returns false when dialog is cancelled', async () => {
+      const { dialog } = await import('electron')
+      ;(dialog.showSaveDialog as any).mockResolvedValue({ filePath: undefined })
+      const handler = getHandler('export-config')
+      const result = await handler(fakeEvent, { content: '{"version":"1"}' })
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('export-services-md', () => {
+    it('returns false when dialog is cancelled', async () => {
+      const { dialog } = await import('electron')
+      ;(dialog.showSaveDialog as any).mockResolvedValue({ filePath: undefined })
+      const handler = getHandler('export-services-md')
+      const result = await handler(fakeEvent, { content: '# Services' })
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('export-html', () => {
+    it('returns false when dialog is cancelled', async () => {
+      const { dialog } = await import('electron')
+      ;(dialog.showSaveDialog as any).mockResolvedValue({ filePath: undefined })
+      const handler = getHandler('export-html')
+      const result = await handler(fakeEvent, { data: { projectName: 'Test', services: [], dependencies: [], flowNodes: [], flowEdges: [] } })
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('check-link-status', () => {
+    it('returns linked for existing local path', async () => {
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sw-test-'))
+      try {
+        const handler = getHandler('check-link-status')
+        const result = await handler(fakeEvent, {
+          config: {
+            version: '1',
+            services: [],
+            source: { type: 'local', lastSeenPath: tmpDir },
+          },
+        })
+        expect(result).toBe('linked')
+      } finally {
+        await fs.rm(tmpDir, { recursive: true, force: true })
+      }
+    })
+
+    it('returns unlinked for non-existent local path', async () => {
+      const handler = getHandler('check-link-status')
+      const result = await handler(fakeEvent, {
+        config: {
+          version: '1',
+          services: [],
+          source: { type: 'local', lastSeenPath: '/nonexistent/path/12345' },
+        },
+      })
+      expect(result).toBe('unlinked')
+    })
+
+    it('returns unknown for config without source', async () => {
+      const handler = getHandler('check-link-status')
+      const result = await handler(fakeEvent, {
+        config: { version: '1', services: [] },
+      })
+      expect(result).toBe('unknown')
+    })
+  })
+
+  describe('scan-vulnerabilities', () => {
+    it('returns results for valid deps', async () => {
+      const handler = getHandler('scan-vulnerabilities')
+      const result = await handler(fakeEvent, {
+        deps: [{ name: 'lodash', version: '4.17.21', type: 'production', ecosystem: 'npm' }],
+      })
+      expect(result).toBeDefined()
+    })
+
+    it('rejects deps array exceeding max', async () => {
+      const handler = getHandler('scan-vulnerabilities')
+      const hugeDeps = Array.from({ length: 5001 }, (_, i) => ({
+        name: `pkg-${i}`, version: '1.0.0', type: 'production', ecosystem: 'npm',
+      }))
+      await expect(handler(fakeEvent, { deps: hugeDeps })).rejects.toThrow(/Invalid arguments/)
+    })
+  })
+
+  describe('generate-sbom', () => {
+    it('generates CycloneDX SBOM', async () => {
+      const handler = getHandler('generate-sbom')
+      const result = await handler(fakeEvent, {
+        deps: [{ name: 'lodash', version: '4.17.21', type: 'production' }],
+        projectName: 'test',
+        format: 'cyclonedx',
+      })
+      expect(result).toBeDefined()
+    })
+
+    it('generates SPDX SBOM', async () => {
+      const handler = getHandler('generate-sbom')
+      const result = await handler(fakeEvent, {
+        deps: [{ name: 'lodash', version: '4.17.21', type: 'production' }],
+        projectName: 'test',
+        format: 'spdx',
+      })
+      expect(result).toBeDefined()
+    })
+
+    it('rejects invalid format', async () => {
+      const handler = getHandler('generate-sbom')
+      await expect(handler(fakeEvent, {
+        deps: [],
+        projectName: 'test',
+        format: 'invalid',
+      })).rejects.toThrow(/Invalid arguments/)
+    })
+  })
+
+  describe('get-score-history', () => {
+    it('returns empty array when no history', async () => {
+      const handler = getHandler('get-score-history')
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sw-test-'))
+      try {
+        const result = await handler(fakeEvent, { folderPath: tmpDir })
+        expect(Array.isArray(result)).toBe(true)
+      } finally {
+        await fs.rm(tmpDir, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('save-score-entry', () => {
+    it('saves entry without error', async () => {
+      const handler = getHandler('save-score-entry')
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sw-test-'))
+      try {
+        await handler(fakeEvent, {
+          folderPath: tmpDir,
+          entry: {
+            timestamp: new Date().toISOString(),
+            score: 85,
+            passingChecks: 7,
+            totalChecks: 8,
+            serviceCount: 5,
+            depCount: 20,
+            source: 'scan',
+          },
+        })
+      } finally {
+        await fs.rm(tmpDir, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('get-connectivity', () => {
+    it('returns online status', async () => {
+      const handler = getHandler('get-connectivity')
+      const result = await handler(fakeEvent)
+      expect(result).toHaveProperty('online')
+      expect(typeof result.online).toBe('boolean')
+    })
+  })
+
+  describe('get-encryption-status', () => {
+    it('returns boolean', async () => {
+      const handler = getHandler('get-encryption-status')
+      const result = await handler(fakeEvent)
+      expect(typeof result).toBe('boolean')
     })
   })
 })
