@@ -143,8 +143,9 @@ export const DoctorModal: React.FC = () => {
       target: e.target,
       flowType: e.data?.flowType ?? 'data',
     }));
-    return calculateHealthScore(services, fNodes, fEdges);
-  }, [services, graphNodes, graphEdges]);
+    const vr = storeVulnScanned ? storeVulnResults : undefined;
+    return calculateHealthScore(services, fNodes, fEdges, vr);
+  }, [services, graphNodes, graphEdges, storeVulnResults, storeVulnScanned]);
 
   // Build check sections
   const sections: CheckSection[] = useMemo(() => {

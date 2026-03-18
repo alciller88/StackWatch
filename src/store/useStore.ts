@@ -686,6 +686,7 @@ export const useStore = create<StoreState>((set, get) => ({
         deepAnalysis: null,
         error: null,
       });
+      get().recalculateScore();
     } catch (err) {
       if (err instanceof SyntaxError || (err instanceof Error && err.message)) {
         set({ error: `Import failed: ${err instanceof Error ? err.message : 'Invalid file format'}` });
@@ -770,7 +771,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   openScoreHistory: () => {
-    set({ showScoreHistory: true });
+    set({ showScoreHistory: true, showScoreBreakdown: false });
     get().loadScoreHistory();
   },
 
@@ -779,7 +780,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   openScoreBreakdown: () => {
-    set({ showScoreBreakdown: true });
+    set({ showScoreBreakdown: true, showScoreHistory: false });
   },
 
   closeScoreBreakdown: () => {

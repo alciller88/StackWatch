@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import type { StackCheck } from '../../types';
 
@@ -18,26 +18,50 @@ export const ScoreBreakdown: React.FC = () => {
     setActivePanel,
   } = useStore();
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // Close on Escape
+  // Focus management: trap focus and restore on close
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeScoreBreakdown();
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    closeButtonRef.current?.focus();
+    return () => {
+      previousFocusRef.current?.focus();
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    closeScoreBreakdown();
   }, [closeScoreBreakdown]);
 
-  // Close on click outside
+  // Close on Escape (stop propagation to prevent closing other overlays)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleClose();
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
+  }, [handleClose]);
+
+  // Close on click outside (delayed to avoid conflict with trigger button)
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        closeScoreBreakdown();
+        handleClose();
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [closeScoreBreakdown]);
+    // Use setTimeout to skip the click event that opened the panel
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handler);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handler);
+    };
+  }, [handleClose]);
 
   const applicable = healthChecks.filter(c => c.status !== 'unchecked');
   const passing = applicable.filter(c => c.status === 'pass').length;
@@ -56,7 +80,7 @@ export const ScoreBreakdown: React.FC = () => {
   const handleAction = (check: StackCheck) => {
     if (check.actionPanel) {
       setActivePanel(check.actionPanel);
-      closeScoreBreakdown();
+      handleClose();
     }
   };
 
@@ -70,6 +94,7 @@ export const ScoreBreakdown: React.FC = () => {
         <span
           className="font-mono text-sm shrink-0 w-4 text-center"
           style={{ color }}
+          aria-hidden="true"
         >
           {icon}
         </span>
@@ -78,7 +103,7 @@ export const ScoreBreakdown: React.FC = () => {
             className="font-mono text-[11px] block"
             style={{ color: check.status === 'unchecked' ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}
           >
-            {check.label}
+            {check.status === 'pass' ? 'Pass' : check.status === 'fail' ? 'Fail' : 'Not checked'}: {check.label}
           </span>
           {check.detail && (
             <span className="font-mono text-[10px] block" style={{ color: 'var(--color-text-muted)' }}>
@@ -98,6 +123,12 @@ export const ScoreBreakdown: React.FC = () => {
     );
   };
 
+  const scoreColor = stackScore >= 80
+    ? 'var(--color-success)'
+    : stackScore >= 50
+      ? 'var(--color-accent)'
+      : 'var(--color-danger)';
+
   return (
     <div
       ref={panelRef}
@@ -105,19 +136,17 @@ export const ScoreBreakdown: React.FC = () => {
       style={{
         background: 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border)',
+        boxShadow: '-4px 0 16px rgba(0,0,0,0.3)',
       }}
       role="dialog"
+      aria-modal="true"
       aria-label="Stack Score Breakdown"
     >
       {/* Header */}
       <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
         <div>
           <div className="flex items-center gap-3">
-            <span
-              className={`font-mono text-2xl font-bold ${
-                stackScore >= 80 ? 'text-green-400' : stackScore >= 50 ? 'text-[var(--color-accent)]' : 'text-red-400'
-              }`}
-            >
+            <span className="font-mono text-2xl font-bold" style={{ color: scoreColor }}>
               {stackScore}
             </span>
             <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
@@ -125,13 +154,14 @@ export const ScoreBreakdown: React.FC = () => {
             </span>
           </div>
           <span className="font-mono text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
-            {passing}/{total} checks passing
+            {total > 0 ? `${passing}/${total} checks passing` : 'No checks applicable'}
           </span>
         </div>
         <button
-          onClick={closeScoreBreakdown}
+          ref={closeButtonRef}
+          onClick={handleClose}
           className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          aria-label="Close"
+          aria-label="Close score breakdown"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -171,13 +201,13 @@ export const ScoreBreakdown: React.FC = () => {
         <div className="border-t pt-3 space-y-1" style={{ borderColor: 'var(--color-border)' }}>
           {autoMonthlyCount > 0 && (
             <div className="flex items-center gap-2 font-mono text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-              <span style={{ color: '#60a5fa' }}>i</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>i</span>
               {autoMonthlyCount} monthly auto-renewing service{autoMonthlyCount !== 1 ? 's' : ''}
             </div>
           )}
           {freeCount > 0 && (
             <div className="flex items-center gap-2 font-mono text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-              <span style={{ color: '#60a5fa' }}>i</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>i</span>
               {freeCount} free service{freeCount !== 1 ? 's' : ''} (not scored)
             </div>
           )}
@@ -193,7 +223,7 @@ export const ScoreBreakdown: React.FC = () => {
       {/* Footer */}
       <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
         <button
-          onClick={() => { openScoreHistory(); closeScoreBreakdown(); }}
+          onClick={() => { openScoreHistory(); handleClose(); }}
           className="w-full font-mono text-[11px] uppercase tracking-widest py-2 text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] border border-[var(--color-border)] hover:border-[var(--color-accent)] transition-colors"
         >
           View Score History

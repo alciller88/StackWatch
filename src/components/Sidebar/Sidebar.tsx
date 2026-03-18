@@ -173,13 +173,14 @@ export const Sidebar: React.FC = () => {
           title={collapsed ? `Score: ${stackScore} — Click for details` : `Stack Score: ${stackScore} — Click for details`}
         >
           <span
-            className={`font-mono font-bold ${collapsed ? 'text-sm' : 'text-lg'} ${
-              stackScore >= 80
-                ? 'text-green-400'
+            className={`font-mono font-bold ${collapsed ? 'text-sm' : 'text-lg'}`}
+            style={{
+              color: stackScore >= 80
+                ? 'var(--color-success)'
                 : stackScore >= 50
-                  ? 'text-[var(--color-accent)]'
-                  : 'text-red-400'
-            }`}
+                  ? 'var(--color-accent)'
+                  : 'var(--color-danger)',
+            }}
           >
             {stackScore}
           </span>

@@ -60,6 +60,7 @@ export function calculateHealthScore(
       category: 'security',
       status: 'unchecked',
       label: 'Vulnerability scan not run',
+      actionLabel: 'Run scan',
       actionPanel: 'dependencies',
     });
   }
