@@ -25,10 +25,10 @@ export function getEdgeColor(flowType: FlowEdge['flowType']): string {
 
 export function getConfidenceBackground(confidence: 'high' | 'medium' | 'low' | undefined): string {
   switch (confidence) {
-    case 'high': return '#1a2e1a'
-    case 'medium': return '#2e2a1a'
-    case 'low': return '#2e1a1a'
-    default: return '#1f2937'
+    case 'high': return 'var(--color-badge-bg-success)'
+    case 'medium': return 'var(--color-badge-bg-warning)'
+    case 'low': return 'var(--color-danger-bg)'
+    default: return 'var(--color-bg-tertiary)'
   }
 }
 

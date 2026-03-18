@@ -356,7 +356,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
                   [{alt.type}]
                 </span>
                 {alt.estimatedSavings && (
-                  <span className="ml-1 text-emerald-400">{alt.estimatedSavings}</span>
+                  <span className="ml-1 text-[var(--color-success)]">{alt.estimatedSavings}</span>
                 )}
                 <p className="text-[var(--color-text-muted)] text-[10px]">{alt.reason}</p>
               </div>

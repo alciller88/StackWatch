@@ -12,6 +12,11 @@ export default defineConfig({
     },
   },
   base: './',
+  server: {
+    watch: {
+      ignored: ['**/.stackwatch/**'],
+    },
+  },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

@@ -604,6 +604,35 @@ export const useStore = create<StoreState>((set, get) => ({
       set((state) => ({
         services: [...state.services, service],
       }));
+      // Ensure graph node exists for the new service (Service ↔ Node 1:1 invariant)
+      const graphNodes = useGraphStore.getState().nodes;
+      const hasNode = graphNodes.some(n => n.data?.serviceId === service.id);
+      if (!hasNode) {
+        const { nodes: extraNodes, edges: extraEdges } = ensureFlowNodes([service], get().flowNodes);
+        if (extraNodes.length > 0) {
+          const flowNode = extraNodes[0]!;
+          set((state) => ({
+            flowNodes: [...state.flowNodes, ...extraNodes],
+            flowEdges: [...state.flowEdges, ...extraEdges],
+          }));
+          // Add to graphStore so the React Flow canvas renders the node
+          const graph = useGraphStore.getState();
+          graph.addNode(flowNode.id, { x: 200, y: 200 }, {
+            label: service.name,
+            nodeType: flowNode.type,
+            category: service.category,
+            plan: service.plan,
+            confidence: service.confidence,
+            source: 'manual',
+          });
+          // Patch serviceId on the created node (addNode sets it to undefined)
+          useGraphStore.setState((state) => ({
+            nodes: state.nodes.map(n =>
+              n.id === flowNode.id ? { ...n, data: { ...n.data, serviceId: service.id } } : n
+            ),
+          }));
+        }
+      }
       get().recalculateScore();
     } finally {
       release();

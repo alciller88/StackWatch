@@ -107,7 +107,7 @@ function buildNodeStyle(nodeType: FlowNode['type'], confidence?: 'high' | 'mediu
     background: getConfidenceBackground(confidence),
     border: `2px solid ${getNodeColor(nodeType)}`,
     borderRadius: '12px',
-    color: '#f9fafb',
+    color: 'var(--color-text-primary)',
     fontSize: '13px',
     display: 'flex',
     alignItems: 'center',

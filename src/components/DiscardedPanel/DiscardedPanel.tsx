@@ -11,8 +11,8 @@ const REASON_LABELS: Record<DiscardedItem['reason'], string> = {
 
 const REASON_COLORS: Record<DiscardedItem['reason'], string> = {
   low_score: 'bg-[var(--color-badge-bg-warning)] text-[var(--color-accent)] border-[var(--color-badge-border-warning)]',
-  ai_filter: 'bg-[#1a2a3a] text-[#4a8ab0] border-[#2a4a6a]',
-  generic_term: 'bg-[#1a1a2a] text-[#8a7ab0] border-[#3a3a6a]',
+  ai_filter: 'bg-[var(--color-info-bg)] text-[var(--color-info)] border-[var(--color-info-border)]',
+  generic_term: 'bg-[var(--color-badge-bg-danger)] text-[var(--color-text-secondary)] border-[var(--color-badge-border-danger)]',
 }
 
 export const DiscardedPanel: React.FC = () => {

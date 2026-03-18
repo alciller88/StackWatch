@@ -173,7 +173,7 @@ export const ServicesPanel: React.FC = () => {
         </div>
 
         {/* Activity status filter — only if any services have zombie/stale status */}
-        {zombieCounts.hasAny && (
+        {zombieCounts.hasAny ? (
           <div className="flex gap-1.5">
             {(['all', 'active', 'stale', 'zombie'] as const).map((status) => (
               <button
@@ -189,7 +189,14 @@ export const ServicesPanel: React.FC = () => {
               </button>
             ))}
           </div>
-        )}
+        ) : repoPath?.startsWith('github:') && services.length > 0 ? (
+          <div className="font-mono text-[10px] text-[var(--color-text-muted)] flex items-center gap-1.5">
+            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Zombie detection not available for remote repos — clone locally to enable
+          </div>
+        ) : null}
       </div>
 
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
@@ -271,7 +278,7 @@ const VirtualizedServiceGrid: React.FC<{
             <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">
               {zombieCounts.zombie > 0 && <span className="text-[var(--color-danger)]">{zombieCounts.zombie} zombie service{zombieCounts.zombie !== 1 ? 's' : ''}</span>}
               {zombieCounts.zombie > 0 && zombieCounts.stale > 0 && ', '}
-              {zombieCounts.stale > 0 && <span className="text-[#c8a040]">{zombieCounts.stale} stale service{zombieCounts.stale !== 1 ? 's' : ''}</span>}
+              {zombieCounts.stale > 0 && <span className="text-[var(--color-warning)]">{zombieCounts.stale} stale service{zombieCounts.stale !== 1 ? 's' : ''}</span>}
               <span className="text-[var(--color-text-muted)]"> detected</span>
             </span>
           </div>
@@ -464,7 +471,7 @@ const ServiceForm: React.FC<{
         {isEditing && (
           <button
             onClick={handleDelete}
-            className="text-xs text-[#a35050] hover:opacity-80 transition-colors"
+            className="text-xs text-[var(--color-danger)] hover:opacity-80 transition-colors"
           >
             Delete
           </button>
