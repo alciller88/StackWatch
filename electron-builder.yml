@@ -57,6 +57,10 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: StackWatch
+  runAfterFinish: true
 
 linux:
   target:
