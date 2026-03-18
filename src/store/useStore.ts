@@ -47,6 +47,7 @@ interface StoreState {
   hasSeenTutorial: boolean;
   showTutorial: boolean;
   showScoreHistory: boolean;
+  showScoreBreakdown: boolean;
   showDoctor: boolean;
   discardedItems: DiscardedItem[];
   /** Service IDs added in last scan (for graph diff highlight). Cleared after 3s. */
@@ -88,6 +89,8 @@ interface StoreState {
   loadScoreHistory: () => Promise<void>;
   openScoreHistory: () => void;
   closeScoreHistory: () => void;
+  openScoreBreakdown: () => void;
+  closeScoreBreakdown: () => void;
   openDoctor: () => void;
   closeDoctor: () => void;
   restoreDiscardedItem: (item: DiscardedItem) => Promise<void>;
@@ -169,6 +172,7 @@ export const useStore = create<StoreState>((set, get) => ({
   hasSeenTutorial: localStorage.getItem('stackwatch-tutorial-seen') === 'true',
   showTutorial: false,
   showScoreHistory: false,
+  showScoreBreakdown: false,
   showDoctor: false,
   discardedItems: [],
   scanDiffAdded: new Set<string>(),
@@ -772,6 +776,14 @@ export const useStore = create<StoreState>((set, get) => ({
 
   closeScoreHistory: () => {
     set({ showScoreHistory: false });
+  },
+
+  openScoreBreakdown: () => {
+    set({ showScoreBreakdown: true });
+  },
+
+  closeScoreBreakdown: () => {
+    set({ showScoreBreakdown: false });
   },
 
   openDoctor: () => {

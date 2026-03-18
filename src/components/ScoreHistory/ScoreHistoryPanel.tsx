@@ -59,9 +59,11 @@ const CustomTooltip = ({
       <div style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>
         Score: {entry.score}
       </div>
-      <div style={{ color: 'var(--color-text-secondary)' }}>
-        {entry.passingChecks}/{entry.totalChecks} checks passing
-      </div>
+      {entry.passingChecks != null && entry.totalChecks != null && (
+        <div style={{ color: 'var(--color-text-secondary)' }}>
+          {entry.passingChecks}/{entry.totalChecks} checks passing
+        </div>
+      )}
       <div style={{ color: 'var(--color-text-secondary)', marginTop: 4 }}>
         {entry.serviceCount} services, {entry.depCount} deps
       </div>

@@ -18,13 +18,14 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
 import { ScoreHistoryPanel } from './components/ScoreHistory/ScoreHistoryPanel'
+import { ScoreBreakdown } from './components/ScoreBreakdown/ScoreBreakdown'
 import { DoctorModal } from './components/Doctor/DoctorModal'
 import { ScanProgress } from './components/ScanProgress/ScanProgress'
 import { ServicesPanelSkeleton, DepsPanelSkeleton, DiscardedPanelSkeleton, FlowGraphSkeleton, CostsPanelSkeleton } from './components/Skeleton'
 import { useTheme } from './hooks/useTheme'
 
 export default function App() {
-  const { repoPath, activePanel, showTutorial, showScoreHistory, showDoctor, services, config, isAnalyzing, scanProgress } = useStore()
+  const { repoPath, activePanel, showTutorial, showScoreHistory, showScoreBreakdown, showDoctor, services, config, isAnalyzing, scanProgress } = useStore()
   useTheme()
   const dialog = useDialogStore()
 
@@ -107,6 +108,7 @@ export default function App() {
         </div>
         {showTutorial && <OnboardingTutorial />}
         {showScoreHistory && <ScoreHistoryPanel />}
+        {showScoreBreakdown && <ScoreBreakdown />}
         {showDoctor && <DoctorModal />}
         {dialog.current && (
           <ConfirmDialog
