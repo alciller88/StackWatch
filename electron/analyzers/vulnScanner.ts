@@ -1,6 +1,5 @@
 import type { Dependency, Vulnerability, DepVulnResult } from '../../shared/types'
 
-// Map StackWatch ecosystems to OSV ecosystems
 const ecosystemMap: Record<string, string> = {
   npm: 'npm',
   pip: 'PyPI',
@@ -13,6 +12,12 @@ const ecosystemMap: Record<string, string> = {
   dart: 'Pub',
 }
 
+const BATCH_SIZE = 100
+const BATCH_DELAY_MS = 200
+const MAX_RETRIES = 3
+const RETRY_BASE_DELAY_MS = 1000
+const REQUEST_TIMEOUT_MS = 15000
+
 function mapSeverity(scores: Array<{ score?: number; severity?: string }>): Vulnerability['severity'] {
   if (!scores || scores.length === 0) return 'unknown'
   for (const s of scores) {
@@ -22,7 +27,6 @@ function mapSeverity(scores: Array<{ score?: number; severity?: string }>): Vuln
     if (score >= 4.0) return 'medium'
     if (score > 0) return 'low'
   }
-  // Check severity field directly
   for (const s of scores) {
     const sev = s.severity?.toLowerCase()
     if (sev === 'critical') return 'critical'
@@ -33,13 +37,41 @@ function mapSeverity(scores: Array<{ score?: number; severity?: string }>): Vuln
   return 'unknown'
 }
 
-/** Scan a batch of dependencies against OSV.dev API */
+async function fetchWithBackoff(
+  url: string,
+  body: unknown,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
+
+  if (response.status === 429 && retries > 0) {
+    const delay = RETRY_BASE_DELAY_MS * (MAX_RETRIES - retries + 1)
+    console.warn(`[VulnScanner] Rate limited (429), retrying in ${delay}ms (${retries} retries left)`)
+    await new Promise(r => setTimeout(r, delay))
+    return fetchWithBackoff(url, body, retries - 1)
+  }
+
+  return response
+}
+
+export interface VulnScanResult {
+  results: DepVulnResult[]
+  partial: boolean
+  error?: string
+}
+
+/** Scan dependencies against OSV.dev API with backoff and partial result support */
 export async function scanVulnerabilities(
   deps: Dependency[],
-): Promise<DepVulnResult[]> {
+): Promise<VulnScanResult> {
   const results: DepVulnResult[] = []
+  let failedBatches = 0
 
-  // Build queries for OSV batch API (max 1000 per request)
   const queries = deps
     .filter(d => ecosystemMap[d.ecosystem])
     .map(d => ({
@@ -50,21 +82,22 @@ export async function scanVulnerabilities(
       version: d.version.replace(/^[\^~>=<]/, ''),
     }))
 
-  if (queries.length === 0) return results
+  if (queries.length === 0) return { results, partial: false }
 
-  // Batch in groups of 100
-  for (let i = 0; i < queries.length; i += 100) {
-    const batch = queries.slice(i, i + 100)
+  const totalBatches = Math.ceil(queries.length / BATCH_SIZE)
+
+  for (let i = 0; i < queries.length; i += BATCH_SIZE) {
+    const batch = queries.slice(i, i + BATCH_SIZE)
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1
 
     try {
-      const response = await fetch('https://api.osv.dev/v1/querybatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queries: batch }),
-        signal: AbortSignal.timeout(15000),
-      })
+      const response = await fetchWithBackoff('https://api.osv.dev/v1/querybatch', { queries: batch })
 
-      if (!response.ok) continue
+      if (!response.ok) {
+        console.warn(`[VulnScanner] Batch ${batchNum}/${totalBatches} failed: HTTP ${response.status}`)
+        failedBatches++
+        continue
+      }
 
       const data = await response.json()
       const batchResults = data.results ?? []
@@ -93,10 +126,22 @@ export async function scanVulnerabilities(
           })),
         })
       }
-    } catch {
-      // Network error — skip batch silently
+    } catch (err) {
+      console.warn(`[VulnScanner] Batch ${batchNum}/${totalBatches} error:`, err instanceof Error ? err.message : err)
+      failedBatches++
+    }
+
+    // Delay between batches to avoid rate limiting
+    if (i + BATCH_SIZE < queries.length) {
+      await new Promise(r => setTimeout(r, BATCH_DELAY_MS))
     }
   }
 
-  return results
+  return {
+    results,
+    partial: failedBatches > 0,
+    error: failedBatches > 0
+      ? `${failedBatches}/${totalBatches} batches failed — vulnerability results may be incomplete`
+      : undefined,
+  }
 }

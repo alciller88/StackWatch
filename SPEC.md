@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.3 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
+> Version: v0.10.4 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -695,7 +695,16 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.3 (current)
+### v0.10.4 (current)
+- **Stability**: Concurrent scan guard — `scanInProgress` flag rejects second scan with error message
+- **Stability**: OSV.dev vulnerability scanner uses exponential backoff on 429, 200ms batch delay, `VulnScanResult` with `partial` flag
+- **Stability**: All silent `catch {}` blocks replaced with `console.warn`/`console.error` or justification comments
+- **Stability**: `graphStore.persistToConfig` catches and logs `saveConfig` errors
+- **Performance**: `historyStore` dynamic snapshot limits: 50 (small), 25 (medium), 10 (large graph)
+- **Stability**: Monorepo `resolveGlobs` capped at 500 packages with warning
+- 487 tests across 36 suites
+
+### v0.10.3
 - **Fix**: APP_VERSION now injected from package.json via Vite `define` — no more hardcoded version constant
 - **Security**: Zod validation added to `check-link-status` IPC handler; all 27 channels now validated or documented as no-args
 - **Security**: safeStorage unavailability shows startup warning dialog + Settings banner (was silent `console.warn`)

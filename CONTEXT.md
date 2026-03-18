@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.3
+# CONTEXT.md — StackWatch v0.10.4
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -44,7 +44,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
-Pipeline emits `scan-progress` IPC at each phase. Supports `AbortSignal` for cancellation.
+Pipeline emits `scan-progress` IPC at each phase. Supports `AbortSignal` for cancellation. **Only one scan at a time** — `scanInProgress` flag rejects concurrent attempts.
 
 **Heuristic scoring** (no hardcoded service maps):
 
@@ -118,7 +118,7 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 |----------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
 | `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Single Zustand store with 4 specialized selector hooks: `useAnalysisState/Actions`, `useServicesState/Actions`, `useConfigState/Actions`, `useUIState/Actions`. Import selectors for better re-render performance. |
 | `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock**. Dagre layout cache (skips recalc when structure unchanged). Registered callbacks — no dynamic `import()`. |
-| `historyStore` | Undo/redo                     | Past/future stacks, max 50 snapshots. Captures nodes + edges + services.                                                       |
+| `historyStore` | Undo/redo                     | Past/future stacks, dynamic limit (50/25/10 for small/medium/large graphs). Captures nodes + edges + services.                 |
 | `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
 | `toastStore`   | Notifications                 | Auto-dismiss 4s. Animation keyframes defined in CSS (slide-in-from-right + fade-in).                                            |
 
@@ -326,6 +326,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No `: any` without justification             | Use typed alternatives or annotate with eslint-disable comment |
 | No `mutex.acquire()` without try/finally     | Prevents deadlock if operation throws                          |
 | No `.passthrough()` without justification comment | Document why extra fields are needed in Zod schemas       |
+| No empty `catch {}` blocks                       | Always `console.warn`/`console.error` or justification comment |
+| No concurrent scans                              | Check `scanInProgress` flag before starting a new scan    |
 
 ---
 

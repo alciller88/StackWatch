@@ -2,6 +2,8 @@ import fs from 'fs/promises'
 import path from 'path'
 import { load as loadYaml } from 'js-yaml'
 
+const MAX_WORKSPACE_PACKAGES = 500
+
 export interface MonorepoInfo {
   type: 'npm-workspaces' | 'pnpm' | 'lerna' | 'turborepo' | 'nx' | null
   packages: string[]  // resolved absolute paths to each package
@@ -88,17 +90,25 @@ async function resolveGlobs(rootPath: string, patterns: string[]): Promise<strin
         // Must have at least one manifest file
         if (await hasManifest(fullPath)) {
           dirs.push(fullPath)
+          if (dirs.length >= MAX_WORKSPACE_PACKAGES) {
+            console.warn(`[Monorepo] Package limit reached (${MAX_WORKSPACE_PACKAGES}). Remaining packages skipped.`)
+            return dirs
+          }
         }
       }
     } catch {
-      // Pattern dir doesn't exist — try as a direct path
+      // Expected: pattern directory may not exist — try as a direct path
       const directPath = path.join(rootPath, pattern.replace(/\/?\*?$/, ''))
       try {
         const stat = await fs.stat(directPath)
         if (stat.isDirectory() && await hasManifest(directPath)) {
           dirs.push(directPath)
+          if (dirs.length >= MAX_WORKSPACE_PACKAGES) {
+            console.warn(`[Monorepo] Package limit reached (${MAX_WORKSPACE_PACKAGES}). Remaining packages skipped.`)
+            return dirs
+          }
         }
-      } catch { /* not found */ }
+      } catch { /* Expected: path may not exist */ }
     }
   }
 

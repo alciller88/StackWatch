@@ -12,8 +12,6 @@ interface Snapshot {
 interface HistoryState {
   past: Snapshot[]
   future: Snapshot[]
-  maxHistory: number
-
   /** Call before making a change to save current state */
   pushSnapshot: (label: string, current: { nodes: Node[]; edges: Edge[]; services: Service[] }) => void
 
@@ -28,10 +26,20 @@ interface HistoryState {
   clear: () => void
 }
 
+const MAX_HISTORY_SMALL = 50   // < 100 nodes
+const MAX_HISTORY_MEDIUM = 25  // 100-300 nodes
+const MAX_HISTORY_LARGE = 10   // > 300 nodes
+const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024 // 2MB
+
+function getMaxHistory(nodeCount: number): number {
+  if (nodeCount > 300) return MAX_HISTORY_LARGE
+  if (nodeCount > 100) return MAX_HISTORY_MEDIUM
+  return MAX_HISTORY_SMALL
+}
+
 export const useHistoryStore = create<HistoryState>((set, get) => ({
   past: [],
   future: [],
-  maxHistory: 50,
 
   pushSnapshot: (label, current) => {
     // Skip if snapshot is identical to the last one (reference check first, then content)
@@ -44,6 +52,8 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       return
     }
 
+    const maxHistory = getMaxHistory(current.nodes.length)
+
     const snapshot: Snapshot = {
       label,
       nodes: structuredClone(current.nodes),
@@ -51,7 +61,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       services: structuredClone(current.services),
     }
     set((state) => ({
-      past: [...state.past.slice(-(state.maxHistory - 1)), snapshot],
+      past: [...state.past.slice(-(maxHistory - 1)), snapshot],
       future: [], // Clear redo stack on new action
     }))
   },

@@ -38,8 +38,13 @@ export const DepsPanel: React.FC = () => {
     if (!window.stackwatch?.scanVulnerabilities || dependencies.length === 0) return;
     setVulnLoading(true);
     try {
-      const results = await window.stackwatch.scanVulnerabilities(dependencies);
+      const response = await window.stackwatch.scanVulnerabilities(dependencies);
+      // Support both old (array) and new (object with results/partial/error) response shapes
+      const results = Array.isArray(response) ? response : response.results ?? [];
       useStore.setState({ vulnResults: results, vulnScanned: true });
+      if (!Array.isArray(response) && response.partial) {
+        useToastStore.getState().addToast(response.error ?? 'Vulnerability scan incomplete — some results may be missing', 'warning');
+      }
       recalculateScore();
     } catch {
       useToastStore.getState().addToast('Vulnerability scan failed', 'error');

@@ -617,6 +617,8 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       }
       config.graph = graphConfig
       await window.stackwatch.saveConfig(repoPath, config)
+    } catch (err) {
+      console.error('[GraphStore] Failed to persist config:', err)
     } finally {
       persistLock = false
       if (persistQueued) {

@@ -43,6 +43,7 @@ interface TypedStore {
 let store: TypedStore
 let mainWindow: BrowserWindow | null = null
 let scanAbortController: AbortController | null = null
+let scanInProgress = false
 
 // --- safeStorage encryption helpers ---
 
@@ -56,6 +57,7 @@ function decryptValue(encrypted: string): string {
   try {
     return safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
   } catch {
+    // Expected: value may be plaintext (not yet encrypted)
     return encrypted
   }
 }
@@ -67,7 +69,7 @@ function getIconPath(): string {
   if (!app.isPackaged) return devPath
   // electron-builder copies buildResources to resources/
   const prodPath = path.join(process.resourcesPath, 'icon.png')
-  try { require('fs').accessSync(prodPath); return prodPath } catch { return devPath }
+  try { require('fs').accessSync(prodPath); return prodPath } catch { /* Expected: icon may not exist in prod path */ return devPath }
 }
 
 function createWindow() {
@@ -124,12 +126,13 @@ app.whenReady().then(() => {
     store = new (Store as any)()
     // Force a read to detect corrupted data early
     store.store
-  } catch {
+  } catch (err) {
     // Store corrupted — delete and recreate
+    console.warn('[Main] Store corrupted, recreating:', err)
     try {
       const storePath = path.join(app.getPath('userData'), 'config.json')
       require('fs').unlinkSync(storePath)
-    } catch { /* ignore if file doesn't exist */ }
+    } catch { /* Expected: corrupted file may not exist */ }
     store = new (Store as any)()
   }
 
@@ -224,6 +227,7 @@ ipcMain.on('cancel-scan', () => {
     scanAbortController.abort()
     scanAbortController = null
   }
+  scanInProgress = false
 })
 
 // --- Safe External URL ---
@@ -234,6 +238,7 @@ ipcMain.handle('open-external-url', async (_event, args) => {
     await shell.openExternal(url)
     return true
   } catch {
+    // Expected: URL may be invalid or unsupported by OS
     return false
   }
 })
@@ -305,71 +310,80 @@ function decryptConfig(config: UserConfig): UserConfig {
 ipcMain.handle('analyze-local', async (_event, args) => {
   const { folderPath } = validate(schemas.analyzeLocal, typeof args === 'string' ? { folderPath: args } : args, 'analyze-local')
   const safePath = validateRepoPath(folderPath)
-  const aiSettings = getAISettings()
 
-  // Load existing config to get excludedServices
-  let excludedServices: string[] = []
-  try {
-    const configPath = path.join(safePath, 'stackwatch.config.json')
-    const content = await fs.readFile(configPath, 'utf-8')
-    const config = JSON.parse(content) as UserConfig
-    excludedServices = config.graph?.excludedServices ?? []
-  } catch {
-    // No config yet
+  if (scanInProgress) {
+    throw new Error('A scan is already in progress. Cancel it first or wait for it to complete.')
   }
+  scanInProgress = true
 
-  // Set up abort controller for cancellation
-  scanAbortController = new AbortController()
-  const { signal } = scanAbortController
-
-  const onProgress = (data: import('../shared/types').ScanProgressData) => {
-    mainWindow?.webContents.send('scan-progress', data)
-  }
-
-  let result
   try {
-    result = await analyzeLocalRepo(safePath, aiSettings, excludedServices, onProgress, signal)
-  } catch (err: any) {
-    scanAbortController = null
-    if (err?.name === 'AbortError') {
-      // Return partial results on cancellation
-      return {
-        services: [],
-        dependencies: [],
-        flowNodes: [],
-        flowEdges: [],
-        discardedItems: [],
-        cancelled: true,
-      }
+    const aiSettings = getAISettings()
+
+    // Load existing config to get excludedServices
+    let excludedServices: string[] = []
+    try {
+      const configPath = path.join(safePath, 'stackwatch.config.json')
+      const content = await fs.readFile(configPath, 'utf-8')
+      const config = JSON.parse(content) as UserConfig
+      excludedServices = config.graph?.excludedServices ?? []
+    } catch (err) {
+      console.warn('[Main] Could not load existing config:', err)
     }
-    throw err
-  }
-  scanAbortController = null
 
-  // Save snapshot for future diff comparisons
-  try {
-    await saveScanSnapshot(safePath, result)
-  } catch {
-    // Non-critical: don't fail the scan if snapshot save fails
-  }
+    // Set up abort controller for cancellation
+    scanAbortController = new AbortController()
+    const { signal } = scanAbortController
 
-  // Append score history entry
-  try {
-    const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
-    await appendScoreEntry(safePath, {
-      timestamp: new Date().toISOString(),
-      score: healthResult.score,
-      passingChecks: healthResult.passingChecks,
-      totalChecks: healthResult.totalChecks,
-      serviceCount: result.services.length,
-      depCount: result.dependencies.length,
-      source: 'scan',
-    })
-  } catch {
-    // Non-critical: don't fail the scan if score history save fails
-  }
+    const onProgress = (data: import('../shared/types').ScanProgressData) => {
+      mainWindow?.webContents.send('scan-progress', data)
+    }
 
-  return result
+    let result
+    try {
+      result = await analyzeLocalRepo(safePath, aiSettings, excludedServices, onProgress, signal)
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        // Return partial results on cancellation
+        return {
+          services: [],
+          dependencies: [],
+          flowNodes: [],
+          flowEdges: [],
+          discardedItems: [],
+          cancelled: true,
+        }
+      }
+      throw err
+    }
+
+    // Save snapshot for future diff comparisons
+    try {
+      await saveScanSnapshot(safePath, result)
+    } catch (err) {
+      console.warn('[Main] Could not save scan snapshot:', err)
+    }
+
+    // Append score history entry
+    try {
+      const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+      await appendScoreEntry(safePath, {
+        timestamp: new Date().toISOString(),
+        score: healthResult.score,
+        passingChecks: healthResult.passingChecks,
+        totalChecks: healthResult.totalChecks,
+        serviceCount: result.services.length,
+        depCount: result.dependencies.length,
+        source: 'scan',
+      })
+    } catch (err) {
+      console.warn('[Main] Could not save score entry:', err)
+    }
+
+    return result
+  } finally {
+    scanInProgress = false
+    scanAbortController = null
+  }
 })
 
 ipcMain.handle('get-stack-diff', async (_event, args) => {
@@ -386,8 +400,8 @@ ipcMain.handle('get-stack-diff', async (_event, args) => {
     const content = await fs.readFile(configPath, 'utf-8')
     const config = JSON.parse(content) as UserConfig
     excludedServices = config.graph?.excludedServices ?? []
-  } catch {
-    // No config yet
+  } catch (err) {
+    console.warn('[Main] Could not load existing config:', err)
   }
 
   const currentResult = await analyzeLocalRepo(safePath, aiSettings, excludedServices)
@@ -403,110 +417,118 @@ ipcMain.handle(
   async (_event, args) => {
     const { repo, token } = validate(schemas.analyzeGitHub, args, 'analyze-github')
 
-    const { Octokit } = await import('@octokit/rest')
-    const [owner, repoName] = repo.split('/')
-
-    // Only pass auth if token is non-empty; empty auth header causes 403
-    const hasToken = typeof token === 'string' && token.trim().length > 0
-    let octokit = hasToken ? new Octokit({ auth: token.trim() }) : new Octokit()
-
-    // Test auth with a lightweight request; if 403/401, retry unauthenticated (public repo fallback)
-    try {
-      await octokit.repos.get({ owner, repo: repoName })
-    } catch (authErr: any) {
-      if (authErr?.status === 403 || authErr?.status === 401) {
-        octokit = new Octokit()
-      }
+    if (scanInProgress) {
+      throw new Error('A scan is already in progress. Cancel it first or wait for it to complete.')
     }
-
-    // Track rate limiting to stop wasting requests
-    let rateLimited = false
-
-    async function fetchFile(filePath: string): Promise<string | null> {
-      if (rateLimited) return null
-      try {
-        const { data } = await octokit.repos.getContent({
-          owner,
-          repo: repoName,
-          path: filePath,
-        })
-        if ('content' in data && data.content) {
-          return Buffer.from(data.content, 'base64').toString('utf-8')
-        }
-        return null
-      } catch (err: any) {
-        if (err?.status === 403) rateLimited = true
-        return null
-      }
-    }
-
-    async function listDir(dirPath: string): Promise<string[]> {
-      if (rateLimited) return []
-      try {
-        const { data } = await octokit.repos.getContent({
-          owner,
-          repo: repoName,
-          path: dirPath,
-        })
-        if (Array.isArray(data)) {
-          return data
-            .filter((f) => f.type === 'file')
-            .map((f) => f.name)
-        }
-        return []
-      } catch (err: any) {
-        if (err?.status === 403) rateLimited = true
-        return []
-      }
-    }
-
-    const aiSettings = getAISettings()
-
-    scanAbortController = new AbortController()
-    const { signal } = scanAbortController
-
-    const onProgress = (data: import('../shared/types').ScanProgressData) => {
-      mainWindow?.webContents.send('scan-progress', data)
-    }
+    scanInProgress = true
 
     try {
-      const result = await analyzeGitHubRepo(fetchFile, listDir, aiSettings, onProgress, signal)
-      scanAbortController = null
+      const { Octokit } = await import('@octokit/rest')
+      const [owner, repoName] = repo.split('/')
 
-      // Compute score entry for GitHub scans (same as local scans)
-      // Note: snapshot save skipped for GitHub (no local repo to write to)
-      let scoreEntry = undefined
+      // Only pass auth if token is non-empty; empty auth header causes 403
+      const hasToken = typeof token === 'string' && token.trim().length > 0
+      let octokit = hasToken ? new Octokit({ auth: token.trim() }) : new Octokit()
+
+      // Test auth with a lightweight request; if 403/401, retry unauthenticated (public repo fallback)
       try {
-        const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
-        scoreEntry = {
-          timestamp: new Date().toISOString(),
-          score: healthResult.score,
-          passingChecks: healthResult.passingChecks,
-          totalChecks: healthResult.totalChecks,
-          serviceCount: result.services.length,
-          depCount: result.dependencies.length,
-          source: 'scan' as const,
+        await octokit.repos.get({ owner, repo: repoName })
+      } catch (authErr: any) {
+        if (authErr?.status === 403 || authErr?.status === 401) {
+          octokit = new Octokit()
         }
-      } catch {
-        // Non-critical
       }
 
-      return { ...result, scoreEntry }
-    } catch (err: any) {
-      scanAbortController = null
-      if (err?.name === 'AbortError') {
-        return {
-          services: [],
-          dependencies: [],
-          flowNodes: [],
-          flowEdges: [],
-          discardedItems: [],
-          cancelled: true,
+      // Track rate limiting to stop wasting requests
+      let rateLimited = false
+
+      async function fetchFile(filePath: string): Promise<string | null> {
+        if (rateLimited) return null
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner,
+            repo: repoName,
+            path: filePath,
+          })
+          if ('content' in data && data.content) {
+            return Buffer.from(data.content, 'base64').toString('utf-8')
+          }
+          return null
+        } catch (err: any) {
+          if (err?.status === 403) rateLimited = true
+          return null
         }
       }
-      // Sanitize error message to avoid leaking the full token
-      const message = sanitizeToken(err?.message ?? String(err), token)
-      throw new Error(message)
+
+      async function listDir(dirPath: string): Promise<string[]> {
+        if (rateLimited) return []
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner,
+            repo: repoName,
+            path: dirPath,
+          })
+          if (Array.isArray(data)) {
+            return data
+              .filter((f) => f.type === 'file')
+              .map((f) => f.name)
+          }
+          return []
+        } catch (err: any) {
+          if (err?.status === 403) rateLimited = true
+          return []
+        }
+      }
+
+      const aiSettings = getAISettings()
+
+      scanAbortController = new AbortController()
+      const { signal } = scanAbortController
+
+      const onProgress = (data: import('../shared/types').ScanProgressData) => {
+        mainWindow?.webContents.send('scan-progress', data)
+      }
+
+      try {
+        const result = await analyzeGitHubRepo(fetchFile, listDir, aiSettings, onProgress, signal)
+
+        // Compute score entry for GitHub scans (same as local scans)
+        // Note: snapshot save skipped for GitHub (no local repo to write to)
+        let scoreEntry = undefined
+        try {
+          const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
+          scoreEntry = {
+            timestamp: new Date().toISOString(),
+            score: healthResult.score,
+            passingChecks: healthResult.passingChecks,
+            totalChecks: healthResult.totalChecks,
+            serviceCount: result.services.length,
+            depCount: result.dependencies.length,
+            source: 'scan' as const,
+          }
+        } catch (err) {
+          console.warn('[Main] Could not compute score entry:', err)
+        }
+
+        return { ...result, scoreEntry }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          return {
+            services: [],
+            dependencies: [],
+            flowNodes: [],
+            flowEdges: [],
+            discardedItems: [],
+            cancelled: true,
+          }
+        }
+        // Sanitize error message to avoid leaking the full token
+        const message = sanitizeToken(err?.message ?? String(err), token)
+        throw new Error(message)
+      }
+    } finally {
+      scanInProgress = false
+      scanAbortController = null
     }
   }
 )
@@ -529,6 +551,7 @@ ipcMain.handle('load-config', async (_event, args) => {
     const config = JSON.parse(content) as UserConfig
     return decryptConfig(config)
   } catch {
+    // Expected: no config file yet
     return null
   }
 })
@@ -674,6 +697,7 @@ async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
       await fs.access(localPath)
       return 'linked'
     } catch {
+      // Expected: directory may not exist
       return 'unlinked'
     }
   }
@@ -687,6 +711,7 @@ async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
       )
       return res.ok ? 'linked' : 'unlinked'
     } catch {
+      // Expected: network error or timeout
       return 'unlinked'
     }
   }
@@ -776,7 +801,7 @@ ipcMain.handle('save-score-entry', async (_event, args) => {
 
 ipcMain.handle('scan-vulnerabilities', async (_event, args) => {
   if (!rateLimiter.isAllowed('scan-vulnerabilities', { maxCalls: 1, windowMs: 30000 })) {
-    return [] // throttled
+    return { results: [], partial: false, error: 'Rate limited — please wait before scanning again' }
   }
   const { deps } = validate(schemas.scanVulnerabilities, Array.isArray(args) ? { deps: args } : args, 'scan-vulnerabilities')
   return scanVulnerabilities(deps as import('./types').Dependency[])

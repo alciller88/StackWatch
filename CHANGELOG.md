@@ -3,6 +3,22 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.4](https://github.com/alciller88/StackWatch/compare/v0.10.3...v0.10.4) (2026-03-18)
+
+### Fixed
+- Concurrent scan guard: second scan attempt throws error instead of corrupting state (`scanInProgress` flag in main.ts)
+- OSV.dev vulnerability scanner now uses exponential backoff on HTTP 429 with 200ms delay between batches; shows partial result warning to user
+- 27 silent catch blocks now log `console.warn`/`console.error` or have justification comments — no more empty `catch {}`
+- `graphStore.persistToConfig` now catches `saveConfig` errors instead of leaving unhandled promise rejections
+- `historyStore` memory usage reduced with dynamic snapshot limits based on graph size (10/25/50 snapshots for large/medium/small graphs)
+- Monorepo scanner limited to 500 packages via `MAX_WORKSPACE_PACKAGES` to prevent hangs on massive workspaces
+
+### Stability
+- `VulnScanResult` type with `partial` flag and `error` message — renderer shows toast when results are incomplete
+- Scan cancellation now also resets `scanInProgress` flag
+
+---
+
 ## [0.10.3](https://github.com/alciller88/StackWatch/compare/v0.10.2...v0.10.3) (2026-03-18)
 
 ### Fixed

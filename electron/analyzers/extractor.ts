@@ -117,7 +117,7 @@ export async function extractEvidences(
     const gitignoreContent = await fs.readFile(path.join(repoPath, '.gitignore'), 'utf-8')
     ig.add(gitignoreContent)
   } catch {
-    // no .gitignore
+    // Expected: .gitignore may not exist
   }
 
   // Walk the repo
@@ -222,7 +222,7 @@ export async function extractEvidences(
         extractFromSourceCode(content, relPath, evidences, projectDomain)
       }
     } catch {
-      // skip files that can't be read
+      // Skip unreadable files
     }
   }
 
@@ -244,6 +244,7 @@ async function walkRepo(
   try {
     entries = await fs.readdir(dir, { withFileTypes: true })
   } catch {
+    // Expected: directory may not be readable
     return results
   }
 
@@ -451,6 +452,7 @@ function extractDomainFromUrl(url: string): string | null {
     if (!hostname || hostname === 'localhost' || /^[\d.]+$/.test(hostname)) return null
     return hostname
   } catch {
+    // Expected: invalid URL format
     return null
   }
 }
@@ -685,7 +687,7 @@ async function detectProjectDomain(repoPath: string): Promise<string | null> {
           if (apex) return apex
         }
       }
-    } catch { /* no file */ }
+    } catch { /* Expected: file may not exist */ }
   }
 
   // 2. From vercel.json alias
@@ -696,14 +698,14 @@ async function detectProjectDomain(repoPath: string): Promise<string | null> {
       const apex = extractApexDomain(vercelConfig.alias[0])
       if (apex) return apex
     }
-  } catch { /* no file */ }
+  } catch { /* Expected: file may not exist */ }
 
   // 3. Fallback: package.json name
   try {
     const pkgContent = await fs.readFile(path.join(repoPath, 'package.json'), 'utf-8')
     const pkg = JSON.parse(pkgContent)
     if (pkg?.name) return pkg.name.replace(/[^a-z0-9]/gi, '').toLowerCase()
-  } catch { /* no file */ }
+  } catch { /* Expected: file may not exist */ }
 
   return null
 }
@@ -723,6 +725,7 @@ function extractApexDomain(urlOrDomain: string): string | null {
     const { hostname } = new URL(url)
     return hostname.replace(/^www\./, '').split('.')[0].toLowerCase()
   } catch {
+    // Expected: invalid URL format
     return null
   }
 }
@@ -753,14 +756,14 @@ async function getProjectName(repoPath: string): Promise<string> {
     const content = await fs.readFile(path.join(repoPath, 'stackwatch.config.json'), 'utf-8')
     const config = JSON.parse(content)
     if (config?.project?.name) return config.project.name
-  } catch { /* no file */ }
+  } catch { /* Expected: file may not exist */ }
 
   // 2. package.json name
   try {
     const content = await fs.readFile(path.join(repoPath, 'package.json'), 'utf-8')
     const pkg = JSON.parse(content)
     if (pkg?.name) return formatProjectName(pkg.name)
-  } catch { /* no file */ }
+  } catch { /* Expected: file may not exist */ }
 
   // 3. Folder name fallback
   return formatProjectName(path.basename(repoPath))
