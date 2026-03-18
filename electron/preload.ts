@@ -62,7 +62,7 @@ const api: StackWatchAPI = {
     ipcRenderer.invoke('check-renewals', services),
 
   onScanProgress: (callback: (data: import('../shared/types').ScanProgressData) => void) => {
-    const handler = (_event: any, data: import('../shared/types').ScanProgressData) => callback(data)
+    const handler = (_event: Electron.IpcRendererEvent, data: import('../shared/types').ScanProgressData) => callback(data)
     ipcRenderer.on('scan-progress', handler)
     return () => { ipcRenderer.removeListener('scan-progress', handler) }
   },

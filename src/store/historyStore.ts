@@ -34,6 +34,16 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   maxHistory: 50,
 
   pushSnapshot: (label, current) => {
+    // Skip if snapshot is identical to the last one (reference check first, then content)
+    const { past } = get()
+    const last = past[past.length - 1]
+    if (last &&
+        last.nodes === current.nodes &&
+        last.edges === current.edges &&
+        last.services === current.services) {
+      return
+    }
+
     const snapshot: Snapshot = {
       label,
       nodes: structuredClone(current.nodes),

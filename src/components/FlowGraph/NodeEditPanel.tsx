@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useReducer, useEffect, useRef, useCallback } from 'react'
 import { SERVICE_CATEGORIES } from '../../types'
 import type { FlowNode, ServiceCategory, ServiceBilling } from '../../types'
 import { renewService } from '../../utils/billing'
@@ -11,6 +11,51 @@ const PLANS = ['free', 'paid', 'trial', 'unknown'] as const
 const CONFIDENCES = ['high', 'medium', 'low'] as const
 const BILLING_TYPES: ServiceBilling['type'][] = ['manual', 'automatic', 'free']
 const BILLING_PERIODS: NonNullable<ServiceBilling['period']>[] = ['monthly', 'yearly', 'one-time', 'usage-based']
+
+interface NodeEditFormState {
+  label: string
+  nodeType: FlowNode['type']
+  category: ServiceCategory
+  plan: string
+  confidence: 'high' | 'medium' | 'low'
+  url: string
+  note: string
+  billingType: ServiceBilling['type']
+  billingPeriod: NonNullable<ServiceBilling['period']>
+  billingAmount: string
+  billingCurrency: string
+  billingNextDate: string
+  billingLastRenewed: string
+}
+
+type NodeEditAction =
+  | { type: 'SET_FIELD'; field: keyof NodeEditFormState; value: string }
+  | { type: 'INIT'; data: NodeEditPanelProps['initialData'] }
+
+function nodeEditReducer(state: NodeEditFormState, action: NodeEditAction): NodeEditFormState {
+  switch (action.type) {
+    case 'INIT':
+      return {
+        label: action.data.label,
+        nodeType: action.data.nodeType,
+        category: action.data.category ?? 'other',
+        plan: action.data.plan ?? 'unknown',
+        confidence: action.data.confidence ?? 'high',
+        url: action.data.url ?? '',
+        note: action.data.note ?? '',
+        billingType: action.data.billing?.type ?? 'manual',
+        billingPeriod: action.data.billing?.period ?? 'monthly',
+        billingAmount: action.data.billing?.amount?.toString() ?? '',
+        billingCurrency: action.data.billing?.currency ?? 'USD',
+        billingNextDate: action.data.billing?.nextDate ?? '',
+        billingLastRenewed: action.data.billing?.lastRenewed ?? '',
+      }
+    case 'SET_FIELD':
+      return { ...state, [action.field]: action.value }
+    default:
+      return state
+  }
+}
 
 interface NodeEditPanelProps {
   x: number
@@ -45,21 +90,24 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [label, setLabel] = useState(initialData.label)
-  const [nodeType, setNodeType] = useState<FlowNode['type']>(initialData.nodeType)
-  const [category, setCategory] = useState<ServiceCategory>(initialData.category ?? 'other')
-  const [plan, setPlan] = useState(initialData.plan ?? 'unknown')
-  const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>(initialData.confidence ?? 'high')
-  const [url, setUrl] = useState(initialData.url ?? '')
-  const [note, setNote] = useState(initialData.note ?? '')
+  const [state, dispatch] = useReducer(nodeEditReducer, initialData, (data) => ({
+    label: data.label,
+    nodeType: data.nodeType,
+    category: data.category ?? 'other',
+    plan: data.plan ?? 'unknown',
+    confidence: data.confidence ?? 'high',
+    url: data.url ?? '',
+    note: data.note ?? '',
+    billingType: data.billing?.type ?? 'manual',
+    billingPeriod: data.billing?.period ?? 'monthly',
+    billingAmount: data.billing?.amount?.toString() ?? '',
+    billingCurrency: data.billing?.currency ?? 'USD',
+    billingNextDate: data.billing?.nextDate ?? '',
+    billingLastRenewed: data.billing?.lastRenewed ?? '',
+  }))
 
-  // Billing state
-  const [billingType, setBillingType] = useState<ServiceBilling['type']>(initialData.billing?.type ?? 'manual')
-  const [billingPeriod, setBillingPeriod] = useState<NonNullable<ServiceBilling['period']>>(initialData.billing?.period ?? 'monthly')
-  const [billingAmount, setBillingAmount] = useState(initialData.billing?.amount?.toString() ?? '')
-  const [billingCurrency, setBillingCurrency] = useState(initialData.billing?.currency ?? 'USD')
-  const [billingNextDate, setBillingNextDate] = useState(initialData.billing?.nextDate ?? '')
-  const [billingLastRenewed, setBillingLastRenewed] = useState(initialData.billing?.lastRenewed ?? '')
+  const { label, nodeType, category, plan, confidence, url, note, billingType, billingPeriod, billingAmount, billingCurrency, billingNextDate, billingLastRenewed } = state
+  const setField = (field: keyof NodeEditFormState, value: string) => dispatch({ type: 'SET_FIELD', field, value })
 
   const ref = useRef<HTMLDivElement>(null)
   const [clampedPos, setClampedPos] = useState({ left: x, top: y })
@@ -148,7 +196,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
           <input
             className={fieldClass}
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={(e) => setField('label', e.target.value)}
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
           />
@@ -157,13 +205,13 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
         <div className="flex gap-2">
           <div className="flex-1">
             <label className={labelClass}>Type</label>
-            <select className={fieldClass} value={nodeType} onChange={(e) => setNodeType(e.target.value as FlowNode['type'])}>
+            <select className={fieldClass} value={nodeType} onChange={(e) => setField('nodeType', e.target.value)}>
               {NODE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div className="flex-1">
             <label className={labelClass}>Category</label>
-            <select className={fieldClass} value={category} onChange={(e) => setCategory(e.target.value as ServiceCategory)}>
+            <select className={fieldClass} value={category} onChange={(e) => setField('category', e.target.value)}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -172,13 +220,13 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
         <div className="flex gap-2">
           <div className="flex-1">
             <label className={labelClass}>Plan</label>
-            <select className={fieldClass} value={plan} onChange={(e) => setPlan(e.target.value)}>
+            <select className={fieldClass} value={plan} onChange={(e) => setField('plan', e.target.value)}>
               {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           <div className="flex-1">
             <label className={labelClass}>Confidence</label>
-            <select className={fieldClass} value={confidence} onChange={(e) => setConfidence(e.target.value as 'high' | 'medium' | 'low')}>
+            <select className={fieldClass} value={confidence} onChange={(e) => setField('confidence', e.target.value)}>
               {CONFIDENCES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -186,7 +234,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
 
         <div>
           <label className={labelClass}>URL</label>
-          <input className={fieldClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+          <input className={fieldClass} value={url} onChange={(e) => setField('url', e.target.value)} placeholder="https://..." />
         </div>
 
         {/* Billing section */}
@@ -196,14 +244,14 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
           <div className="flex gap-2">
             <div className="flex-1">
               <label className={labelClass}>Type</label>
-              <select className={fieldClass} value={billingType} onChange={(e) => setBillingType(e.target.value as ServiceBilling['type'])}>
+              <select className={fieldClass} value={billingType} onChange={(e) => setField('billingType', e.target.value)}>
                 {BILLING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             {showBillingFields && (
               <div className="flex-1">
                 <label className={labelClass}>Period</label>
-                <select className={fieldClass} value={billingPeriod} onChange={(e) => setBillingPeriod(e.target.value as NonNullable<ServiceBilling['period']>)}>
+                <select className={fieldClass} value={billingPeriod} onChange={(e) => setField('billingPeriod', e.target.value)}>
                   {BILLING_PERIODS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
@@ -226,7 +274,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
                   className={fieldClass}
                   type="number"
                   value={billingAmount}
-                  onChange={(e) => setBillingAmount(e.target.value)}
+                  onChange={(e) => setField('billingAmount', e.target.value)}
                   placeholder="0"
                   min="0"
                   step="0.01"
@@ -234,7 +282,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
               </div>
               <div className="w-16">
                 <label className={labelClass}>Cur.</label>
-                <select className={fieldClass} value={billingCurrency} onChange={(e) => setBillingCurrency(e.target.value)}>
+                <select className={fieldClass} value={billingCurrency} onChange={(e) => setField('billingCurrency', e.target.value)}>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                 </select>
@@ -245,7 +293,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
           {showRenewalFields && (
             <div className="mt-1.5">
               <label className={labelClass}>Next renewal</label>
-              <input className={fieldClass} type="date" value={billingNextDate} onChange={(e) => setBillingNextDate(e.target.value)} />
+              <input className={fieldClass} type="date" value={billingNextDate} onChange={(e) => setField('billingNextDate', e.target.value)} />
             </div>
           )}
 
@@ -253,7 +301,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
             <div className="mt-1.5 space-y-1.5">
               <div>
                 <label className={labelClass}>Last renewed</label>
-                <input className={fieldClass} type="date" value={billingLastRenewed} onChange={(e) => setBillingLastRenewed(e.target.value)} />
+                <input className={fieldClass} type="date" value={billingLastRenewed} onChange={(e) => setField('billingLastRenewed', e.target.value)} />
               </div>
               <button
                 type="button"
@@ -266,8 +314,8 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
                     nextDate: billingNextDate || undefined,
                     lastRenewed: billingLastRenewed || undefined,
                   })
-                  setBillingLastRenewed(updated.lastRenewed ?? '')
-                  setBillingNextDate(updated.nextDate ?? '')
+                  setField('billingLastRenewed', updated.lastRenewed ?? '')
+                  setField('billingNextDate', updated.nextDate ?? '')
                 }}
                 className="w-full py-1 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-success)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-[var(--color-bg-primary)] transition-colors"
               >
@@ -282,7 +330,7 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
           <textarea
             className={`${fieldClass} resize-none`}
             value={note}
-            onChange={(e) => setNote(e.target.value.slice(0, 200))}
+            onChange={(e) => setField('note', e.target.value.slice(0, 200))}
             rows={2}
             maxLength={200}
             placeholder="Max 200 characters"

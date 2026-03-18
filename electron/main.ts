@@ -11,6 +11,7 @@ import { calculateHealthScore } from '../src/utils/healthScore'
 import { testConnection, PRESET_PROVIDERS } from './ai/provider'
 import { SENSITIVE_FIELDS } from '../shared/types'
 import { schemas, validate } from './validation'
+import { rateLimiter } from './ipcRateLimiter'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
 // --- Global error handlers (stability) ---
@@ -32,10 +33,10 @@ process.on('uncaughtException', (error) => {
 // electron-store with encryption — Conf's type declarations require moduleResolution: node16+
 // which is incompatible with our tsconfig. We type with the methods we actually use.
 interface TypedStore {
-  store: Record<string, any>
-  get(key: string): any
-  set(key: string, value: any): void
-  set(object: Record<string, any>): void
+  store: Record<string, unknown>
+  get(key: string): unknown
+  set(key: string, value: unknown): void
+  set(object: Record<string, unknown>): void
   delete(key: string): void
 }
 
@@ -167,7 +168,7 @@ function migrateLegacyEncryption(): void {
       }
     }
     // Also migrate aiSettings apiKey if present
-    const aiSettings = store.get('aiSettings') as any
+    const aiSettings = store.get('aiSettings') as AISettings | undefined
     if (aiSettings?.provider?.apiKey && typeof aiSettings.provider.apiKey === 'string') {
       try {
         safeStorage.decryptString(Buffer.from(aiSettings.provider.apiKey, 'base64'))
@@ -525,6 +526,9 @@ ipcMain.handle(
     _event,
     args,
   ) => {
+    if (!rateLimiter.isAllowed('save-config', { maxCalls: 10, windowMs: 1000 })) {
+      return // throttled
+    }
     const validated = validate(schemas.saveConfig, args, 'save-config')
     const repoPath = validated.repoPath
     const config = validated.config as unknown as UserConfig
@@ -557,6 +561,7 @@ ipcMain.handle('get-ai-settings', async () => {
 })
 
 ipcMain.handle('set-ai-settings', async (_event, args) => {
+  if (!rateLimiter.isAllowed('set-ai-settings', { maxCalls: 2, windowMs: 1000 })) return
   const { settings } = validate(schemas.setAISettings, typeof args === 'object' && args !== null && 'settings' in args ? args : { settings: args }, 'set-ai-settings')
   // Encrypt API key with safeStorage before storing
   const toStore = { ...settings }
@@ -753,6 +758,9 @@ ipcMain.handle('save-score-entry', async (_event, args) => {
 // --- Vulnerability Scanning ---
 
 ipcMain.handle('scan-vulnerabilities', async (_event, args) => {
+  if (!rateLimiter.isAllowed('scan-vulnerabilities', { maxCalls: 1, windowMs: 30000 })) {
+    return [] // throttled
+  }
   const { deps } = validate(schemas.scanVulnerabilities, Array.isArray(args) ? { deps: args } : args, 'scan-vulnerabilities')
   return scanVulnerabilities(deps as import('./types').Dependency[])
 })

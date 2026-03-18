@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.0 | Last updated: 2026-03-18 | Tests: 481 across 35 suites
+> Version: v0.10.1 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -668,7 +668,7 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 15. Testing
 
-481 tests across 35 suites (Vitest + @testing-library/react + jsdom). Coverage thresholds enforced in CI (60/60/50/60 for statements/functions/branches/lines).
+487 tests across 36 suites (Vitest + @testing-library/react + jsdom). Coverage thresholds enforced in CI (60/60/50/60 for statements/functions/branches/lines).
 
 | Suite | Count | Suite | Count |
 |---|---|---|---|
@@ -687,15 +687,24 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 | Encryption | 8 | scoreHistory | 8 |
 | scanDiff | 7 | ContextMenu | 7 |
 | DiscardedPanel | 7 | Pipeline | 7 |
-| Dagre Cache | 6 | PanelErrorBoundary | 5 |
-| AsyncMutex | 5 | Pipeline Integration | 4 |
-| daysUntil | 3 | | |
+| Dagre Cache | 6 | IPC RateLimiter | 6 |
+| PanelErrorBoundary | 5 | AsyncMutex | 5 |
+| Pipeline Integration | 4 | daysUntil | 3 |
 
 ---
 
 ## 16. Version History
 
-### v0.10.0 (current)
+### v0.10.1 (current)
+- **Type safety**: Reduced `any` instances from 24 to 17 — typed TypedStore interface, vulnScanner response types, IPC event types. Remaining annotated with justification.
+- **Performance**: NodeEditPanel refactored from 11 `useState` to `useReducer` — single state update per action
+- **Performance**: `ServiceCard` wrapped in `React.memo` with shallow prop comparison — skips re-render when service data unchanged
+- **Performance**: `historyStore.pushSnapshot` skips duplicate snapshots (reference equality check)
+- **Security**: IPC rate limiter (`electron/ipcRateLimiter.ts`) — save-config 10/s, set-ai-settings 2/s, scan-vulnerabilities 1/30s
+- **DX**: CHANGELOG.md automation via `conventional-changelog-cli` (`npm run changelog`)
+- 487 tests across 36 suites (+6 IPC RateLimiter tests)
+
+### v0.10.0
 - **Architecture**: 4 specialized selector hooks (`analysisStore`, `servicesStore`, `configStore`, `uiStore`) for optimized re-renders — components can import only the state slice they need
 - **Architecture**: Zero dynamic `require()` in `src/store/` — all cross-store communication via registered callbacks
 - **Performance**: ServicesPanel virtualized with `@tanstack/react-virtual` — handles 100+ services without lag

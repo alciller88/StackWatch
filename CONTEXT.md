@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.0
+# CONTEXT.md — StackWatch v0.10.1
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -19,7 +19,7 @@
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
 | Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
 | Validation   | `zod` schemas on all IPC handlers                                |
-| Tests        | 481 tests, 35 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 487 tests, 36 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -159,6 +159,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 |-----------------------------------------|----------------------------------------------------------------------------------|
 | `electron/main.ts`                      | Entry, IPC handlers, safeStorage encryption, CSP, window management, global error handlers |
 | `electron/validation.ts`                | Zod schemas + validate() helper for all IPC handler arguments                    |
+| `electron/ipcRateLimiter.ts`            | Rate limiter for high-frequency IPC channels (save-config, scan-vulnerabilities) |
 | `electron/preload.ts`                   | IPC bridge via contextBridge (StackWatchAPI)                                      |
 | `electron/analyzers/index.ts`           | Pipeline orchestrator. Monorepo-aware. Emits scan-progress. AbortSignal support. |
 | `electron/analyzers/extractor.ts`       | Evidence extraction: env vars, imports, URLs, configs, deps                      |
@@ -224,7 +225,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (481 tests, 35 suites)                      |
+| `npm test`           | vitest (487 tests, 36 suites)                      |
 | `npm run test:coverage` | vitest with v8 coverage (thresholds: 60/60/50/60) |
 
 ### Release flow
@@ -254,7 +255,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-481 tests across 35 suites.
+487 tests across 36 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -273,8 +274,9 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | scoreHistory            | 8     | ContextMenu            | 7     |
 | scanDiff                | 7     | Pipeline               | 7     |
 | DiscardedPanel          | 7     | Dagre Cache            | 6     |
-| PanelErrorBoundary      | 5     | AsyncMutex             | 5     |
-| Pipeline Integration    | 4     | daysUntil              | 3     |
+| IPC RateLimiter         | 6     | PanelErrorBoundary     | 5     |
+| AsyncMutex              | 5     | Pipeline Integration   | 4     |
+| daysUntil               | 3     |                        |       |
 
 ---
 
@@ -321,6 +323,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No assuming AI is available                  | Always fallback to heuristics                  |
 | No using legacy cost/renewalDate fields      | Use `service.billing` (ServiceBilling). Legacy fields removed. |
 | No skipping tsbuildinfo cleanup              | Stale cache breaks builds                      |
+| No `: any` without justification             | Use typed alternatives or annotate with eslint-disable comment |
 
 ---
 

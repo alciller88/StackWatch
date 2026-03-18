@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { useDialogStore } from '../../store/dialogStore';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -61,15 +61,15 @@ export const ServicesPanel: React.FC = () => {
     });
   }, [services, search, activeCategory, activePlan, activeActivity]);
 
-  const handleEdit = (service: Service) => {
+  const handleEdit = useCallback((service: Service) => {
     setEditingService(service);
     setShowAddForm(true);
-  };
+  }, []);
 
-  const handleCloseForm = () => {
+  const handleCloseForm = useCallback(() => {
     setShowAddForm(false);
     setEditingService(null);
-  };
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col min-h-0">

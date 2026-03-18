@@ -73,7 +73,7 @@ interface ServiceCardProps {
   onEdit?: (service: Service) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEdit }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function ServiceCard({ service, context, onEdit }) {
   const nextDate = service.billing?.nextDate;
   const days = nextDate ? daysUntil(nextDate) : null;
   const confidence = service.confidence ?? 'high';
@@ -372,4 +372,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, context, onEd
       )}
     </div>
   );
-};
+}, (prev, next) => {
+  return (
+    prev.service.id === next.service.id &&
+    prev.service.name === next.service.name &&
+    prev.service.plan === next.service.plan &&
+    prev.service.confidence === next.service.confidence &&
+    prev.service.needsReview === next.service.needsReview &&
+    prev.service.zombieStatus === next.service.zombieStatus &&
+    prev.service.billing?.nextDate === next.service.billing?.nextDate &&
+    prev.service.owner === next.service.owner &&
+    prev.service.notes === next.service.notes &&
+    prev.context === next.context &&
+    prev.onEdit === next.onEdit
+  )
+});

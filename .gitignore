@@ -11,3 +11,4 @@ out/
 *.tsbuildinfo
 .claude/
 stackwatch.config.json
+coverage/

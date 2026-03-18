@@ -13,7 +13,7 @@ const ecosystemMap: Record<string, string> = {
   dart: 'Pub',
 }
 
-function mapSeverity(scores: any[]): Vulnerability['severity'] {
+function mapSeverity(scores: Array<{ score?: number; severity?: string }>): Vulnerability['severity'] {
   if (!scores || scores.length === 0) return 'unknown'
   for (const s of scores) {
     const score = s.score ?? 0
@@ -82,12 +82,13 @@ export async function scanVulnerabilities(
           ecosystem: dep.ecosystem,
           name: dep.name,
           version: dep.version,
-          vulnerabilities: vulns.slice(0, 5).map((v: any) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OSV.dev API response is untyped
+          vulnerabilities: vulns.slice(0, 5).map((v: Record<string, any>) => ({
             id: v.id ?? 'unknown',
             summary: (v.summary ?? v.details ?? 'No description').slice(0, 200),
             severity: mapSeverity(v.severity ?? []),
             aliases: v.aliases ?? [],
-            fixedVersion: v.affected?.[0]?.ranges?.[0]?.events?.find((e: any) => e.fixed)?.fixed,
+            fixedVersion: v.affected?.[0]?.ranges?.[0]?.events?.find((e: Record<string, unknown>) => e.fixed)?.fixed as string | undefined,
             url: v.references?.[0]?.url ?? `https://osv.dev/vulnerability/${v.id}`,
           })),
         })
