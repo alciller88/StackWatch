@@ -284,7 +284,7 @@ function encryptConfig(config: UserConfig): UserConfig {
     for (const field of SENSITIVE_FIELDS) {
       const value = svc[field as keyof typeof svc]
       if (typeof value === 'string' && value && !value.startsWith('$encrypted:')) {
-        ;(svc as Record<string, unknown>)[field] = encryptServiceField(svc.id, field, value)
+        ;(svc as unknown as Record<string, unknown>)[field] = encryptServiceField(svc.id, field, value)
       }
     }
   }
@@ -299,7 +299,7 @@ function decryptConfig(config: UserConfig): UserConfig {
       if (typeof value === 'string' && value.startsWith('$encrypted:')) {
         const real = decryptServiceField(value)
         if (real !== undefined) {
-          ;(svc as Record<string, unknown>)[field] = real
+          ;(svc as unknown as Record<string, unknown>)[field] = real
         }
       }
     }
