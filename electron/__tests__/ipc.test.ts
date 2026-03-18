@@ -461,7 +461,7 @@ describe('IPC Handlers', () => {
       const { dialog } = await import('electron')
       ;(dialog.showSaveDialog as any).mockResolvedValue({ filePath: undefined })
       const handler = getHandler('export-html')
-      const result = await handler(fakeEvent, { data: { projectName: 'Test', services: [], dependencies: [], flowNodes: [], flowEdges: [] } })
+      const result = await handler(fakeEvent, { data: { projectName: 'Test', services: [], dependencies: [], flowNodes: [], flowEdges: [], generatedAt: new Date().toISOString(), stackScore: { score: 100, passingChecks: 0, totalChecks: 0, checks: [] } } })
       expect(result).toBe(false)
     })
   })

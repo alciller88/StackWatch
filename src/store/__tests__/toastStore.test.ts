@@ -43,6 +43,7 @@ describe('toastStore', () => {
 
   it('removes toast by id', () => {
     useToastStore.getState().addToast('A', 'info')
+    vi.advanceTimersByTime(1) // ensure different Date.now() for unique IDs
     useToastStore.getState().addToast('B', 'info')
     const id = useToastStore.getState().toasts[0]!.id
     useToastStore.getState().removeToast(id)
