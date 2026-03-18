@@ -3,6 +3,26 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.10.3](https://github.com/alciller88/StackWatch/compare/v0.10.2...v0.10.3) (2026-03-18)
+
+### Fixed
+- APP_VERSION now reads from package.json via Vite `define` instead of hardcoded constant — UI always shows correct version
+- Zod validation added to `check-link-status` IPC handler (was accepting unvalidated UserConfig objects)
+- safeStorage unavailability now shows warning dialog at startup and banner in Settings instead of silent `console.warn`
+- `NodeEditPanel` changed `aria-modal` from `"false"` to `"true"`, added focus trap
+
+### Security
+- All 27 IPC handlers now validated or documented as no-args — no unvalidated input paths remain
+- `.passthrough()` usage in Zod schemas documented with justification comments
+- `get-encryption-status` IPC channel exposes safeStorage availability to renderer for UI warnings
+
+### Accessibility
+- `ScanProgress`: added `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-label`
+- `DepsPanel`: table rows now keyboard navigable with `tabIndex`, `onKeyDown` (Enter/Space), `role="row"`, `aria-label`
+- `NodeEditPanel`: `aria-modal="true"`, focus trap cycling Tab/Shift+Tab within dialog
+
+---
+
 ## [0.10.2](https://github.com/alciller88/StackWatch/compare/v0.10.1...v0.10.2) (2026-03-18)
 
 ### Bug Fixes

@@ -18,8 +18,8 @@ export const schemas = {
         category: z.string(),
         plan: z.enum(['free', 'paid', 'trial', 'unknown']),
         source: z.enum(['inferred', 'manual']),
-      }).passthrough()),
-    }).passthrough(),
+      }).passthrough()), // .passthrough() required — services have many optional fields (billing, confidence, urls, etc.)
+    }).passthrough(), // .passthrough() required — UserConfig has many optional fields (graph, budget, source, billing, etc.)
   }),
   loadConfig: z.object({
     repoPath: z.string().min(1),
@@ -80,7 +80,7 @@ export const schemas = {
       category: z.string(),
       plan: z.string(),
       source: z.string(),
-    }).passthrough()),
+    }).passthrough()), // .passthrough() required — services have many optional fields (billing, confidence, urls, etc.)
   }),
   testAIConnection: z.object({
     provider: z.object({
@@ -102,7 +102,19 @@ export const schemas = {
   exportHtml: z.object({
     data: z.object({
       projectName: z.string(),
-    }).passthrough(),
+    }).passthrough(), // .passthrough() required — HtmlExportData has many optional fields (services, deps, scores, etc.)
+  }),
+  checkLinkStatus: z.object({
+    config: z.object({
+      version: z.string(),
+      services: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        category: z.string(),
+        plan: z.enum(['free', 'paid', 'trial', 'unknown']),
+        source: z.enum(['inferred', 'manual']),
+      })).max(1000),
+    }).passthrough(), // .passthrough() required — UserConfig has many optional fields (graph, budget, source, billing, etc.)
   }),
 }
 

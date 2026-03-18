@@ -360,4 +360,5 @@ export interface StackWatchAPI {
   windowMaximize(): void;
   windowClose(): void;
   windowIsMaximized(): Promise<boolean>;
+  getEncryptionStatus(): Promise<boolean>;
 }

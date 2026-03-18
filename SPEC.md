@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.10.1 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
+> Version: v0.10.3 | Last updated: 2026-03-18 | Tests: 487 across 36 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -55,7 +55,7 @@ Modern projects depend on dozens of external services spread across multiple acc
 ```
 ┌─────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)             │
-│  ├── IPC handlers (26 channels)             │
+│  ├── IPC handlers (27 channels)             │
 │  ├── TypedStore<StoreSchema> (encrypted)    │
 │  ├── Analyzers (pure Node.js)               │
 │  ├── AI client (OpenAI-compatible)          │
@@ -586,7 +586,7 @@ interface StackWatchAPI {
 
 | Area | Implementation |
 |---|---|
-| Encryption | `safeStorage` delegates to OS keychain (macOS Keychain, Windows DPAPI, Linux libsecret/kwallet). Fallback to unencrypted storage with console warning if keychain unavailable. Auto-migration from legacy deterministic key on startup. |
+| Encryption | `safeStorage` delegates to OS keychain (macOS Keychain, Windows DPAPI, Linux libsecret/kwallet). Fallback to unencrypted storage with **startup warning dialog and Settings banner** if keychain unavailable. Auto-migration from legacy deterministic key on startup. |
 | IPC validation | `zod` schemas in `electron/validation.ts` validate all IPC handler arguments before any logic. Rejects malformed inputs with structured error messages. |
 | CSP | `Content-Security-Policy` via `session.webRequest.onHeadersReceived` (production only) |
 | External URLs | IPC `open-external-url` → zod-validated (http/https only) → `shell.openExternal()` |
@@ -695,7 +695,14 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.10.1 (current)
+### v0.10.3 (current)
+- **Fix**: APP_VERSION now injected from package.json via Vite `define` — no more hardcoded version constant
+- **Security**: Zod validation added to `check-link-status` IPC handler; all 27 channels now validated or documented as no-args
+- **Security**: safeStorage unavailability shows startup warning dialog + Settings banner (was silent `console.warn`)
+- **Accessibility**: `ScanProgress` `role="progressbar"` with ARIA attributes; `DepsPanel` keyboard-navigable rows; `NodeEditPanel` `aria-modal="true"` with focus trap
+- 487 tests across 36 suites
+
+### v0.10.1
 - **Type safety**: Reduced `any` instances from 24 to 17 — typed TypedStore interface, vulnScanner response types, IPC event types. Remaining annotated with justification.
 - **Performance**: NodeEditPanel refactored from 11 `useState` to `useReducer` — single state update per action
 - **Performance**: `ServiceCard` wrapped in `React.memo` with shallow prop comparison — skips re-render when service data unchanged

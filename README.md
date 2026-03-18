@@ -3,7 +3,7 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.10.1-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.10.3-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
 [![Tests](https://img.shields.io/badge/tests-487%20passing-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -37,6 +37,8 @@ npm run dev
 ```
 
 Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The Electron window opens automatically. WSL2 is detected and handled -- no manual setup needed.
+
+> **Linux users:** StackWatch requires `libsecret` or `kwallet` for credential encryption. Without it, credentials are stored unencrypted and a warning is shown at startup.
 
 ### Your First Scan
 

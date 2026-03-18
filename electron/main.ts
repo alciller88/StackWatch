@@ -136,11 +136,22 @@ app.whenReady().then(() => {
   // Migrate from legacy deterministic encryption to safeStorage
   migrateLegacyEncryption()
 
-  if (!safeStorage.isEncryptionAvailable()) {
-    console.warn('[Main] safeStorage is not available — sensitive values will be stored without encryption. Install a keychain (libsecret/kwallet) on Linux.')
-  }
-
   createWindow()
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.warn('[Main] safeStorage is not available — sensitive values will be stored without encryption.')
+    dialog.showMessageBox(mainWindow!, {
+      type: 'warning',
+      title: 'Encryption unavailable',
+      message: 'StackWatch cannot encrypt stored credentials on this system.',
+      detail: 'GitHub tokens and AI API keys will be stored without encryption. This is common on Linux systems without a keychain service.\n\nTo enable encryption, install and configure libsecret or kwallet.',
+      buttons: ['Continue', 'Quit'],
+      defaultId: 0,
+      cancelId: 1,
+    }).then(({ response }) => {
+      if (response === 1) app.quit()
+    })
+  }
 })
 
 function migrateLegacyEncryption(): void {
@@ -203,9 +214,11 @@ ipcMain.on('window-maximize', () => {
 })
 ipcMain.on('window-close', () => mainWindow?.close())
 ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized() ?? false)
+ipcMain.handle('get-encryption-status', () => safeStorage.isEncryptionAvailable())
 
 // --- Scan Cancellation ---
 
+// No arguments — no validation needed
 ipcMain.on('cancel-scan', () => {
   if (scanAbortController) {
     scanAbortController.abort()
@@ -576,12 +589,14 @@ ipcMain.handle('test-ai-connection', async (_event, args) => {
   return testConnection(provider as AIProvider)
 })
 
+// No arguments — no validation needed
 ipcMain.handle('get-ai-presets', async () => {
   return PRESET_PROVIDERS
 })
 
 // --- Import / Export ---
 
+// No arguments — validation on returned content done by renderer
 ipcMain.handle('import-config-standalone', async () => {
   if (!mainWindow) return null
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
@@ -679,10 +694,12 @@ async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {
   return 'unknown'
 }
 
-ipcMain.handle('check-link-status', async (_event, config) => {
+ipcMain.handle('check-link-status', async (_event, args) => {
+  const { config } = validate(schemas.checkLinkStatus, typeof args === 'object' && args !== null && 'config' in args ? args : { config: args }, 'check-link-status')
   return checkLinkStatus(config as UserConfig)
 })
 
+// No arguments — no validation needed
 ipcMain.handle('relink-local', async () => {
   if (!mainWindow) return null
   const result = await dialog.showOpenDialog(mainWindow, {

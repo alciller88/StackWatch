@@ -30,6 +30,7 @@ export const Settings: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [badgeCopied, setBadgeCopied] = useState(false);
+  const [encryptionAvailable, setEncryptionAvailable] = useState(true);
 
   useEffect(() => {
     loadAISettings();
@@ -37,6 +38,10 @@ export const Settings: React.FC = () => {
       window.stackwatch.getAIPresets().then(setPresets);
     }
   }, [loadAISettings]);
+
+  useEffect(() => {
+    window.stackwatch?.getEncryptionStatus?.().then(status => setEncryptionAvailable(status))
+  }, []);
 
   useEffect(() => {
     if (aiSettings) {
@@ -103,6 +108,18 @@ export const Settings: React.FC = () => {
   return (
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-2xl mx-auto space-y-8">
+        {!encryptionAvailable && (
+          <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)', background: 'rgba(239, 68, 68, 0.08)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-[var(--color-danger)] font-mono text-[11px] uppercase tracking-widest font-medium">
+                Credentials stored without encryption
+              </span>
+            </div>
+            <p className="font-mono text-[10px] text-[var(--color-text-muted)] mt-1">
+              Install libsecret or kwallet to enable credential encryption on this system.
+            </p>
+          </div>
+        )}
         <div>
           <h2 className="font-mono uppercase tracking-widest text-sm font-medium text-[var(--color-text-primary)] mb-1">Settings</h2>
           <p className="font-mono text-[11px] text-[var(--color-text-muted)]">Configure optional AI enhancement for service detection.</p>

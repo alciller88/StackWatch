@@ -33,6 +33,11 @@ export function ScanProgress() {
         {/* Progress bar */}
         <div
           className="relative h-6 overflow-hidden"
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Scan progress: ${phase}`}
           style={{
             border: '1px solid var(--color-border)',
             borderRadius: 0,
@@ -56,6 +61,7 @@ export function ScanProgress() {
         <div
           className="text-center font-mono text-sm"
           style={{ color: 'var(--color-text-primary)', fontSize: '14px' }}
+          aria-live="polite"
         >
           {phase}
           {phase !== 'Done' && (

@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.10.1
+# CONTEXT.md — StackWatch v0.10.3
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -89,7 +89,7 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 ```
 ┌──────────────────────────────────────────────┐
 │ Main Process (electron/main.ts)              │
-│  ├── IPC handlers (25 channels)              │
+│  ├── IPC handlers (27 channels, all validated) │
 │  ├── electron-store (typed: Store<StoreSchema>) │
 │  ├── Analyzers (pure Node.js)                │
 │  ├── AI client (OpenAI-compatible)           │
@@ -138,7 +138,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 | Area              | Implementation                                                                                      |
 |-------------------|-----------------------------------------------------------------------------------------------------|
-| Encryption        | `safeStorage` (OS keychain: macOS Keychain, Windows DPAPI, Linux libsecret/kwallet). Fallback to unencrypted with console warning if unavailable. Auto-migration from legacy deterministic key. |
+| Encryption        | `safeStorage` (OS keychain: macOS Keychain, Windows DPAPI, Linux libsecret/kwallet). Fallback to unencrypted with **startup warning dialog + Settings banner** if unavailable. `get-encryption-status` IPC exposes availability to renderer. Auto-migration from legacy deterministic key. |
 | IPC validation    | `zod` schemas validate all IPC handler arguments in `electron/validation.ts` before any logic runs. |
 | CSP               | Production-only via `session.webRequest.onHeadersReceived`. Disabled in dev for Vite HMR.           |
 | External URLs     | All via IPC `open-external-url` → zod-validated (http/https only) → `shell.openExternal()`.         |
@@ -324,6 +324,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No using legacy cost/renewalDate fields      | Use `service.billing` (ServiceBilling). Legacy fields removed. |
 | No skipping tsbuildinfo cleanup              | Stale cache breaks builds                      |
 | No `: any` without justification             | Use typed alternatives or annotate with eslint-disable comment |
+| No `mutex.acquire()` without try/finally     | Prevents deadlock if operation throws                          |
+| No `.passthrough()` without justification comment | Document why extra fields are needed in Zod schemas       |
 
 ---
 

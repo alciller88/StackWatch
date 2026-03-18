@@ -176,9 +176,26 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
     <div
       ref={ref}
       role="dialog"
-      aria-modal="false"
+      aria-modal="true"
       aria-label="Edit node"
       className="absolute z-50 w-64 p-3 font-mono text-[11px]"
+      onKeyDown={(e) => {
+        if (e.key === 'Tab' && ref.current) {
+          const focusable = ref.current.querySelectorAll<HTMLElement>(
+            'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
+          )
+          if (focusable.length === 0) return
+          const first = focusable[0]
+          const last = focusable[focusable.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }}
       style={{
         left: clampedPos.left,
         top: clampedPos.top,

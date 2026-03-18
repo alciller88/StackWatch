@@ -129,6 +129,15 @@ export const DepsPanel: React.FC = () => {
       className="border-b cursor-pointer transition-colors hover:bg-[var(--color-bg-hover)]"
       style={{ borderColor: 'rgba(30,36,48,0.3)' }}
       onClick={() => openExternal(dep)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          openExternal(dep)
+        }
+      }}
+      tabIndex={0}
+      role="row"
+      aria-label={`${dep.name} ${dep.version} — open on ${dep.ecosystem}`}
       title={`Open ${dep.name} on ${dep.ecosystem}`}
     >
       <td className="px-4 py-2.5 font-mono text-[12px] text-[var(--color-text-primary)]">
