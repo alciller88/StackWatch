@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.9.0
+# CONTEXT.md — StackWatch v0.9.1
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -19,7 +19,7 @@
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
 | Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
 | Validation   | `zod` schemas on all IPC handlers                                |
-| Tests        | 412 tests, 29 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 470 tests, 33 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -219,7 +219,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (412 tests, 29 suites)                      |
+| `npm test`           | vitest (470 tests, 33 suites)                      |
+| `npm run test:coverage` | vitest with v8 coverage (thresholds: 60/60/50/60) |
 
 ### Release flow
 
@@ -248,20 +249,22 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-412 tests across 29 suites.
+470 tests across 33 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
-| Heuristic               | 32    | htmlExporter           | 13    |
-| graphStore              | 27    | TopBar                 | 13    |
-| vulnScanner             | 27    | Deep Analyzer (runDeep)| 13    |
-| Extractor               | 26    | zombieDetector         | 12    |
-| Deep Analyzer           | 24    | monorepo               | 12    |
-| Deduplicator            | 23    | historyStore           | 12    |
-| useStore                | 19    | ServiceCard            | 12    |
-| IPC Validation          | 18    | healthScore            | 11    |
-| Flow inference          | 17    | alternativeSuggester   | 10    |
-| badge                   | 17    | ScanProgress           | 9     |
+| Heuristic               | 32    | IPC Handlers           | 22    |
+| graphStore              | 27    | GitHub Auth            | 20    |
+| vulnScanner             | 27    | useStore               | 19    |
+| Extractor               | 26    | IPC Validation         | 18    |
+| Deep Analyzer           | 24    | Concurrency            | 16    |
+| Deduplicator            | 23    | Flow inference         | 17    |
+| badge                   | 17    | htmlExporter           | 13    |
+| TopBar                  | 13    | Deep Analyzer (runDeep)| 13    |
+| zombieDetector          | 12    | monorepo               | 12    |
+| historyStore            | 12    | ServiceCard            | 12    |
+| healthScore             | 11    | alternativeSuggester   | 10    |
+| ScanProgress            | 9     | Encryption             | 8     |
 | scoreHistory            | 8     | ContextMenu            | 7     |
 | scanDiff                | 7     | Pipeline               | 7     |
 | DiscardedPanel          | 7     | AsyncMutex             | 5     |

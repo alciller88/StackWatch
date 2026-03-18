@@ -19,5 +19,26 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     globals: true,
     exclude: ['node_modules', 'dist', 'dist-electron', 'dist-cli'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 50,
+        statements: 60,
+      },
+      include: [
+        'electron/analyzers/**',
+        'electron/ai/**',
+        'electron/validation.ts',
+        'src/store/**',
+        'src/utils/**',
+      ],
+      exclude: [
+        'electron/main.ts',
+        'src/components/**',
+      ],
+    },
   },
 })

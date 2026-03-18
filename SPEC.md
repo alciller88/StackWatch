@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.9.0 | Last updated: 2026-03-18 | Tests: 412 across 29 suites
+> Version: v0.9.1 | Last updated: 2026-03-18 | Tests: 470 across 33 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -668,21 +668,23 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 15. Testing
 
-412 tests across 29 suites (Vitest + @testing-library/react + jsdom).
+470 tests across 33 suites (Vitest + @testing-library/react + jsdom). Coverage thresholds enforced in CI (60/60/50/60 for statements/functions/branches/lines).
 
 | Suite | Count | Suite | Count |
 |---|---|---|---|
 | Heuristic | 32 | graphStore | 27 |
 | vulnScanner | 27 | Extractor | 26 |
 | Deep Analyzer | 24 | Deduplicator | 23 |
+| IPC Handlers | 22 | GitHub Auth | 20 |
 | useStore | 19 | IPC Validation | 18 |
 | healthScore | 18 | Flow inference | 17 |
-| badge | 17 | TopBar | 13 |
-| htmlExporter | 13 | Deep Analyzer (runDeep) | 13 |
-| zombieDetector | 12 | monorepo | 12 |
-| historyStore | 12 | ServiceCard | 12 |
-| billing | 10 | alternativeSuggester | 10 |
-| ScanProgress | 9 | scoreHistory | 8 |
+| badge | 17 | Concurrency | 16 |
+| TopBar | 13 | htmlExporter | 13 |
+| Deep Analyzer (runDeep) | 13 | zombieDetector | 12 |
+| monorepo | 12 | historyStore | 12 |
+| ServiceCard | 12 | billing | 10 |
+| alternativeSuggester | 10 | ScanProgress | 9 |
+| Encryption | 8 | scoreHistory | 8 |
 | scanDiff | 7 | ContextMenu | 7 |
 | DiscardedPanel | 7 | Pipeline | 7 |
 | AsyncMutex | 5 | Pipeline Integration | 4 |
@@ -692,7 +694,15 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.9.0 (current)
+### v0.9.1 (current)
+- **Testing**: IPC handler tests (22 tests) — analyze-local, analyze-github, save/load-config, open-external-url, cancel-scan
+- **Testing**: Encryption round-trip tests (8 tests) — encrypt/decrypt, store corruption recovery, legacy migration
+- **Testing**: GitHub auth tests (20 tests) — repo format, token handling, rate limiting, error sanitization
+- **Testing**: Concurrency/race condition tests (16 tests) — mutex serialization, concurrent addService, deleteService consistency
+- **Testing**: Coverage thresholds in CI — v8 provider, 60/60/50/60 (statements/functions/branches/lines)
+- 470 tests across 33 suites (+58 new tests, +4 new suites)
+
+### v0.9.0
 - **Security**: `safeStorage` encryption replacing deterministic key derivation (delegates to OS keychain: DPAPI, Keychain, libsecret)
 - **Security**: `zod` schemas validate all IPC handler arguments before processing (`electron/validation.ts`)
 - **Security**: Race condition fixes — `AsyncMutex` for multi-store operations, registered callbacks replace dynamic `import()` in cross-store communication

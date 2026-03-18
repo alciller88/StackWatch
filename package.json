@@ -1,6 +1,6 @@
 {
   "name": "stackwatch",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Know your stack, own your stack. Visualize every service, dependency, and account your project depends on.",
   "main": "dist-electron/electron/main.js",
   "bin": {
@@ -20,6 +20,7 @@
     "build:prod": "tsc -p tsconfig.node.json && vite build",
     "build:dist": "npm run build:prod && electron-builder",
     "test": "vitest",
+    "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
     "lint": "eslint src/ electron/ shared/",
     "build:cli": "tsc -p cli/tsconfig.json",
@@ -54,6 +55,7 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.2.4",
     "concurrently": "^9.1.2",
     "electron": "^35.1.2",
     "electron-builder": "^26.8.1",
