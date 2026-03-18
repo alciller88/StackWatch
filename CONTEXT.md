@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.7.0
+# CONTEXT.md — StackWatch v0.8.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.

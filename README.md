@@ -3,7 +3,7 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.0-blue)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
 [![Tests](https://img.shields.io/badge/tests-389%20passing-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 

@@ -2,6 +2,8 @@
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
 > Version: v0.8.0 | Last updated: 2026-03-18 | Tests: 389 across 27 suites
+>
+> Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
 ---
 
