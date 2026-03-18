@@ -115,7 +115,7 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 
 | Store          | Purpose                       | Key details                                                                                                                     |
 |----------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` + `healthChecks: StackCheck[]` + `vulnResults: DepVulnResult[]` recalculated reactively. Score changes debounced 2s, persisted with `source: 'manual'`. Uses `ServiceBilling` (no legacy cost/renewalDate). |
+| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` + `healthChecks: StackCheck[]` + `vulnResults: DepVulnResult[]` + `vulnScanned: boolean` recalculated reactively. `showScoreBreakdown` toggles ScoreBreakdown panel (mutually exclusive with ScoreHistory). Uses `ServiceBilling` (no legacy cost/renewalDate). |
 | `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock** (prevents race conditions). Uses `registerServiceGetter()` callback (no `require()`). Subscribes to node/edge count to trigger score recalculation. |
 | `historyStore` | Undo/redo                     | Past/future stacks, max 50 snapshots. Captures nodes + edges + services.                                                       |
 | `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
@@ -187,7 +187,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `src/components/ServicesPanel/` | Cards, zombie badges, confidence, evidence popover, activity filter |
 | `src/components/DepsPanel/`    | Virtualized table (@tanstack/react-virtual), vuln scanning        |
 | `src/components/DiscardedPanel/`| Virtualized list, reason filter, restore to manual service        |
-| `src/components/FlowGraph/`    | React Flow canvas, context menu (arrow key nav), node edit        |
+| `src/components/FlowGraph/`    | React Flow canvas, context menu (arrow key nav), node edit (with billing fields, viewport-clamped) |
+| `src/components/ScoreBreakdown/`| Slide-in panel: 8 checks (security + completeness), actions, informational counts |
 | `src/components/CostsPanel/`   | Cost breakdown, renewal alerts, bar chart, budget mode            |
 | `src/components/ScanProgress/` | Real-time progress: CRT effect bar, phase text, cancel button     |
 | `src/components/TopBar/`       | Import/export, share (dynamic badges), GitHub, re-analyze         |

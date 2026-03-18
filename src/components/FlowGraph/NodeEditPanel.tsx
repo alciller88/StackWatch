@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { SERVICE_CATEGORIES } from '../../types'
-import type { FlowNode, ServiceCategory } from '../../types'
+import type { FlowNode, ServiceCategory, ServiceBilling } from '../../types'
+import { renewService } from '../../utils/billing'
 
 const NODE_TYPES: FlowNode['type'][] = ['layer', 'cdn', 'api', 'database', 'external']
 
@@ -8,6 +9,8 @@ const CATEGORIES = SERVICE_CATEGORIES;
 
 const PLANS = ['free', 'paid', 'trial', 'unknown'] as const
 const CONFIDENCES = ['high', 'medium', 'low'] as const
+const BILLING_TYPES: ServiceBilling['type'][] = ['manual', 'automatic', 'free']
+const BILLING_PERIODS: NonNullable<ServiceBilling['period']>[] = ['monthly', 'yearly', 'one-time', 'usage-based']
 
 interface NodeEditPanelProps {
   x: number
@@ -20,6 +23,7 @@ interface NodeEditPanelProps {
     confidence?: 'high' | 'medium' | 'low'
     url?: string
     note?: string
+    billing?: ServiceBilling
   }
   onSave: (data: {
     label: string
@@ -29,6 +33,7 @@ interface NodeEditPanelProps {
     confidence?: 'high' | 'medium' | 'low'
     url?: string
     note?: string
+    billing?: ServiceBilling
   }) => void
   onCancel: () => void
 }
@@ -48,7 +53,28 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
   const [url, setUrl] = useState(initialData.url ?? '')
   const [note, setNote] = useState(initialData.note ?? '')
 
+  // Billing state
+  const [billingType, setBillingType] = useState<ServiceBilling['type']>(initialData.billing?.type ?? 'manual')
+  const [billingPeriod, setBillingPeriod] = useState<NonNullable<ServiceBilling['period']>>(initialData.billing?.period ?? 'monthly')
+  const [billingAmount, setBillingAmount] = useState(initialData.billing?.amount?.toString() ?? '')
+  const [billingCurrency, setBillingCurrency] = useState(initialData.billing?.currency ?? 'USD')
+  const [billingNextDate, setBillingNextDate] = useState(initialData.billing?.nextDate ?? '')
+  const [billingLastRenewed, setBillingLastRenewed] = useState(initialData.billing?.lastRenewed ?? '')
+
   const ref = useRef<HTMLDivElement>(null)
+  const [clampedPos, setClampedPos] = useState({ left: x, top: y })
+
+  // Clamp position after render so panel stays within viewport
+  useEffect(() => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const maxLeft = window.innerWidth - rect.width - 10
+    const maxTop = window.innerHeight - rect.height - 10
+    setClampedPos({
+      left: Math.max(10, Math.min(x, maxLeft)),
+      top: Math.max(10, Math.min(y, maxTop)),
+    })
+  }, [x, y])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -64,6 +90,21 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
 
   const handleSave = () => {
     if (!label.trim()) return
+
+    let billing: ServiceBilling | undefined
+    if (billingType === 'free') {
+      billing = { type: 'free' }
+    } else {
+      billing = {
+        type: billingType,
+        period: billingPeriod,
+        ...(billingAmount && { amount: parseFloat(billingAmount) }),
+        currency: billingCurrency,
+        ...(billingNextDate && { nextDate: billingNextDate }),
+        ...(billingLastRenewed && { lastRenewed: billingLastRenewed }),
+      }
+    }
+
     onSave({
       label: label.trim(),
       nodeType,
@@ -72,20 +113,16 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
       confidence,
       url: url.trim() || undefined,
       note: note.trim() || undefined,
+      billing,
     })
   }
 
-  const fieldStyle: React.CSSProperties = {
-    width: '100%',
-    background: 'var(--color-bg-primary)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 0,
-    padding: '4px 8px',
-    color: 'var(--color-text-primary)',
-    fontSize: '11px',
-    fontFamily: 'IBM Plex Mono',
-    outline: 'none',
-  }
+  const showBillingFields = billingType !== 'free'
+  const showRenewalFields = showBillingFields && billingPeriod !== 'usage-based' && billingPeriod !== 'one-time'
+  const showManualRenewal = showRenewalFields && billingType === 'manual'
+
+  const labelClass = "font-mono text-[10px] uppercase tracking-wide text-[var(--color-text-muted)] block mb-0.5"
+  const fieldClass = "w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] px-2 py-1 text-[11px] font-mono text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
 
   return (
     <div
@@ -93,126 +130,177 @@ export const NodeEditPanel: React.FC<NodeEditPanelProps> = ({
       role="dialog"
       aria-modal="false"
       aria-label="Edit node"
+      className="absolute z-50 w-64 p-3 font-mono text-[11px]"
       style={{
-        position: 'absolute',
-        left: Math.min(x, (typeof window !== 'undefined' ? window.innerWidth : 1280) - 280),
-        top: Math.min(y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 500),
-        zIndex: 50,
-        width: 256,
+        left: clampedPos.left,
+        top: clampedPos.top,
         background: 'var(--color-bg-secondary)',
         border: '1px solid var(--color-border)',
-        borderRadius: 0,
-        padding: 12,
-        fontFamily: 'IBM Plex Mono',
-        fontSize: '11px',
+        maxHeight: 'calc(100vh - 20px)',
+        overflowY: 'auto',
       }}
     >
-      <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-muted)', marginBottom: 8 }}>Edit Node</div>
+      <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Edit Node</div>
 
       <div className="space-y-2">
         <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Name</label>
+          <label className={labelClass}>Name</label>
           <input
-            style={fieldStyle}
+            className={fieldClass}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
-            onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
           />
         </div>
 
-        <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Node type</label>
-          <select style={fieldStyle} value={nodeType} onChange={(e) => setNodeType(e.target.value as FlowNode['type'])}>
-            {NODE_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className={labelClass}>Type</label>
+            <select className={fieldClass} value={nodeType} onChange={(e) => setNodeType(e.target.value as FlowNode['type'])}>
+              {NODE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className={labelClass}>Category</label>
+            <select className={fieldClass} value={category} onChange={(e) => setCategory(e.target.value as ServiceCategory)}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className={labelClass}>Plan</label>
+            <select className={fieldClass} value={plan} onChange={(e) => setPlan(e.target.value)}>
+              {PLANS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className={labelClass}>Confidence</label>
+            <select className={fieldClass} value={confidence} onChange={(e) => setConfidence(e.target.value as 'high' | 'medium' | 'low')}>
+              {CONFIDENCES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
 
         <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Service category</label>
-          <select style={fieldStyle} value={category} onChange={(e) => setCategory(e.target.value as ServiceCategory)}>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <label className={labelClass}>URL</label>
+          <input className={fieldClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+        </div>
+
+        {/* Billing section */}
+        <div className="border-t border-[var(--color-border)] pt-2 mt-2">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Billing</div>
+
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className={labelClass}>Type</label>
+              <select className={fieldClass} value={billingType} onChange={(e) => setBillingType(e.target.value as ServiceBilling['type'])}>
+                {BILLING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            {showBillingFields && (
+              <div className="flex-1">
+                <label className={labelClass}>Period</label>
+                <select className={fieldClass} value={billingPeriod} onChange={(e) => setBillingPeriod(e.target.value as NonNullable<ServiceBilling['period']>)}>
+                  {BILLING_PERIODS.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {billingType === 'free' && (
+            <div className="font-mono text-[10px] text-[var(--color-success)] mt-1">Free — no billing</div>
+          )}
+
+          {showBillingFields && billingPeriod === 'usage-based' && (
+            <div className="font-mono text-[10px] text-[var(--color-text-muted)] mt-1">Cost varies by usage</div>
+          )}
+
+          {showBillingFields && billingPeriod !== 'usage-based' && (
+            <div className="flex gap-2 mt-1.5">
+              <div className="flex-1">
+                <label className={labelClass}>Amount</label>
+                <input
+                  className={fieldClass}
+                  type="number"
+                  value={billingAmount}
+                  onChange={(e) => setBillingAmount(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="w-16">
+                <label className={labelClass}>Cur.</label>
+                <select className={fieldClass} value={billingCurrency} onChange={(e) => setBillingCurrency(e.target.value)}>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {showRenewalFields && (
+            <div className="mt-1.5">
+              <label className={labelClass}>Next renewal</label>
+              <input className={fieldClass} type="date" value={billingNextDate} onChange={(e) => setBillingNextDate(e.target.value)} />
+            </div>
+          )}
+
+          {showManualRenewal && (
+            <div className="mt-1.5 space-y-1.5">
+              <div>
+                <label className={labelClass}>Last renewed</label>
+                <input className={fieldClass} type="date" value={billingLastRenewed} onChange={(e) => setBillingLastRenewed(e.target.value)} />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = renewService({
+                    type: billingType,
+                    period: billingPeriod,
+                    amount: billingAmount ? parseFloat(billingAmount) : undefined,
+                    currency: billingCurrency,
+                    nextDate: billingNextDate || undefined,
+                    lastRenewed: billingLastRenewed || undefined,
+                  })
+                  setBillingLastRenewed(updated.lastRenewed ?? '')
+                  setBillingNextDate(updated.nextDate ?? '')
+                }}
+                className="w-full py-1 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-success)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-[var(--color-bg-primary)] transition-colors"
+              >
+                Mark renewed today
+              </button>
+            </div>
+          )}
         </div>
 
         <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Plan</label>
-          <select style={fieldStyle} value={plan} onChange={(e) => setPlan(e.target.value)}>
-            {PLANS.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Confidence</label>
-          <select style={fieldStyle} value={confidence} onChange={(e) => setConfidence(e.target.value as 'high' | 'medium' | 'low')}>
-            {CONFIDENCES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>URL</label>
-          <input
-            style={fieldStyle}
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://..."
-            onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
-            onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
-          />
-        </div>
-
-        <div>
-          <label style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>Notes</label>
+          <label className={labelClass}>Notes</label>
           <textarea
-            style={{ ...fieldStyle, resize: 'none' }}
+            className={`${fieldClass} resize-none`}
             value={note}
             onChange={(e) => setNote(e.target.value.slice(0, 200))}
             rows={2}
             maxLength={200}
             placeholder="Max 200 characters"
-            onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent)')}
-            onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
           />
-          <div style={{ fontFamily: 'IBM Plex Mono', fontSize: '10px', color: 'var(--color-text-muted)', textAlign: 'right' }}>{note.length}/200</div>
+          <div className="font-mono text-[10px] text-[var(--color-text-muted)] text-right">{note.length}/200</div>
         </div>
       </div>
 
       <div className="flex gap-2 mt-3">
         <button
           onClick={handleSave}
-          className="flex-1 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] transition-all cursor-pointer"
-          style={{
-            fontFamily: 'IBM Plex Mono',
-            fontSize: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            padding: '6px 0',
-            background: 'transparent',
-          }}
+          className="flex-1 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] transition-all cursor-pointer"
         >
           Save
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-all cursor-pointer"
-          style={{
-            fontFamily: 'IBM Plex Mono',
-            fontSize: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            padding: '6px 0',
-            background: 'transparent',
-          }}
+          className="flex-1 py-1.5 font-mono text-[10px] uppercase tracking-widest bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-all cursor-pointer"
         >
           Cancel
         </button>

@@ -336,6 +336,7 @@ export const FlowGraph: React.FC = () => {
     confidence?: 'high' | 'medium' | 'low'
     url?: string
     note?: string
+    billing?: import('../../types').ServiceBilling
   }) => {
     if (editPanel?.nodeId) {
       // Update existing node
@@ -348,6 +349,15 @@ export const FlowGraph: React.FC = () => {
         url: data.url,
         note: data.note,
       })
+      // Update billing on the linked service if it exists
+      const node = nodes.find(n => n.id === editPanel.nodeId)
+      if (node?.data?.serviceId && data.billing) {
+        const { useStore } = require('../../store/useStore')
+        const svc = useStore.getState().services.find((s: import('../../types').Service) => s.id === node.data.serviceId)
+        if (svc) {
+          useStore.getState().updateManualService({ ...svc, billing: data.billing, plan: data.plan ?? svc.plan })
+        }
+      }
     } else {
       // Create new node
       const id = data.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -370,6 +380,11 @@ export const FlowGraph: React.FC = () => {
     if (editPanel?.nodeId) {
       const node = nodes.find((n) => n.id === editPanel.nodeId)
       if (node) {
+        // Get billing from linked service if available
+        const { useStore } = require('../../store/useStore')
+        const svc = node.data.serviceId
+          ? useStore.getState().services.find((s: import('../../types').Service) => s.id === node.data.serviceId)
+          : undefined
         return {
           label: node.data.label ?? '',
           nodeType: node.data.nodeType ?? 'external',
@@ -378,6 +393,7 @@ export const FlowGraph: React.FC = () => {
           confidence: node.data.confidence,
           url: node.data.url,
           note: node.data.note,
+          billing: svc?.billing,
         }
       }
     }
@@ -390,6 +406,7 @@ export const FlowGraph: React.FC = () => {
       confidence: 'high' as const,
       url: undefined,
       note: undefined,
+      billing: undefined,
     }
   }
 
