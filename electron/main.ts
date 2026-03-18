@@ -32,6 +32,16 @@ function getEncryptionKey(): string {
   return `sw-${Buffer.from(app.getPath('userData')).toString('base64').slice(0, 24)}`
 }
 
+function getIconPath(): string {
+  // In dev: __dirname = dist-electron/electron/ → ../../build/icon.png
+  // In packaged: buildResources contents are at process.resourcesPath
+  const devPath = path.join(__dirname, '..', '..', 'build', 'icon.png')
+  if (!app.isPackaged) return devPath
+  // electron-builder copies buildResources to resources/
+  const prodPath = path.join(process.resourcesPath, 'icon.png')
+  try { require('fs').accessSync(prodPath); return prodPath } catch { return devPath }
+}
+
 function createWindow() {
   Menu.setApplicationMenu(null)
 
@@ -41,6 +51,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'StackWatch',
+    icon: getIconPath(),
     frame: false,
     titleBarStyle: 'hidden',
     autoHideMenuBar: true,
