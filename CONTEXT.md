@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.9.1
+# CONTEXT.md — StackWatch v0.10.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -13,13 +13,13 @@
 | Layer        | Stack                                                            |
 |------------- |------------------------------------------------------------------|
 | Desktop      | Electron 35, React 19, Vite 6, TypeScript 5.7, Tailwind 4       |
-| State        | Zustand 5 (5 stores), React Flow 11, Recharts 3                 |
+| State        | Zustand 5 (5 stores + 4 selector hooks), React Flow 11, Recharts 3 |
 | CLI          | `npx stackwatch [path]` — same heuristic engine, no Electron    |
 | GitHub Action| `alciller88/StackWatch@main` — posts PR comments with results   |
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
 | Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
 | Validation   | `zod` schemas on all IPC handlers                                |
-| Tests        | 470 tests, 33 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 481 tests, 35 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -116,8 +116,8 @@ Layer nodes (type: `'layer'`) are organizational — they do NOT represent servi
 
 | Store          | Purpose                       | Key details                                                                                                                     |
 |----------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Merged services = inferred + manual. `stackScore` + `healthChecks: StackCheck[]` + `vulnResults: DepVulnResult[]` + `vulnScanned: boolean` recalculated reactively. `showScoreBreakdown` toggles ScoreBreakdown panel (mutually exclusive with ScoreHistory). Uses `ServiceBilling` (no legacy cost/renewalDate). |
-| `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock**. Uses registered callbacks (`registerServiceGetter`, `registerServiceDeleter`, `registerRepoPathGetter`, `registerScoreRecalculator`) — no dynamic `import()`. |
+| `useStore`     | Services, deps, config, AI, theme, score, budget, mode | Single Zustand store with 4 specialized selector hooks: `useAnalysisState/Actions`, `useServicesState/Actions`, `useConfigState/Actions`, `useUIState/Actions`. Import selectors for better re-render performance. |
+| `graphStore`   | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with **serialized write lock**. Dagre layout cache (skips recalc when structure unchanged). Registered callbacks — no dynamic `import()`. |
 | `historyStore` | Undo/redo                     | Past/future stacks, max 50 snapshots. Captures nodes + edges + services.                                                       |
 | `dialogStore`  | Confirm dialogs               | Promise-based, returns button value string.                                                                                     |
 | `toastStore`   | Notifications                 | Auto-dismiss 4s. Animation keyframes defined in CSS (slide-in-from-right + fade-in).                                            |
@@ -182,7 +182,11 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 |---------------------------------|-------------------------------------------------------------------|
 | `src/App.tsx`                   | Layout, panel routing, undo/redo, skeleton switching              |
 | `src/store/useStore.ts`        | Global state, analysis flow, service CRUD, theme, budget, score   |
-| `src/store/graphStore.ts`      | React Flow state, debounced persist with write lock, registered callbacks |
+| `src/store/analysisStore.ts`   | Selector hooks for analysis pipeline state                        |
+| `src/store/servicesStore.ts`   | Selector hooks for services/deps/score state                      |
+| `src/store/configStore.ts`     | Selector hooks for config/AI/budget state                         |
+| `src/store/uiStore.ts`         | Selector hooks for UI state (panels, theme, modals)               |
+| `src/store/graphStore.ts`      | React Flow state, debounced persist, dagre cache, registered callbacks |
 | `src/store/mutex.ts`           | AsyncMutex for serializing multi-store operations                 |
 | `src/store/historyStore.ts`    | Undo/redo snapshots (50 max)                                      |
 | `src/store/toastStore.ts`      | Toast notifications (4s auto-dismiss)                             |
@@ -190,7 +194,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `src/utils/healthScore.ts`     | Stack Score via 8 binary checks (security + completeness). Score = passing/applicable × 100 |
 | `src/utils/billing.ts`         | ServiceBilling utilities: calculateNextDate, renewService, getRenewalThreshold, getMonthlyAmount |
 | `src/themes.ts`                | Dark/light theme CSS variable definitions + semantic colors       |
-| `src/components/ServicesPanel/` | Cards, zombie badges, confidence, evidence popover, activity filter |
+| `src/components/ServicesPanel/` | Virtualized card grid (@tanstack/react-virtual), zombie badges, confidence, evidence popover, activity filter |
+| `src/components/PanelErrorBoundary.tsx` | Per-panel error boundary with reload/report actions                |
 | `src/components/DepsPanel/`    | Virtualized table (@tanstack/react-virtual), vuln scanning        |
 | `src/components/DiscardedPanel/`| Virtualized list, reason filter, restore to manual service        |
 | `src/components/FlowGraph/`    | React Flow canvas, context menu (arrow key nav), node edit (with billing fields, viewport-clamped) |
@@ -219,7 +224,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (470 tests, 33 suites)                      |
+| `npm test`           | vitest (481 tests, 35 suites)                      |
 | `npm run test:coverage` | vitest with v8 coverage (thresholds: 60/60/50/60) |
 
 ### Release flow
@@ -249,7 +254,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-470 tests across 33 suites.
+481 tests across 35 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -267,7 +272,8 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | ScanProgress            | 9     | Encryption             | 8     |
 | scoreHistory            | 8     | ContextMenu            | 7     |
 | scanDiff                | 7     | Pipeline               | 7     |
-| DiscardedPanel          | 7     | AsyncMutex             | 5     |
+| DiscardedPanel          | 7     | Dagre Cache            | 6     |
+| PanelErrorBoundary      | 5     | AsyncMutex             | 5     |
 | Pipeline Integration    | 4     | daysUntil              | 3     |
 
 ---
@@ -310,7 +316,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No JS hover handlers                         | Use Tailwind `hover:` classes                  |
 | No hardcoded hex colors in components        | Use CSS variables from `themes.ts` (--color-danger, --color-success, etc.) |
 | No `shared/types.js` in repo root            | Delete if it appears (breaks Vite)             |
-| No full Zustand store subscriptions          | Use selectors in perf-critical components      |
+| No full Zustand store subscriptions          | Use specialized selector hooks (`useAnalysisState`, `useServicesState`, etc.) for better re-render performance |
 | No synchronous fs in main process            | Use `fs.promises`                              |
 | No assuming AI is available                  | Always fallback to heuristics                  |
 | No using legacy cost/renewalDate fields      | Use `service.billing` (ServiceBilling). Legacy fields removed. |

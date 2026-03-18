@@ -3,8 +3,8 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
-[![Tests](https://img.shields.io/badge/tests-470%20passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Tests](https://img.shields.io/badge/tests-481%20passing-brightgreen)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project depends on -- with costs, renewal dates, and an interactive architecture graph. Zero config, works offline, and delivers results in seconds.
@@ -233,7 +233,7 @@ For the full detection architecture, see [`SPEC.md`](./SPEC.md).
 |---------|-------------|
 | `npm run dev` | Development mode with hot reload |
 | `npm run build` | Production build with electron-builder |
-| `npm test` | Run 470 tests across 33 suites |
+| `npm test` | Run 481 tests across 35 suites |
 | `npm run test:coverage` | Tests with coverage thresholds |
 | `npm run lint` | ESLint across src, electron, shared |
 | `npm run validate` | 32-point production build checker |

@@ -16,6 +16,7 @@ import { TitleBar } from './components/TitleBar'
 import { ToastContainer } from './components/Toast'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { PanelErrorBoundary } from './components/PanelErrorBoundary'
 import { OnboardingTutorial } from './components/OnboardingTutorial'
 import { ScoreHistoryPanel } from './components/ScoreHistory/ScoreHistoryPanel'
 import { ScoreBreakdown } from './components/ScoreBreakdown/ScoreBreakdown'
@@ -81,15 +82,15 @@ export default function App() {
 
     switch (activePanel) {
       case 'services':
-        return <ServicesPanel />
+        return <PanelErrorBoundary panelName="Services"><ServicesPanel /></PanelErrorBoundary>
       case 'dependencies':
-        return <DepsPanel />
+        return <PanelErrorBoundary panelName="Dependencies"><DepsPanel /></PanelErrorBoundary>
       case 'discarded':
-        return <DiscardedPanel />
+        return <PanelErrorBoundary panelName="Discarded"><DiscardedPanel /></PanelErrorBoundary>
       case 'flow':
-        return <FlowGraph />
+        return <PanelErrorBoundary panelName="Flow Graph"><FlowGraph /></PanelErrorBoundary>
       case 'costs':
-        return <CostsPanel />
+        return <PanelErrorBoundary panelName="Costs"><CostsPanel /></PanelErrorBoundary>
       default:
         return <Dashboard />
     }

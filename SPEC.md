@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.9.1 | Last updated: 2026-03-18 | Tests: 470 across 33 suites
+> Version: v0.10.0 | Last updated: 2026-03-18 | Tests: 481 across 35 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -433,7 +433,7 @@ interface UserConfig {
 | Panel | Component | Purpose |
 |---|---|---|
 | Dashboard | `Dashboard.tsx` | Quick start guide, features grid, keyboard shortcuts |
-| Services | `ServicesPanel/` | Card grid, search, filters (category/plan/activity), add/edit form, confidence & zombie badges, evidence popover |
+| Services | `ServicesPanel/` | Virtualized card grid (@tanstack/react-virtual), search, filters (category/plan/activity), add/edit form, confidence & zombie badges, evidence popover |
 | Dependencies | `DepsPanel/` | Virtualized table, sort, group by ecosystem, vuln scanning |
 | Discarded | `DiscardedPanel/` | Virtualized list, search, reason filter, restore to manual service |
 | Flow | `FlowGraph/` | React Flow canvas, minimap, controls, legend, context menus, inline node edit, dagre layout |
@@ -442,7 +442,7 @@ interface UserConfig {
 
 ### 6.3 Shared Components
 
-`TitleBar` (frameless window controls), `TopBar` (import/export/share, repo path, GitHub connect), `Sidebar` (panel nav, Stack Score, theme toggle), `ScoreHistoryPanel` (Recharts line chart modal), `DoctorModal` (health check), `ConfirmDialog` (promise-based, focus trap), `Toast` (auto-dismiss 4s, CSS keyframe animation), `ScanProgress` (CRT-effect progress bar, phase text, counters, cancel), `ErrorBoundary`, `OnboardingTutorial` (6-step walkthrough).
+`TitleBar` (frameless window controls), `TopBar` (import/export/share, repo path, GitHub connect), `Sidebar` (panel nav, Stack Score, theme toggle), `ScoreHistoryPanel` (Recharts line chart modal), `DoctorModal` (health check), `ConfirmDialog` (promise-based, focus trap), `Toast` (auto-dismiss 4s, CSS keyframe animation), `ScanProgress` (CRT-effect progress bar, phase text, counters, cancel), `ErrorBoundary` (app-level), `PanelErrorBoundary` (per-panel with reload/report), `OnboardingTutorial` (6-step walkthrough).
 
 ### 6.4 Confidence Display
 
@@ -471,8 +471,8 @@ interface UserConfig {
 
 | Store | Purpose | Key Details |
 |---|---|---|
-| `useStore` | Services, deps, config, AI, theme, mode | Merged services = inferred + manual. Registers service getter with graphStore via `registerServiceGetter()` callback. Reactive `stackScore` recalculated after every mutation. |
-| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with serialized write lock. Uses `registerServiceGetter()` to avoid circular dependency. Pushes to historyStore before mutations. |
+| `useStore` | Services, deps, config, AI, theme, mode | Single Zustand store with **4 specialized selector hooks** for optimized re-renders: `useAnalysisState/Actions` (pipeline), `useServicesState/Actions` (CRUD/score), `useConfigState/Actions` (config/AI), `useUIState/Actions` (panels/theme). Import selectors in components instead of full `useStore()`. |
+| `graphStore` | React Flow nodes/edges, excluded services | `persistToConfig` debounced 500ms with serialized write lock. Dagre layout cache (skips recalculation when graph structure unchanged). Registered callbacks — no dynamic `import()`. |
 | `historyStore` | Undo/redo | Past/future stacks, max 50 snapshots |
 | `dialogStore` | Promise-based confirm dialogs | Returns button value string |
 | `toastStore` | Notifications | Auto-dismiss after 4s |
@@ -668,7 +668,7 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 15. Testing
 
-470 tests across 33 suites (Vitest + @testing-library/react + jsdom). Coverage thresholds enforced in CI (60/60/50/60 for statements/functions/branches/lines).
+481 tests across 35 suites (Vitest + @testing-library/react + jsdom). Coverage thresholds enforced in CI (60/60/50/60 for statements/functions/branches/lines).
 
 | Suite | Count | Suite | Count |
 |---|---|---|---|
@@ -687,6 +687,7 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 | Encryption | 8 | scoreHistory | 8 |
 | scanDiff | 7 | ContextMenu | 7 |
 | DiscardedPanel | 7 | Pipeline | 7 |
+| Dagre Cache | 6 | PanelErrorBoundary | 5 |
 | AsyncMutex | 5 | Pipeline Integration | 4 |
 | daysUntil | 3 | | |
 
@@ -694,7 +695,16 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.9.1 (current)
+### v0.10.0 (current)
+- **Architecture**: 4 specialized selector hooks (`analysisStore`, `servicesStore`, `configStore`, `uiStore`) for optimized re-renders — components can import only the state slice they need
+- **Architecture**: Zero dynamic `require()` in `src/store/` — all cross-store communication via registered callbacks
+- **Performance**: ServicesPanel virtualized with `@tanstack/react-virtual` — handles 100+ services without lag
+- **Performance**: Dagre layout cache in `graphStore` — skips recalculation when graph structure unchanged (position-only changes are free)
+- **Stability**: `PanelErrorBoundary` — per-panel error boundaries with reload/report actions; error in FlowGraph doesn't crash ServicesPanel
+- **Security**: `sanitizeToken()` with regex-safe escaping replaces fragile `replaceAll()` for token redaction
+- 481 tests across 35 suites (+11 new: 5 PanelErrorBoundary, 6 Dagre Cache)
+
+### v0.9.1
 - **Testing**: IPC handler tests (22 tests) — analyze-local, analyze-github, save/load-config, open-external-url, cancel-scan
 - **Testing**: Encryption round-trip tests (8 tests) — encrypt/decrypt, store corruption recovery, legacy migration
 - **Testing**: GitHub auth tests (20 tests) — repo format, token handling, rate limiting, error sanitization

@@ -224,6 +224,14 @@ ipcMain.handle('open-external-url', async (_event, args) => {
   }
 })
 
+// --- Token Sanitization ---
+
+function sanitizeToken(message: string, token: string | undefined): string {
+  if (!token || token.length < 4) return message
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return message.replace(new RegExp(escaped, 'g'), token.slice(0, 4) + '****')
+}
+
 // --- Path Validation ---
 
 function validateRepoPath(repoPath: string): string {
@@ -483,10 +491,7 @@ ipcMain.handle(
         }
       }
       // Sanitize error message to avoid leaking the full token
-      let message = err?.message ?? String(err)
-      if (token && token.length > 4) {
-        message = message.replaceAll(token, token.slice(0, 4) + '****')
-      }
+      const message = sanitizeToken(err?.message ?? String(err), token)
       throw new Error(message)
     }
   }

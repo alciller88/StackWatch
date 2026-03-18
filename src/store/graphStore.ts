@@ -42,6 +42,16 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null
 let persistLock = false
 let persistQueued = false
 
+// Dagre layout cache — skip recalculation when structure hasn't changed
+let lastLayoutHash = ''
+let lastLayoutPositions: Map<string, { x: number; y: number }> = new Map()
+
+export function hashStructure(nodes: FlowNode[], edges: FlowEdge[]): string {
+  const nodeIds = nodes.map(n => n.id).sort().join(',')
+  const edgeIds = edges.map(e => `${e.source}->${e.target}`).sort().join(',')
+  return `${nodeIds}|${edgeIds}`
+}
+
 // Module-level callbacks — set by useStore to avoid circular dependency
 let _getServices: (() => import('../types').Service[]) | null = null
 let _deleteService: ((serviceId: string) => void) | null = null
@@ -125,28 +135,38 @@ function flowNodesToRFNodes(
   if (allSaved) {
     positionMap = savedPositions
   } else {
-    // Any new nodes → recalculate full layout with dagre to avoid overlaps
-    const g = new dagre.graphlib.Graph()
-    g.setDefaultEdgeLabel(() => ({}))
-    g.setGraph({ rankdir: 'TB', ranksep: 120, nodesep: 80, marginx: 20, marginy: 20 })
+    // Check dagre cache — skip recalculation if structure unchanged
+    const structureHash = hashStructure(flowNodes, flowEdges)
+    if (structureHash === lastLayoutHash && lastLayoutPositions.size > 0) {
+      positionMap = lastLayoutPositions
+    } else {
+      // Any new nodes → recalculate full layout with dagre to avoid overlaps
+      const g = new dagre.graphlib.Graph()
+      g.setDefaultEdgeLabel(() => ({}))
+      g.setGraph({ rankdir: 'TB', ranksep: 120, nodesep: 80, marginx: 20, marginy: 20 })
 
-    for (const node of flowNodes) {
-      const dim = getNodeDimensions(node)
-      g.setNode(node.id, { width: dim.width, height: dim.height })
-    }
-    for (const edge of flowEdges) {
-      g.setEdge(edge.source, edge.target)
-    }
-    dagre.layout(g)
+      for (const node of flowNodes) {
+        const dim = getNodeDimensions(node)
+        g.setNode(node.id, { width: dim.width, height: dim.height })
+      }
+      for (const edge of flowEdges) {
+        g.setEdge(edge.source, edge.target)
+      }
+      dagre.layout(g)
 
-    positionMap = new Map()
-    for (const node of flowNodes) {
-      const dim = getNodeDimensions(node)
-      const pos = g.node(node.id)
-      positionMap.set(node.id, {
-        x: (pos?.x ?? 0) - dim.width / 2,
-        y: (pos?.y ?? 0) - dim.height / 2,
-      })
+      positionMap = new Map()
+      for (const node of flowNodes) {
+        const dim = getNodeDimensions(node)
+        const pos = g.node(node.id)
+        positionMap.set(node.id, {
+          x: (pos?.x ?? 0) - dim.width / 2,
+          y: (pos?.y ?? 0) - dim.height / 2,
+        })
+      }
+
+      // Cache the result
+      lastLayoutHash = structureHash
+      lastLayoutPositions = positionMap
     }
   }
 

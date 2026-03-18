@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import { useDialogStore } from '../../store/dialogStore';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ServiceCard } from './ServiceCard';
 import { SERVICE_CATEGORIES } from '../../types';
 import type { Service, ServiceCategory, ServiceContext, ServiceBilling } from '../../types';
@@ -198,28 +199,80 @@ export const ServicesPanel: React.FC = () => {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <VirtualizedServiceGrid
+        filtered={filtered}
+        services={services}
+        repoPath={repoPath}
+        contextMap={contextMap}
+        needsReview={needsReview}
+        zombieCounts={zombieCounts}
+        search={search}
+        activeCategory={activeCategory}
+        activePlan={activePlan}
+        activeActivity={activeActivity}
+        onEdit={handleEdit}
+        onShowAddForm={() => { setEditingService(null); setShowAddForm(true); }}
+      />
+    </div>
+  );
+};
+
+/** Virtualized service grid — only renders visible rows */
+const CARD_HEIGHT = 140;
+const CARD_GAP = 16;
+const COLS_BY_WIDTH = { xl: 4, lg: 3, md: 2, sm: 1 };
+
+const VirtualizedServiceGrid: React.FC<{
+  filtered: Service[];
+  services: Service[];
+  repoPath: string | null;
+  contextMap: Map<string, ServiceContext>;
+  needsReview: Service[];
+  zombieCounts: { zombie: number; stale: number; hasAny: boolean };
+  search: string;
+  activeCategory: ServiceCategory | 'all';
+  activePlan: Service['plan'] | 'all';
+  activeActivity: string;
+  onEdit: (service: Service) => void;
+  onShowAddForm: () => void;
+}> = ({ filtered, services, repoPath, contextMap, needsReview, zombieCounts, search, activeCategory, activePlan, activeActivity, onEdit, onShowAddForm }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Use 4 columns as default — responsive would require ResizeObserver
+  const cols = 4;
+  const rowCount = Math.ceil(filtered.length / cols);
+
+  const virtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => CARD_HEIGHT + CARD_GAP,
+    overscan: 3,
+  });
+
+  // Banner sections above the grid
+  const showZombieBanner = zombieCounts.hasAny && !search && activeCategory === 'all' && activePlan === 'all' && activeActivity === 'all';
+  const showReviewSection = needsReview.length > 0 && !search && activeCategory === 'all' && activePlan === 'all';
+
+  return (
+    <div ref={scrollRef} className="flex-1 overflow-auto p-6">
+      <div className="space-y-6">
         {/* Zombie summary banner */}
-        {zombieCounts.hasAny && !search && activeCategory === 'all' && activePlan === 'all' && activeActivity === 'all' && (
+        {showZombieBanner && (
           <div className="bg-[var(--color-badge-bg-danger)] border border-[var(--color-badge-border-danger)] rounded-sm px-4 py-2.5 flex items-center gap-2">
             <svg className="w-4 h-4 text-[var(--color-danger)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">
-              {zombieCounts.zombie > 0 && (
-                <span className="text-[var(--color-danger)]">{zombieCounts.zombie} zombie service{zombieCounts.zombie !== 1 ? 's' : ''}</span>
-              )}
+              {zombieCounts.zombie > 0 && <span className="text-[var(--color-danger)]">{zombieCounts.zombie} zombie service{zombieCounts.zombie !== 1 ? 's' : ''}</span>}
               {zombieCounts.zombie > 0 && zombieCounts.stale > 0 && ', '}
-              {zombieCounts.stale > 0 && (
-                <span className="text-[#c8a040]">{zombieCounts.stale} stale service{zombieCounts.stale !== 1 ? 's' : ''}</span>
-              )}
+              {zombieCounts.stale > 0 && <span className="text-[#c8a040]">{zombieCounts.stale} stale service{zombieCounts.stale !== 1 ? 's' : ''}</span>}
               <span className="text-[var(--color-text-muted)]"> detected</span>
             </span>
           </div>
         )}
 
         {/* Needs Review Section */}
-        {needsReview.length > 0 && !search && activeCategory === 'all' && activePlan === 'all' && (
+        {showReviewSection && (
           <div className="bg-[var(--color-badge-bg-warning)] border border-[var(--color-badge-border-warning)] rounded-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -234,33 +287,23 @@ export const ServicesPanel: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {needsReview.map((service) => (
-                <ServiceCard
-                  key={service.id}
-                  service={service}
-                  context={contextMap.get(service.id)}
-                  onEdit={handleEdit}
-                />
+                <ServiceCard key={service.id} service={service} context={contextMap.get(service.id)} onEdit={onEdit} />
               ))}
             </div>
             <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[var(--color-badge-border-warning)]/30">
-              <button
-                onClick={() => { setEditingService(null); setShowAddForm(true); }}
-                className="text-xs text-[var(--color-accent)] hover:opacity-80 transition-colors"
-              >
+              <button onClick={onShowAddForm} className="text-xs text-[var(--color-accent)] hover:opacity-80 transition-colors">
                 Complete in form &rarr;
               </button>
               <span className="text-xs text-[var(--color-text-muted)]">or</span>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                Edit stackwatch.config.json directly
-              </span>
+              <span className="text-xs text-[var(--color-text-muted)]">Edit stackwatch.config.json directly</span>
             </div>
           </div>
         )}
 
-        {/* Grid */}
+        {/* Virtualized Grid */}
         {filtered.length === 0 ? (
           services.length === 0 && repoPath ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
+            <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-8">
               <svg className="w-12 h-12 text-[var(--color-text-muted)] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
@@ -270,30 +313,39 @@ export const ServicesPanel: React.FC = () => {
                   This could mean the project uses only local dependencies, or services are configured in ways StackWatch doesn't recognize yet.
                 </p>
               </div>
-              <button
-                onClick={() => { setEditingService(null); setShowAddForm(true); }}
-                className="mt-2 px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
-              >
+              <button onClick={onShowAddForm} className="mt-2 px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors">
                 + Add service manually
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
-              {services.length === 0
-                ? 'No services detected. Analyze a repository to get started.'
-                : 'No services match your filters.'}
+            <div className="flex items-center justify-center h-64 text-[var(--color-text-muted)] text-sm">
+              {services.length === 0 ? 'No services detected. Analyze a repository to get started.' : 'No services match your filters.'}
             </div>
           )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((service) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-                context={contextMap.get(service.id)}
-                onEdit={handleEdit}
-              />
-            ))}
+          <div style={{ height: virtualizer.getTotalSize(), width: '100%', position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const startIdx = virtualRow.index * cols;
+              const rowServices = filtered.slice(startIdx, startIdx + cols);
+              return (
+                <div
+                  key={virtualRow.key}
+                  style={{
+                    position: 'absolute',
+                    top: virtualRow.start,
+                    left: 0,
+                    width: '100%',
+                    height: virtualRow.size,
+                  }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {rowServices.map((service) => (
+                      <ServiceCard key={service.id} service={service} context={contextMap.get(service.id)} onEdit={onEdit} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
