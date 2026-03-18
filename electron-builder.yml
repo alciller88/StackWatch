@@ -63,7 +63,9 @@ linux:
   category: Development
   icon: build/icons
   desktop:
-    StartupWMClass: StackWatch
+    entry: |
+      [Desktop Entry]
+      StartupWMClass=StackWatch
 
 publish:
   provider: github
