@@ -8,13 +8,15 @@ See [SPEC.md](./SPEC.md) for full technical details.
 ### Added
 - Dashboard always visible in Sidebar as first nav item ("Home")
 - "Close Stack" button in Sidebar — clears all state and returns to Dashboard with confirmation dialog
+- Drag & drop folder to scan from any panel — full-window overlay with accent border
+- Dashboard hint: "or drag & drop a folder anywhere on this window"
 
 ### Fixed
 - Cancel scan now returns to Dashboard instead of empty Services panel (or Services if partial results exist)
 - Critical scan errors now return to Dashboard with descriptive toast instead of showing empty panels
 
 ### Tests
-- 550+ tests across 42 suites (+Sidebar tests, cancelScan/closeStack navigation tests)
+- 548 tests across 41 suites
 
 ---
 
