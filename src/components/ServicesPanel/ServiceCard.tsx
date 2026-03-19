@@ -208,6 +208,14 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
               {confidence === 'low' && '\u26A0 '}
               {confidence === 'high' ? 'confirmed' : badge.label}
             </button>
+            {/* Needs review reasons */}
+            {service.needsReview && confidence !== 'high' && (
+              <div className="font-mono text-[9px] text-[var(--color-text-muted)] mt-0.5 max-w-[120px] leading-tight">
+                {service.confidenceReasons && service.confidenceReasons.length > 0
+                  ? service.confidenceReasons.join(' \u00B7 ')
+                  : 'Review confidence and category'}
+              </div>
+            )}
             {showConfDropdown && (
               <div className="absolute right-0 top-full mt-1 z-50 py-1 min-w-[140px]" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}>
                 {(['high', 'medium', 'low'] as const).map(level => (
@@ -380,6 +388,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
     prev.service.plan === next.service.plan &&
     prev.service.confidence === next.service.confidence &&
     prev.service.needsReview === next.service.needsReview &&
+    prev.service.confidenceReasons === next.service.confidenceReasons &&
     prev.service.zombieStatus === next.service.zombieStatus &&
     prev.service.billing?.nextDate === next.service.billing?.nextDate &&
     prev.service.owner === next.service.owner &&

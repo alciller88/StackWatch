@@ -3,6 +3,24 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.11.1](https://github.com/alciller88/StackWatch/compare/v0.11.0...v0.11.1) (2026-03-19)
+
+### Fixed
+- Layer nodes no longer disappear when editing a service from ServicesPanel — `updateManualService` uses incremental `graphStore.updateServiceNode()` instead of full graph rebuild
+- "Needs review" badge now shows `confidenceReasons` explaining what fields to complete; falls back to generic message when reasons are empty
+- Editing confidence to 'high' from FlowGraph NodeEditPanel now clears `needsReview` — no need to re-edit from ServicesPanel
+- ServiceForm preserves existing service metadata (`evidenceSummary`, `confidenceReasons`, `aiContext`, `zombieStatus`) when editing
+- Connection line now visible when dragging to create edges in FlowGraph — added `connectionLineStyle` with accent color and dashed stroke
+
+### Architecture
+- `shouldNeedReview()` helper in `src/utils/serviceValidation.ts` — centralized review logic used by both ServicesPanel and FlowGraph
+- `graphStore.updateServiceNode(serviceId, data)` — incremental node update by serviceId without touching layer nodes
+
+### Tests
+- 540+ tests across 40 suites (+16 new: 5 serviceValidation, 3 graphStore updateServiceNode, 5 NodeEditPanel, 3 ServiceCard needsReview)
+
+---
+
 ## [0.11.0](https://github.com/alciller88/StackWatch/compare/v0.10.10...v0.11.0) (2026-03-18)
 
 ### Features

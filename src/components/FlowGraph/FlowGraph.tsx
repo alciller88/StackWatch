@@ -15,7 +15,8 @@ import { useDialogStore } from '../../store/dialogStore'
 import { getNodeColor, getNodeIcon, getEdgeColor, getLayerIcon } from './flowUtils'
 import { ContextMenu, type MenuEntry } from './ContextMenu'
 import { NodeEditPanel } from './NodeEditPanel'
-import type { FlowNode, ServiceCategory } from '../../types'
+import type { FlowNode, ServiceCategory, Service } from '../../types'
+import { shouldNeedReview } from '../../utils/serviceValidation'
 
 interface ContextMenuState {
   x: number
@@ -352,9 +353,9 @@ export const FlowGraph: React.FC = () => {
       // Sync ALL fields to the linked service so ServicesPanel stays in sync
       const node = nodes.find(n => n.id === editPanel.nodeId)
       if (node?.data?.serviceId) {
-        const svc = useStore.getState().services.find((s: import('../../types').Service) => s.id === node.data.serviceId)
+        const svc = useStore.getState().services.find((s: Service) => s.id === node.data.serviceId)
         if (svc) {
-          useStore.getState().updateManualService({
+          const merged: Service = {
             ...svc,
             name: data.label,
             category: data.category ?? svc.category,
@@ -363,7 +364,9 @@ export const FlowGraph: React.FC = () => {
             url: data.url ?? svc.url,
             notes: data.note ?? svc.notes,
             billing: data.billing ?? svc.billing,
-          })
+          }
+          // needsReview is recalculated inside updateManualService via shouldNeedReview
+          useStore.getState().updateManualService(merged)
         }
       }
     } else {
@@ -549,6 +552,13 @@ export const FlowGraph: React.FC = () => {
         onNodeDragStop={handleNodeDragStop}
         onPaneClick={closeAll}
         connectionMode={ConnectionMode.Loose}
+        connectionLineType="smoothstep"
+        connectionLineStyle={{
+          stroke: 'var(--color-accent)',
+          strokeWidth: 2,
+          strokeDasharray: '5 5',
+          opacity: 1,
+        }}
         snapToGrid
         snapGrid={[16, 16]}
         deleteKeyCode="Delete"

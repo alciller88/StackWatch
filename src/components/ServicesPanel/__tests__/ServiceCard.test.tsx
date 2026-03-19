@@ -113,4 +113,38 @@ describe('ServiceCard', () => {
     render(<ServiceCard service={svc} />)
     expect(screen.queryByLabelText('Evidence details')).not.toBeInTheDocument()
   })
+
+  describe('needsReview reasons', () => {
+    it('shows confidenceReasons when present and needsReview is true', () => {
+      const svc = {
+        ...baseService,
+        confidence: 'medium' as const,
+        needsReview: true,
+        confidenceReasons: ['Low evidence score', 'Generic category'],
+      }
+      render(<ServiceCard service={svc} />)
+      expect(screen.getByText('Low evidence score \u00B7 Generic category')).toBeInTheDocument()
+    })
+
+    it('shows generic message when confidenceReasons is empty and needsReview is true', () => {
+      const svc = {
+        ...baseService,
+        confidence: 'low' as const,
+        needsReview: true,
+        confidenceReasons: [],
+      }
+      render(<ServiceCard service={svc} />)
+      expect(screen.getByText('Review confidence and category')).toBeInTheDocument()
+    })
+
+    it('does not show review reasons when needsReview is false', () => {
+      const svc = {
+        ...baseService,
+        confidence: 'high' as const,
+        needsReview: false,
+      }
+      render(<ServiceCard service={svc} />)
+      expect(screen.queryByText('Review confidence and category')).not.toBeInTheDocument()
+    })
+  })
 })

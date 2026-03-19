@@ -236,6 +236,9 @@ interface GraphStoreState {
   updateNode: (id: string, data: Partial<GraphNodeData>) => void
   deleteNode: (id: string) => void
 
+  // Service-node sync (incremental — does NOT call initFromAnalysis)
+  updateServiceNode: (serviceId: string, data: Partial<GraphNodeData>) => void
+
   // Edge operations
   addEdge: (source: string, target: string, flowType: FlowEdge['flowType']) => void
   deleteEdge: (edgeId: string) => void
@@ -453,6 +456,12 @@ export const useGraphStore = create<GraphStoreState>((set, get) => ({
       }),
     }))
     get().persistToConfig()
+  },
+
+  updateServiceNode: (serviceId, data) => {
+    const node = get().nodes.find(n => n.data?.serviceId === serviceId)
+    if (!node) return
+    get().updateNode(node.id, data)
   },
 
   deleteNode: (id) => {

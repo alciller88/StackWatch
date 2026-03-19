@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.11.0 | Last updated: 2026-03-18 | Tests: 523+ across 38 suites
+> Version: v0.11.1 | Last updated: 2026-03-19 | Tests: 540+ across 40 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -721,7 +721,17 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.11.0 (current)
+### v0.11.1 (current)
+- **Fix**: Layer nodes no longer disappear when editing a service from ServicesPanel — `updateManualService` uses incremental `graphStore.updateServiceNode()` instead of full graph rebuild
+- **Fix**: "Needs review" badge now shows `confidenceReasons` explaining what fields to complete; falls back to generic message when reasons are empty
+- **Fix**: Editing confidence to 'high' from FlowGraph NodeEditPanel now clears `needsReview` via `shouldNeedReview()` — no need to re-edit from ServicesPanel
+- **Fix**: ServiceForm preserves existing service metadata (evidenceSummary, confidenceReasons, aiContext, zombieStatus) when editing
+- **Fix**: Connection line now visible when dragging to create edges in FlowGraph — `connectionLineStyle` with accent color and dashed stroke
+- **Architecture**: `shouldNeedReview()` helper in `src/utils/serviceValidation.ts` — centralized review logic
+- **Architecture**: `graphStore.updateServiceNode(serviceId, data)` — incremental node update by serviceId
+- 540+ tests across 40 suites
+
+### v0.11.0
 - **Feature**: Style Editor in Settings — full graph color customization with real-time preview
   - Connection type colors (data, auth, payment, webhook) saved in config
   - Node type colors (user, cdn, frontend, api, database, external) saved in config

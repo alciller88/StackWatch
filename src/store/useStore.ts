@@ -21,6 +21,7 @@ import { computeScanDiff } from '../utils/scanDiff';
 import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
 import { useGraphStore, registerServiceGetter, registerServiceDeleter, registerRepoPathGetter, registerScoreRecalculator } from './graphStore';
+import { shouldNeedReview } from '../utils/serviceValidation';
 import { storeMutex } from './mutex';
 import { useStylesStore, registerGraphStylesSaver } from './stylesStore';
 import { DEBOUNCE_SCORE_MS } from '../constants';
@@ -643,29 +644,29 @@ export const useStore = create<StoreState>((set, get) => ({
   updateManualService: async (service: Service) => {
     const release = await storeMutex.acquire();
     try {
+      // Recalculate needsReview based on current service state
+      const updatedService = {
+        ...service,
+        needsReview: shouldNeedReview(service),
+      };
       const currentConfig = ensureConfig(get().config);
       const updatedConfig = {
         ...currentConfig,
-        services: currentConfig.services.map(s => s.id === service.id ? service : s),
+        services: currentConfig.services.map(s => s.id === updatedService.id ? updatedService : s),
       };
       await get().saveConfig(updatedConfig);
       set((state) => ({
-        services: state.services.map(s => s.id === service.id ? service : s),
+        services: state.services.map(s => s.id === updatedService.id ? updatedService : s),
       }));
-      // Sync graph node with updated service data
-      const graphNode = useGraphStore.getState().nodes.find(
-        n => n.data?.serviceId === service.id
-      );
-      if (graphNode) {
-        useGraphStore.getState().updateNode(graphNode.id, {
-          label: service.name,
-          category: service.category,
-          plan: service.plan,
-          confidence: service.confidence,
-          url: service.url,
-          note: service.notes,
-        });
-      }
+      // Incremental graph update — only the affected node, no initFromAnalysis
+      useGraphStore.getState().updateServiceNode(updatedService.id, {
+        label: updatedService.name,
+        category: updatedService.category,
+        plan: updatedService.plan,
+        confidence: updatedService.confidence,
+        url: updatedService.url,
+        note: updatedService.notes,
+      });
       get().recalculateScore();
     } finally {
       release();

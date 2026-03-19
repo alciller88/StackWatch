@@ -439,6 +439,54 @@ describe('graphStore', () => {
     });
   });
 
+  describe('updateServiceNode', () => {
+    it('updates the node matching a serviceId', () => {
+      useGraphStore.setState({
+        nodes: [
+          { id: 'svc-redis', position: { x: 0, y: 0 }, data: { label: 'Redis', nodeType: 'database', serviceId: 'redis' } },
+          { id: 'layer-custom', position: { x: 0, y: 100 }, data: { label: 'My Layer', nodeType: 'layer' } },
+        ],
+        edges: [],
+      });
+
+      useGraphStore.getState().updateServiceNode('redis', { label: 'Redis Updated', category: 'database' });
+
+      const node = useGraphStore.getState().nodes.find(n => n.id === 'svc-redis');
+      expect(node?.data.label).toBe('Redis Updated');
+      expect(node?.data.category).toBe('database');
+    });
+
+    it('is a no-op when serviceId is not found', () => {
+      useGraphStore.setState({
+        nodes: [{ id: 'svc-redis', position: { x: 0, y: 0 }, data: { label: 'Redis', serviceId: 'redis' } }],
+        edges: [],
+      });
+
+      useGraphStore.getState().updateServiceNode('nonexistent', { label: 'X' });
+
+      expect(useGraphStore.getState().nodes[0].data.label).toBe('Redis');
+    });
+
+    it('does not affect layer nodes when updating a service node', () => {
+      useGraphStore.setState({
+        nodes: [
+          { id: 'svc-stripe', position: { x: 0, y: 0 }, data: { label: 'Stripe', nodeType: 'external', serviceId: 'stripe' } },
+          { id: 'layer-custom-1', position: { x: 100, y: 200 }, data: { label: 'Custom Layer', nodeType: 'layer', layerColor: '#ff0000' } },
+          { id: 'user', position: { x: 0, y: -100 }, data: { label: 'User', nodeType: 'layer' } },
+        ],
+        edges: [],
+      });
+
+      useGraphStore.getState().updateServiceNode('stripe', { label: 'Stripe Updated', plan: 'paid' });
+
+      const nodes = useGraphStore.getState().nodes;
+      expect(nodes).toHaveLength(3);
+      expect(nodes.find(n => n.id === 'layer-custom-1')?.data.label).toBe('Custom Layer');
+      expect(nodes.find(n => n.id === 'user')?.data.label).toBe('User');
+      expect(nodes.find(n => n.id === 'svc-stripe')?.data.label).toBe('Stripe Updated');
+    });
+  });
+
   describe('saveNodePosition', () => {
     it('persists position to the node', () => {
       useGraphStore.setState({

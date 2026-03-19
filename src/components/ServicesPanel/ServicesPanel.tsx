@@ -412,13 +412,15 @@ const ServiceForm: React.FC<{
     }
 
     const service: Service = {
+      // Preserve existing fields (evidenceSummary, confidenceReasons, aiContext, zombieStatus, etc.)
+      ...(editingService ?? {}),
       id: editingService?.id ?? name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
       name: name.trim(),
       category,
       plan,
       source: editingService?.source ?? 'manual',
       confidence,
-      ...(url && { url }),
+      ...(url ? { url } : { url: undefined }),
       ...(billingType && {
         billing: {
           type: billingType,
@@ -429,10 +431,10 @@ const ServiceForm: React.FC<{
           ...(billingLastRenewed && { lastRenewed: billingLastRenewed }),
         } as ServiceBilling,
       }),
-      ...(accountEmail && { accountEmail }),
-      ...(notes && { notes }),
-      ...(owner && { owner }),
-      ...(comment && { comment }),
+      ...(accountEmail ? { accountEmail } : { accountEmail: undefined }),
+      ...(notes ? { notes } : { notes: undefined }),
+      ...(owner ? { owner } : { owner: undefined }),
+      ...(comment ? { comment } : { comment: undefined }),
     };
 
     if (isEditing) {
