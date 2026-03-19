@@ -1,5 +1,6 @@
-import { useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useStore } from './store/useStore'
+import { useToastStore } from './store/toastStore'
 import { useDialogStore } from './store/dialogStore'
 import { useHistoryStore } from './store/historyStore'
 import { useGraphStore } from './store/graphStore'
@@ -96,6 +97,59 @@ export default function App() {
     }
   }, [config?.graphStyles, theme])
 
+  // ── Drag & drop folder to scan ──
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounter = useCallback(() => {
+    let count = 0
+    return {
+      inc: () => { count++; return count },
+      dec: () => { count--; return count },
+      reset: () => { count = 0 },
+    }
+  }, [])()
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (dragCounter.inc() === 1) setIsDragOver(true)
+  }, [dragCounter])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (dragCounter.dec() === 0) setIsDragOver(false)
+  }, [dragCounter])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    dragCounter.reset()
+
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+
+    // Electron exposes .path on File objects
+    const filePath = (file as any).path as string | undefined
+    if (!filePath) {
+      useToastStore.getState().addToast('Could not read folder path — try using "Open a Repository" instead', 'error')
+      return
+    }
+
+    const { isAnalyzing } = useStore.getState()
+    if (isAnalyzing) {
+      useToastStore.getState().addToast('A scan is already in progress', 'error')
+      return
+    }
+
+    useStore.getState().analyzeLocal(filePath)
+  }, [dragCounter])
+
   const renderPanel = () => {
     if (activePanel === 'dashboard') return <Dashboard />
     if (activePanel === 'settings') return <Settings />
@@ -136,7 +190,14 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-full flex flex-col" style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
+      <div
+        className="h-full flex flex-col relative"
+        style={{ background: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <TitleBar />
         <TopBar />
         <div className="flex-1 flex min-h-0">
@@ -145,6 +206,20 @@ export default function App() {
             {renderPanel()}
           </main>
         </div>
+        {/* Drag & drop overlay */}
+        {isDragOver && (
+          <div
+            className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none"
+            style={{
+              background: 'rgba(0, 0, 0, 0.6)',
+              border: '3px dashed var(--color-accent)',
+            }}
+          >
+            <div className="font-mono text-sm uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
+              Drop to scan
+            </div>
+          </div>
+        )}
         {showTutorial && <OnboardingTutorial />}
         {showScoreHistory && <ScoreHistoryPanel />}
         {showScoreBreakdown && <ScoreBreakdown />}

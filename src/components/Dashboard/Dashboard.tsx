@@ -142,10 +142,13 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-10">
+        <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-muted)] mb-2">
           Or use the GitHub button in the top bar to analyze a remote repository.
           <br />
           <span className="text-[var(--color-text-muted)]">Blank Stack lets you build your architecture manually without scanning.</span>
+        </p>
+        <p className="font-mono text-[10px] tracking-wide text-[var(--color-text-muted)] mb-10 opacity-60">
+          or drag &amp; drop a folder anywhere on this window
         </p>
 
         {/* Quick Start */}
