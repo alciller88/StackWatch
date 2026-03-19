@@ -396,4 +396,5 @@ export interface StackWatchAPI {
   windowIsMaximized(): Promise<boolean>;
   getEncryptionStatus(): Promise<boolean>;
   getConnectivity(): Promise<{ online: boolean }>;
+  getPathForFile(file: File): string;
 }

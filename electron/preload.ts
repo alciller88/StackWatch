@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { StackWatchAPI } from './types'
 
 const api: StackWatchAPI = {
@@ -78,6 +78,7 @@ const api: StackWatchAPI = {
   windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
   getEncryptionStatus: () => ipcRenderer.invoke('get-encryption-status'),
   getConnectivity: () => ipcRenderer.invoke('get-connectivity'),
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
 }
 
 contextBridge.exposeInMainWorld('stackwatch', api)

@@ -134,8 +134,14 @@ export default function App() {
     const file = e.dataTransfer.files[0]
     if (!file) return
 
-    // Electron exposes .path on File objects
-    const filePath = (file as any).path as string | undefined
+    // Use Electron webUtils.getPathForFile() exposed via preload (File.path is deprecated in Electron 35)
+    let filePath: string | undefined
+    try {
+      filePath = window.stackwatch?.getPathForFile(file)
+    } catch {
+      // Fallback for environments where getPathForFile is not available
+      filePath = (file as any).path as string | undefined
+    }
     if (!filePath) {
       useToastStore.getState().addToast('Could not read folder path — try using "Open a Repository" instead', 'error')
       return
