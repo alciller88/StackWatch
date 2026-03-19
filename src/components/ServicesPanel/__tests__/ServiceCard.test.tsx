@@ -114,8 +114,20 @@ describe('ServiceCard', () => {
     expect(screen.queryByLabelText('Evidence details')).not.toBeInTheDocument()
   })
 
-  describe('needsReview reasons', () => {
-    it('shows confidenceReasons when present and needsReview is true', () => {
+  describe('needsReview ? button and popover', () => {
+    it('shows ? button when needsReview is true', () => {
+      const svc = {
+        ...baseService,
+        confidence: 'medium' as const,
+        needsReview: true,
+        confidenceReasons: ['Low evidence score'],
+      }
+      render(<ServiceCard service={svc} />)
+      expect(screen.getByLabelText('Evidence details')).toBeInTheDocument()
+    })
+
+    it('shows confidenceReasons in popover when ? is clicked', async () => {
+      const user = userEvent.setup()
       const svc = {
         ...baseService,
         confidence: 'medium' as const,
@@ -123,10 +135,13 @@ describe('ServiceCard', () => {
         confidenceReasons: ['Low evidence score', 'Generic category'],
       }
       render(<ServiceCard service={svc} />)
-      expect(screen.getByText('Low evidence score \u00B7 Generic category')).toBeInTheDocument()
+      await user.click(screen.getByLabelText('Evidence details'))
+      expect(screen.getByText('Low evidence score')).toBeInTheDocument()
+      expect(screen.getByText('Generic category')).toBeInTheDocument()
     })
 
-    it('shows generic message when confidenceReasons is empty and needsReview is true', () => {
+    it('shows generic message in popover when confidenceReasons is empty', async () => {
+      const user = userEvent.setup()
       const svc = {
         ...baseService,
         confidence: 'low' as const,
@@ -134,17 +149,18 @@ describe('ServiceCard', () => {
         confidenceReasons: [],
       }
       render(<ServiceCard service={svc} />)
+      await user.click(screen.getByLabelText('Evidence details'))
       expect(screen.getByText('Review confidence and category')).toBeInTheDocument()
     })
 
-    it('does not show review reasons when needsReview is false', () => {
+    it('does not show ? button when needsReview is false and no evidence', () => {
       const svc = {
         ...baseService,
         confidence: 'high' as const,
         needsReview: false,
       }
       render(<ServiceCard service={svc} />)
-      expect(screen.queryByText('Review confidence and category')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Evidence details')).not.toBeInTheDocument()
     })
   })
 })

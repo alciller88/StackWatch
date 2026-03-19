@@ -144,54 +144,6 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Evidence info button */}
-          {service.source === 'inferred' && service.evidenceSummary && service.evidenceSummary.length > 0 && (
-            <div className="relative" ref={evidenceRef}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowEvidence(v => !v); }}
-                className="font-mono text-[10px] w-5 h-5 flex items-center justify-center rounded-none border transition-colors border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
-                aria-label="Evidence details"
-                title="Why was this detected?"
-              >
-                ?
-              </button>
-              {showEvidence && (
-                <div
-                  className="absolute right-0 top-full mt-1 z-50 min-w-[260px] max-w-[340px]"
-                  style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}
-                >
-                  <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                    <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
-                      Evidence breakdown
-                    </span>
-                  </div>
-                  <div className="px-3 py-2 space-y-1">
-                    {service.evidenceSummary!.map((ev, i) => (
-                      <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
-                        <span className="text-[var(--color-text-muted)] w-16 shrink-0 uppercase">{ev.type.replace('_', ' ')}</span>
-                        <span className="text-[var(--color-text-secondary)] truncate flex-1" title={ev.value}>{ev.value}</span>
-                        <span className="text-[var(--color-success)] shrink-0">+{ev.score}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="px-3 py-2 border-t flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
-                    <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                      Total: {service.evidenceSummary!.reduce((sum, e) => sum + e.score, 0)}
-                    </span>
-                    <span className={`font-mono text-[10px] uppercase ${confidence === 'high' ? 'text-[var(--color-success)]' : 'text-[var(--color-accent)]'}`}>
-                      {confidence}
-                    </span>
-                  </div>
-                  {service.source === 'manual' && (
-                    <div className="px-3 py-1 text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                      \u21A9 Manually restored
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Confidence badge — clickable */}
           <div className="relative" ref={confRef}>
             <button
@@ -208,14 +160,6 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
               {confidence === 'low' && '\u26A0 '}
               {confidence === 'high' ? 'confirmed' : badge.label}
             </button>
-            {/* Needs review reasons */}
-            {service.needsReview && confidence !== 'high' && (
-              <div className="font-mono text-[9px] text-[var(--color-text-muted)] mt-0.5 max-w-[120px] leading-tight">
-                {service.confidenceReasons && service.confidenceReasons.length > 0
-                  ? service.confidenceReasons.join(' \u00B7 ')
-                  : 'Review confidence and category'}
-              </div>
-            )}
             {showConfDropdown && (
               <div className="absolute right-0 top-full mt-1 z-50 py-1 min-w-[140px]" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}>
                 {(['high', 'medium', 'low'] as const).map(level => (
@@ -236,6 +180,75 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
               </div>
             )}
           </div>
+
+          {/* Evidence / review reasons ? button — shows popover with details */}
+          {(service.needsReview || (service.source === 'inferred' && service.evidenceSummary && service.evidenceSummary.length > 0)) && (
+            <div className="relative" ref={evidenceRef}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowEvidence(v => !v); }}
+                className="font-mono text-[10px] w-5 h-5 flex items-center justify-center rounded-none border transition-colors border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                aria-label="Evidence details"
+                title={service.needsReview ? 'Why does this need review?' : 'Why was this detected?'}
+              >
+                ?
+              </button>
+              {showEvidence && (
+                <div
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[260px] max-w-[340px]"
+                  style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 0 }}
+                >
+                  {/* Confidence reasons */}
+                  {service.needsReview && (
+                    <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                      <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--color-warning)' }}>
+                        Needs review
+                      </span>
+                      <div className="mt-1 space-y-0.5">
+                        {service.confidenceReasons && service.confidenceReasons.length > 0
+                          ? service.confidenceReasons.map((r, i) => (
+                              <div key={i} className="font-mono text-[10px] text-[var(--color-text-secondary)]">{r}</div>
+                            ))
+                          : <div className="font-mono text-[10px] text-[var(--color-text-muted)]">Review confidence and category</div>
+                        }
+                      </div>
+                    </div>
+                  )}
+                  {/* Evidence breakdown */}
+                  {service.evidenceSummary && service.evidenceSummary.length > 0 && (
+                    <>
+                      <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                        <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
+                          Evidence breakdown
+                        </span>
+                      </div>
+                      <div className="px-3 py-2 space-y-1">
+                        {service.evidenceSummary.map((ev, i) => (
+                          <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
+                            <span className="text-[var(--color-text-muted)] w-16 shrink-0 uppercase">{ev.type.replace('_', ' ')}</span>
+                            <span className="text-[var(--color-text-secondary)] truncate flex-1" title={ev.value}>{ev.value}</span>
+                            <span className="text-[var(--color-success)] shrink-0">+{ev.score}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-3 py-2 border-t flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+                        <span className="font-mono text-[10px] font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                          Total: {service.evidenceSummary.reduce((sum, e) => sum + e.score, 0)}
+                        </span>
+                        <span className={`font-mono text-[10px] uppercase ${confidence === 'high' ? 'text-[var(--color-success)]' : 'text-[var(--color-accent)]'}`}>
+                          {confidence}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {service.source === 'manual' && (
+                    <div className="px-3 py-1 text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                      {'\u21A9'} Manually restored
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </div>
