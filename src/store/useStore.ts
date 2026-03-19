@@ -108,11 +108,32 @@ interface StoreState {
 export function mergeServices(
   inferred: Service[],
   manual: Service[],
-  confidenceOverrides?: Record<string, 'high' | 'medium' | 'low'>
+  confidenceOverrides?: Record<string, 'high' | 'medium' | 'low'>,
+  previousServices?: Service[],
 ): Service[] {
   const merged = new Map<string, Service>();
+  // Build a map of previous services for preserving manual edits
+  const previousMap = new Map<string, Service>();
+  if (previousServices) {
+    for (const s of previousServices) previousMap.set(s.id, s);
+  }
   for (const s of inferred) {
-    merged.set(s.id, s);
+    // If this service existed before and had manual edits, preserve them
+    const prev = previousMap.get(s.id);
+    if (prev && prev.source === 'inferred') {
+      // Preserve manually-edited fields: owner, billing, notes, category (if changed from default)
+      merged.set(s.id, {
+        ...s,
+        ...(prev.owner ? { owner: prev.owner } : {}),
+        ...(prev.billing ? { billing: prev.billing } : {}),
+        ...(prev.notes ? { notes: prev.notes } : {}),
+        ...(prev.comment ? { comment: prev.comment } : {}),
+        ...(prev.accountEmail ? { accountEmail: prev.accountEmail } : {}),
+        ...(prev.url && !s.url ? { url: prev.url } : {}),
+      });
+    } else {
+      merged.set(s.id, s);
+    }
   }
   for (const s of manual) {
     merged.set(s.id, s);
@@ -283,7 +304,8 @@ export const useStore = create<StoreState>((set, get) => ({
 
       const manualServices = scanMode === 'merge' ? (config?.services ?? []) : [];
       const confidenceOverrides = scanMode === 'merge' ? config?.confidenceOverrides : undefined;
-      const allServices = mergeServices(result.services, manualServices, confidenceOverrides);
+      const previousServices = scanMode === 'merge' ? get().services : undefined;
+      const allServices = mergeServices(result.services, manualServices, confidenceOverrides, previousServices);
 
       // Ensure every service has a flow node (manual services aren't in pipeline output)
       const { nodes: extraNodes, edges: extraEdges } = ensureFlowNodes(allServices, result.flowNodes);
@@ -420,7 +442,8 @@ export const useStore = create<StoreState>((set, get) => ({
 
       const manualServices = scanMode === 'merge' ? (config?.services ?? []) : [];
       const confidenceOverrides = scanMode === 'merge' ? config?.confidenceOverrides : undefined;
-      const allGhServices = mergeServices(result.services, manualServices, confidenceOverrides);
+      const previousGhServices = scanMode === 'merge' ? get().services : undefined;
+      const allGhServices = mergeServices(result.services, manualServices, confidenceOverrides, previousGhServices);
 
       const { nodes: ghExtraNodes, edges: ghExtraEdges } = ensureFlowNodes(allGhServices, result.flowNodes);
 
@@ -944,13 +967,11 @@ registerScoreRecalculator(() => useStore.getState().recalculateScore());
 registerServiceDeleter((serviceId: string) => {
   const store = useStore.getState();
   if (store.services.find((s) => s.id === serviceId)) {
+    // Only update services — do NOT touch flowNodes/flowEdges to avoid
+    // triggering FlowGraph's useEffect which would call initFromAnalysis()
+    // and reset all node positions. The graphStore already handles node removal.
     useStore.setState({
       services: store.services.filter((s) => s.id !== serviceId),
-      flowNodes: store.flowNodes.filter((n) => n.serviceId !== serviceId),
-      flowEdges: store.flowEdges.filter((e) => {
-        const nodeId = `svc-${serviceId}`;
-        return e.source !== nodeId && e.target !== nodeId;
-      }),
     });
     // Also remove from config if it's a manual service
     const config = store.config;

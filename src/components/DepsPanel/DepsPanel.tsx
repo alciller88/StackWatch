@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useStore } from '../../store/useStore';
 import { useToastStore } from '../../store/toastStore';
@@ -33,6 +33,9 @@ export const DepsPanel: React.FC = () => {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [groupByType, setGroupByType] = useState(false);
   const [vulnLoading, setVulnLoading] = useState(false);
+
+  // Reset loading state when dependencies change (e.g. after re-scan with Merge)
+  useEffect(() => { setVulnLoading(false); }, [dependencies]);
 
   const scanVulns = async () => {
     if (!window.stackwatch?.scanVulnerabilities || dependencies.length === 0) return;

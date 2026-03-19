@@ -11,6 +11,12 @@ See [SPEC.md](./SPEC.md) for full technical details.
 - Phase messages display for minimum 800ms to be readable on fast scans
 - Extractor emits progress every 50 files for granular updates on large repos
 - Rebalanced pipeline phase weights — extraction gets 5-45% (was 5-20%), reflecting actual scan time
+- Toast text no longer overflows container (word-break on long messages)
+- Deleting a service no longer resets all node positions — service deleter no longer touches flowNodes/flowEdges
+- Merge re-scan preserves manually-edited fields (owner, billing, notes) from previous services
+- Vuln scan button properly resets after Merge re-scan
+- New nodes from FlowGraph context menu appear at correct canvas position (screen-to-flow coordinate conversion)
+- ServiceCard evidence/review reasons moved to popover — consistent card heights in grid
 
 ---
 

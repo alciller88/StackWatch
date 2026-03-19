@@ -4,6 +4,8 @@ import ReactFlow, {
   Controls,
   MiniMap,
   ConnectionMode,
+  ReactFlowProvider,
+  useReactFlow,
   type NodeMouseHandler,
   type EdgeMouseHandler,
   type Node,
@@ -25,6 +27,7 @@ interface ContextMenuState {
   nodeId?: string
   edgeId?: string
   edgeFlowType?: string
+  flowPosition?: { x: number; y: number }
 }
 
 interface EditPanelState {
@@ -35,7 +38,8 @@ interface EditPanelState {
   createPosition?: { x: number; y: number }
 }
 
-export const FlowGraph: React.FC = () => {
+const FlowGraphInner: React.FC = () => {
+  const { screenToFlowPosition } = useReactFlow()
   const flowNodes = useStore(s => s.flowNodes)
   const flowEdges = useStore(s => s.flowEdges)
   const services = useStore(s => s.services)
@@ -108,14 +112,16 @@ export const FlowGraph: React.FC = () => {
       event.preventDefault()
       const bounds = containerRef.current?.getBoundingClientRect()
       if (!bounds) return
+      const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY })
       setContextMenu({
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
         type: 'pane',
+        flowPosition: flowPos,
       })
       setEditPanel(null)
     },
-    [],
+    [screenToFlowPosition],
   )
 
   const handleEdgeContextMenu: EdgeMouseHandler = useCallback(
@@ -238,7 +244,7 @@ export const FlowGraph: React.FC = () => {
             x: contextMenu.x,
             y: contextMenu.y,
             nodeId: null,
-            createPosition: { x: contextMenu.x, y: contextMenu.y },
+            createPosition: contextMenu.flowPosition ?? { x: contextMenu.x, y: contextMenu.y },
           })
         },
       },
@@ -252,7 +258,7 @@ export const FlowGraph: React.FC = () => {
             y: contextMenu.y,
             nodeId: null,
             isCustom: true,
-            createPosition: { x: contextMenu.x, y: contextMenu.y },
+            createPosition: contextMenu.flowPosition ?? { x: contextMenu.x, y: contextMenu.y },
           })
         },
       },
@@ -262,7 +268,8 @@ export const FlowGraph: React.FC = () => {
         onClick: () => {
           if (!contextMenu) return
           const id = `layer-custom-${Date.now()}`
-          addNode(id, { x: contextMenu.x, y: contextMenu.y }, {
+          const pos = contextMenu.flowPosition ?? { x: contextMenu.x, y: contextMenu.y }
+          addNode(id, pos, {
             label: 'New Layer',
             nodeType: 'layer',
             source: 'manual',
@@ -634,3 +641,9 @@ export const FlowGraph: React.FC = () => {
     </div>
   )
 }
+
+export const FlowGraph: React.FC = () => (
+  <ReactFlowProvider>
+    <FlowGraphInner />
+  </ReactFlowProvider>
+)

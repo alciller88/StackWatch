@@ -28,7 +28,7 @@ export const ToastContainer: React.FC = () => {
             aria-live="polite"
           >
             <span className="shrink-0">{style.icon}</span>
-            <span className="flex-1">{toast.message}</span>
+            <span className="flex-1" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
               className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
