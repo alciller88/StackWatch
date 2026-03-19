@@ -28,11 +28,11 @@ export async function analyzeLocalRepo(
     return analyzeMonorepo(folderPath, mono.packages, mono.type, aiSettings, excludedServices, onProgress, signal)
   }
 
-  // Single repo
+  // Single repo — extraction is the longest phase, give it 5-45% range
   onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
   const { evidences, dependencies, projectName } = await extractEvidences(folderPath, onProgress, signal)
-  onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+  onProgress?.({ phase: 'Extracting evidences...', percent: 45, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
   return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath, onProgress, signal)
 }
 
@@ -79,7 +79,7 @@ async function analyzeMonorepo(
   // Deduplicate dependencies (same name+ecosystem across packages)
   const uniqueDeps = deduplicateDeps(allDeps)
 
-  onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: allEvidences.length, services: 0, vulns: 0 } })
+  onProgress?.({ phase: 'Extracting evidences...', percent: 45, counts: { evidences: allEvidences.length, services: 0, vulns: 0 } })
   const result = await runPipeline(allEvidences, uniqueDeps, aiSettings, rootName, excludedServices, rootPath, onProgress, signal)
   result.monorepo = {
     type: monoType,
@@ -113,7 +113,7 @@ export async function analyzeGitHubRepo(
   onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
   const { evidences, dependencies, projectName } = await extractEvidencesFromGitHub(fetchFile, listDir)
-  onProgress?.({ phase: 'Extracting evidences...', percent: 20, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+  onProgress?.({ phase: 'Extracting evidences...', percent: 45, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
   return runPipeline(evidences, dependencies, aiSettings, projectName, undefined, undefined, onProgress, signal)
 }
 
@@ -134,13 +134,13 @@ async function runPipeline(
   }
 
   // Step 1: Heuristic classification (always runs)
-  onProgress?.({ phase: 'Classifying services...', percent: 40, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
+  onProgress?.({ phase: 'Classifying services...', percent: 50, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
   checkAbort()
   const heuristicResults = classifyEvidences(evidences, projectName)
   const dedupResult = deduplicateServices(heuristicResults)
   let services = dedupResult.services
   const discardedItems: DiscardedItem[] = [...dedupResult.discarded]
-  onProgress?.({ phase: 'Deduplicating...', percent: 55, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+  onProgress?.({ phase: 'Deduplicating...', percent: 56, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
   checkAbort()
 
   // Note: excludedServices only affects the graph (filtered in graphStore.initFromAnalysis),
@@ -159,7 +159,7 @@ async function runPipeline(
   // Step 2.5: AI false-positive filter (hybrid mode, before full refinement)
   let aiFilteredCount: number | undefined
   if (useAI) {
-    onProgress?.({ phase: 'Running AI filter...', percent: 70, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+    onProgress?.({ phase: 'Running AI filter...', percent: 62, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
     checkAbort()
     const preFilterServices = [...services]
     try {
@@ -190,7 +190,7 @@ async function runPipeline(
   let deepAnalysis: DeepAnalysisResult | undefined
   let aiError: string | undefined
   if (useAI) {
-    onProgress?.({ phase: 'Analyzing services...', percent: 80, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+    onProgress?.({ phase: 'Analyzing services...', percent: 75, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
     checkAbort()
     const originalServices = [...services]
     try {
@@ -229,9 +229,9 @@ async function runPipeline(
     return true
   })
 
-  // If no AI, jump progress to 80%
+  // If no AI, jump progress to 85%
   if (!useAI) {
-    onProgress?.({ phase: 'Analyzing services...', percent: 80, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
+    onProgress?.({ phase: 'Analyzing services...', percent: 85, counts: { evidences: evidences.length, services: services.length, vulns: 0 } })
   }
 
   checkAbort()

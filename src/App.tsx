@@ -157,11 +157,11 @@ export default function App() {
   }, [dragCounter])
 
   const renderPanel = () => {
+    // Show scan progress screen when actively scanning — takes priority over any panel
+    if (isAnalyzing && scanProgress) return <ScanProgress />
+
     if (activePanel === 'dashboard') return <Dashboard />
     if (activePanel === 'settings') return <Settings />
-
-    // Show scan progress screen when actively scanning with progress data
-    if (isAnalyzing && scanProgress) return <ScanProgress />
 
     const hasData = !!repoPath || services.length > 0 || !!config
     if (!hasData && !isAnalyzing) return <Dashboard />

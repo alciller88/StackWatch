@@ -3,6 +3,17 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.12.1](https://github.com/alciller88/StackWatch/compare/v0.12.0...v0.12.1) (2026-03-19)
+
+### Fixed
+- Drag & drop now shows ScanProgress and Cancel button — scan progress takes priority over active panel
+- Progress bar no longer regresses — forward-only interpolation at 20fps with smooth easing
+- Phase messages display for minimum 800ms to be readable on fast scans
+- Extractor emits progress every 50 files for granular updates on large repos
+- Rebalanced pipeline phase weights — extraction gets 5-45% (was 5-20%), reflecting actual scan time
+
+---
+
 ## [0.12.0](https://github.com/alciller88/StackWatch/compare/v0.11.1...v0.12.0) (2026-03-19)
 
 ### Added

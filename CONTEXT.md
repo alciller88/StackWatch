@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.12.0
+# CONTEXT.md — StackWatch v0.12.1
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -46,7 +46,7 @@ extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
-Pipeline emits `scan-progress` IPC at each phase. Supports `AbortSignal` for cancellation. **Only one scan at a time** — `scanInProgress` flag rejects concurrent attempts.
+Pipeline emits `scan-progress` IPC at each phase. Extractor emits progress every 50 files for smooth UI on large repos. ScanProgress uses forward-only interpolation (20fps) to avoid bar regression. Supports `AbortSignal` for cancellation. **Only one scan at a time** — `scanInProgress` flag rejects concurrent attempts.
 
 **Heuristic scoring** (no hardcoded service maps):
 

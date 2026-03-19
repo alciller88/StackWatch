@@ -1,10 +1,54 @@
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
 import type { ScanProgressData } from '../../types';
+
+const MIN_PHASE_DISPLAY_MS = 800;
 
 export function ScanProgress() {
   const scanProgress = useStore((s) => s.scanProgress);
   const repoPath = useStore((s) => s.repoPath);
   const cancelScan = useStore((s) => s.cancelScan);
+
+  // Smooth progress: only moves forward, interpolates at 20fps
+  const targetPercent = useRef(0);
+  const [displayPercent, setDisplayPercent] = useState(0);
+
+  // Phase text with minimum display time
+  const [displayPhase, setDisplayPhase] = useState('');
+  const lastPhaseChange = useRef(0);
+
+  useEffect(() => {
+    if (!scanProgress) return;
+    targetPercent.current = Math.max(targetPercent.current, scanProgress.percent);
+
+    const now = Date.now();
+    if (now - lastPhaseChange.current >= MIN_PHASE_DISPLAY_MS || displayPhase === '') {
+      setDisplayPhase(scanProgress.phase);
+      lastPhaseChange.current = now;
+    }
+  }, [scanProgress, displayPhase]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayPercent((prev) => {
+        const target = targetPercent.current;
+        if (prev >= target) return prev;
+        const step = Math.max(0.5, (target - prev) * 0.1);
+        return Math.min(target, prev + step);
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reset when a new scan starts
+  useEffect(() => {
+    if (scanProgress && scanProgress.percent <= 1) {
+      targetPercent.current = scanProgress.percent;
+      setDisplayPercent(scanProgress.percent);
+      setDisplayPhase(scanProgress.phase);
+      lastPhaseChange.current = Date.now();
+    }
+  }, [scanProgress?.phase === 'Detecting project structure...' || scanProgress?.phase === 'Initializing...']); // eslint-disable-line react-hooks/exhaustive-deps -- reset on scan start
 
   if (!scanProgress) return null;
 
@@ -14,7 +58,9 @@ export function ScanProgress() {
       : repoPath.split(/[\\/]/).pop() || repoPath
     : 'Unknown';
 
-  const { phase, percent, counts } = scanProgress;
+  const { counts } = scanProgress;
+  const phase = displayPhase || scanProgress.phase;
+  const percent = Math.round(displayPercent);
 
   return (
     <div

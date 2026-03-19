@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.12.0 | Last updated: 2026-03-19 | Tests: 550+ across 42 suites
+> Version: v0.12.1 | Last updated: 2026-03-19 | Tests: 548+ across 41 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -721,12 +721,20 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.12.0 (current)
+### v0.12.1 (current)
+- **Fix**: Drag & drop now shows ScanProgress and Cancel button — scan progress takes priority over active panel
+- **Fix**: Progress bar no longer regresses — forward-only interpolation at 20fps with smooth easing
+- **Fix**: Phase messages display for minimum 800ms to be readable
+- **Fix**: Extractor emits progress every 50 files (was every 20% of total) for granular updates on large repos
+- **Fix**: Rebalanced pipeline phase weights — extraction 5-45%, classify 50%, AI 62-75%, graph 90%
+- 548+ tests across 41 suites
+
+### v0.12.0
 - **Feature**: Dashboard always visible in Sidebar as first nav item ("Home")
 - **Feature**: "Close Stack" button in Sidebar — clears all state and returns to Dashboard with confirmation dialog
+- **Feature**: Drag & drop folder to scan from any panel with full-window overlay
 - **Fix**: Cancel scan returns to Dashboard (or Services if partial results) instead of empty panels
 - **Fix**: Critical scan errors return to Dashboard with descriptive toast
-- 550+ tests across 42 suites
 
 ### v0.11.1
 - **Fix**: Layer nodes no longer disappear when editing a service from ServicesPanel — `updateManualService` uses incremental `graphStore.updateServiceNode()` instead of full graph rebuild

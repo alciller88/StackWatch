@@ -133,17 +133,17 @@ export async function extractEvidences(
   }
 
   // Walk the repo
-  onProgress?.({ phase: 'Walking file tree...', percent: 7, counts: { evidences: 0, services: 0, vulns: 0 } })
+  onProgress?.({ phase: 'Walking file tree...', percent: 8, counts: { evidences: 0, services: 0, vulns: 0 } })
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
   const files = await walkRepo(repoPath, repoPath, ig)
 
-  // Emit progress periodically during file processing
-  const progressInterval = Math.max(1, Math.floor(files.length / 5))
+  // Emit progress every 50 files for smooth UI updates on large repos
+  const PROGRESS_EVERY = 50
   for (let i = 0; i < files.length; i++) {
     const filePath = files[i]! // bounded by i < files.length
     if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
-    if (i > 0 && i % progressInterval === 0) {
-      const filePercent = 8 + Math.round((i / files.length) * 10)
+    if (i > 0 && i % PROGRESS_EVERY === 0) {
+      const filePercent = 10 + Math.round((i / files.length) * 32)
       onProgress?.({ phase: `Processing files (${i}/${files.length})...`, percent: filePercent, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
     }
     const relPath = path.relative(repoPath, filePath)
