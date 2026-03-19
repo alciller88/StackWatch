@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.11.1 | Last updated: 2026-03-19 | Tests: 540+ across 40 suites
+> Version: v0.12.0 | Last updated: 2026-03-19 | Tests: 550+ across 42 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -721,7 +721,14 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.11.1 (current)
+### v0.12.0 (current)
+- **Feature**: Dashboard always visible in Sidebar as first nav item ("Home")
+- **Feature**: "Close Stack" button in Sidebar — clears all state and returns to Dashboard with confirmation dialog
+- **Fix**: Cancel scan returns to Dashboard (or Services if partial results) instead of empty panels
+- **Fix**: Critical scan errors return to Dashboard with descriptive toast
+- 550+ tests across 42 suites
+
+### v0.11.1
 - **Fix**: Layer nodes no longer disappear when editing a service from ServicesPanel — `updateManualService` uses incremental `graphStore.updateServiceNode()` instead of full graph rebuild
 - **Fix**: "Needs review" badge now shows `confidenceReasons` explaining what fields to complete; falls back to generic message when reasons are empty
 - **Fix**: Editing confidence to 'high' from FlowGraph NodeEditPanel now clears `needsReview` via `shouldNeedReview()` — no need to re-edit from ServicesPanel

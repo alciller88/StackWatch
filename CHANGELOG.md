@@ -3,6 +3,21 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.12.0](https://github.com/alciller88/StackWatch/compare/v0.11.1...v0.12.0) (2026-03-19)
+
+### Added
+- Dashboard always visible in Sidebar as first nav item ("Home")
+- "Close Stack" button in Sidebar — clears all state and returns to Dashboard with confirmation dialog
+
+### Fixed
+- Cancel scan now returns to Dashboard instead of empty Services panel (or Services if partial results exist)
+- Critical scan errors now return to Dashboard with descriptive toast instead of showing empty panels
+
+### Tests
+- 550+ tests across 42 suites (+Sidebar tests, cancelScan/closeStack navigation tests)
+
+---
+
 ## [0.11.1](https://github.com/alciller88/StackWatch/compare/v0.11.0...v0.11.1) (2026-03-19)
 
 ### Fixed

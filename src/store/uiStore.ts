@@ -32,5 +32,6 @@ export function useUIActions() {
     dismissTutorial: s.dismissTutorial,
     loadDemo: s.loadDemo,
     initBlankStack: s.initBlankStack,
+    closeStack: s.closeStack,
   }))
 }

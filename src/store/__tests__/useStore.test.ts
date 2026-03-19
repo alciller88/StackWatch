@@ -532,3 +532,57 @@ describe('Reactive stackScore', () => {
     expect(state.healthChecks.length).toBeGreaterThan(0);
   });
 });
+
+// ── cancelScan navigation ──
+
+describe('cancelScan navigation', () => {
+  beforeEach(() => {
+    useStore.setState({
+      services: [],
+      isAnalyzing: true,
+      scanProgress: { phase: 'Scanning...', percent: 50, counts: { evidences: 0, services: 0, vulns: 0 } },
+      activePanel: 'flow',
+    });
+    vi.clearAllMocks();
+  });
+
+  it('navigates to dashboard when no services exist', () => {
+    useStore.getState().cancelScan();
+    expect(useStore.getState().activePanel).toBe('dashboard');
+  });
+
+  it('navigates to services when partial results exist', () => {
+    useStore.setState({ services: [makeService('redis')] });
+    useStore.getState().cancelScan();
+    expect(useStore.getState().activePanel).toBe('services');
+  });
+});
+
+// ── closeStack ──
+
+describe('closeStack', () => {
+  beforeEach(() => {
+    useStore.setState({
+      services: [makeService('redis')],
+      dependencies: [{ name: 'express', version: '4.0.0', type: 'npm' }],
+      flowNodes: [makeNode('redis')],
+      flowEdges: [],
+      repoPath: '/test/repo',
+      config: { version: '1', project: { name: 'Test', description: '' }, services: [], accounts: [] },
+      activePanel: 'services',
+    });
+  });
+
+  it('clears all state and navigates to dashboard', () => {
+    useStore.getState().closeStack();
+    const state = useStore.getState();
+
+    expect(state.services).toHaveLength(0);
+    expect(state.dependencies).toHaveLength(0);
+    expect(state.flowNodes).toHaveLength(0);
+    expect(state.flowEdges).toHaveLength(0);
+    expect(state.repoPath).toBeNull();
+    expect(state.config).toBeNull();
+    expect(state.activePanel).toBe('dashboard');
+  });
+});

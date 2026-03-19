@@ -97,6 +97,7 @@ export default function App() {
   }, [config?.graphStyles, theme])
 
   const renderPanel = () => {
+    if (activePanel === 'dashboard') return <Dashboard />
     if (activePanel === 'settings') return <Settings />
 
     // Show scan progress screen when actively scanning with progress data

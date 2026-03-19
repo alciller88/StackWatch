@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.11.1
+# CONTEXT.md — StackWatch v0.12.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -31,6 +31,8 @@
 | **Blank Stack**   | Empty canvas with USER layer node. No repo. Manual architecture building. TopBar shows "Untitled Stack". |
 | **Import config** | Full restore from exported JSON — services, graph layout, edges, positions.                           |
 | **CLI / Action**  | Headless scan. `--fail-on-vulns` (exit 1), `--fail-on-unreviewed` (exit 2) for CI gates.             |
+
+Dashboard is always accessible from Sidebar as first nav item. "Close Stack" in Sidebar clears all state and returns to Dashboard (with confirmation dialog).
 
 ---
 
@@ -348,6 +350,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | No hex hardcoded for layer nodes               | Use stylesStore.graphStyles.layerColors          |
 | No `eslint-disable` without justification        | Always add comment explaining exactly why the disable is needed |
 | No `!` (non-null assertion) without comment      | `noUncheckedIndexedAccess` enabled — use `?.` or `??` instead, `!` only with proof |
+| No navigating to empty panels after error/cancel | Return to Dashboard instead — user sees actionable landing page, not empty state    |
 
 ---
 

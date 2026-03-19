@@ -21,6 +21,7 @@ import { computeScanDiff } from '../utils/scanDiff';
 import { calculateHealthScore } from '../utils/healthScore';
 import { useToastStore } from './toastStore';
 import { useGraphStore, registerServiceGetter, registerServiceDeleter, registerRepoPathGetter, registerScoreRecalculator } from './graphStore';
+import { useHistoryStore } from './historyStore';
 import { shouldNeedReview } from '../utils/serviceValidation';
 import { storeMutex } from './mutex';
 import { useStylesStore, registerGraphStylesSaver } from './stylesStore';
@@ -28,7 +29,7 @@ import { DEBOUNCE_SCORE_MS } from '../constants';
 import { themes } from '../themes';
 import type { ThemeName } from '../themes';
 
-export type ActivePanel = 'services' | 'dependencies' | 'discarded' | 'flow' | 'costs' | 'settings';
+export type ActivePanel = 'dashboard' | 'services' | 'dependencies' | 'discarded' | 'flow' | 'costs' | 'settings';
 export type StoreMode = 'scan' | 'blank';
 
 // Timer for scan diff cleanup (task 1.7)
@@ -99,6 +100,7 @@ interface StoreState {
   openDoctor: () => void;
   closeDoctor: () => void;
   restoreDiscardedItem: (item: DiscardedItem) => Promise<void>;
+  closeStack: () => void;
   setTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
 }
@@ -167,7 +169,7 @@ export const useStore = create<StoreState>((set, get) => ({
   flowEdges: [],
   repoPath: null,
   isAnalyzing: false,
-  activePanel: 'services',
+  activePanel: 'dashboard',
   config: null,
   error: null,
   aiSettings: null,
@@ -195,8 +197,17 @@ export const useStore = create<StoreState>((set, get) => ({
     if (window.stackwatch?.cancelScan) {
       window.stackwatch.cancelScan();
     }
-    set({ scanProgress: null, isAnalyzing: false, analysisPhase: null });
-    useToastStore.getState().addToast('Scan cancelled', 'info');
+    const hasResults = get().services.length > 0;
+    set({
+      scanProgress: null,
+      isAnalyzing: false,
+      analysisPhase: null,
+      activePanel: hasResults ? 'services' : 'dashboard',
+    });
+    useToastStore.getState().addToast(
+      hasResults ? `Scan cancelled — ${get().services.length} services found` : 'Scan cancelled',
+      'info',
+    );
   },
 
   recalculateScore: () => {
@@ -344,12 +355,15 @@ export const useStore = create<StoreState>((set, get) => ({
       // Load score history after analysis completes
       get().loadScoreHistory();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       set({
         isAnalyzing: false,
         analysisPhase: null,
         scanProgress: null,
-        error: err instanceof Error ? err.message : String(err),
+        error: msg,
+        activePanel: 'dashboard',
       });
+      useToastStore.getState().addToast(`Scan failed: ${msg}`, 'error');
     }
   },
 
@@ -458,12 +472,15 @@ export const useStore = create<StoreState>((set, get) => ({
         set({ config: updatedConfig });
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       set({
         isAnalyzing: false,
         analysisPhase: null,
         scanProgress: null,
-        error: err instanceof Error ? err.message : String(err),
+        error: msg,
+        activePanel: 'dashboard',
       });
+      useToastStore.getState().addToast(`Scan failed: ${msg}`, 'error');
     }
   },
 
@@ -883,6 +900,35 @@ export const useStore = create<StoreState>((set, get) => ({
       root.style.setProperty(key, value);
     }
     set({ theme });
+  },
+
+  closeStack: () => {
+    useGraphStore.setState({ nodes: [], edges: [], excludedServices: [] });
+    useHistoryStore.setState({ past: [], future: [] });
+    set({
+      services: [],
+      dependencies: [],
+      flowNodes: [],
+      flowEdges: [],
+      repoPath: null,
+      config: null,
+      deepAnalysis: null,
+      discardedItems: [],
+      scanDiffAdded: new Set(),
+      scanDiffRemoved: new Set(),
+      stackScore: 0,
+      healthChecks: [],
+      vulnResults: [],
+      vulnScanned: false,
+      scoreHistory: [],
+      error: null,
+      linkStatus: 'unknown',
+      scanProgress: null,
+      isAnalyzing: false,
+      analysisPhase: null,
+      activePanel: 'dashboard',
+    });
+    useToastStore.getState().addToast('Stack closed', 'info');
   },
 
   toggleTheme: () => {

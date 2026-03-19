@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { useDialogStore } from '../../store/dialogStore';
 import { APP_VERSION } from '../../constants';
 
 import type { ActivePanel } from '../../store/useStore';
@@ -12,6 +13,21 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    id: 'dashboard',
+    label: 'Home',
+    section: 'views',
+    icon: (
+      <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5zm-10-2a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1v-7z"
+        />
+      </svg>
+    ),
+  },
   {
     id: 'services',
     label: 'Services',
@@ -118,8 +134,10 @@ const sectionLabel = (text: string, collapsed: boolean) =>
   ) : null;
 
 export const Sidebar: React.FC = () => {
-  const { activePanel, setActivePanel, services, stackScore, healthChecks, openScoreBreakdown, openScoreHistory, openDoctor, theme, toggleTheme } = useStore();
+  const { activePanel, setActivePanel, services, stackScore, healthChecks, openScoreBreakdown, openScoreHistory, openDoctor, theme, toggleTheme, repoPath, config, closeStack } = useStore();
+  const { confirm } = useDialogStore();
   const [collapsed, setCollapsed] = useState(false);
+  const hasProject = !!repoPath || services.length > 0 || !!config;
 
   const applicableChecks = healthChecks.filter(c => c.status !== 'unchecked');
   const passingChecks = applicableChecks.filter(c => c.status === 'pass').length;
@@ -244,6 +262,37 @@ export const Sidebar: React.FC = () => {
             </button>
           );
         })}
+
+        {/* Close Stack */}
+        {hasProject && (
+          <>
+            {sectionLabel('', collapsed)}
+            <button
+              onClick={async () => {
+                const result = await confirm({
+                  title: 'Close current stack?',
+                  message: 'This will clear all loaded data. Unsaved manual changes will be lost.',
+                  buttons: [
+                    { label: 'Cancel', value: 'cancel' },
+                    { label: 'Close Stack', value: 'close', danger: true },
+                  ],
+                });
+                if (result === 'close') closeStack();
+              }}
+              data-testid="close-stack"
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)]`}
+              style={{ borderLeft: '2px solid transparent' }}
+              title={collapsed ? 'Close Stack' : undefined}
+            >
+              <span className="shrink-0">
+                <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </span>
+              {!collapsed && <span>Close Stack</span>}
+            </button>
+          </>
+        )}
 
         {sectionLabel('SYSTEM', collapsed)}
         {systemItems.map((item) => {
