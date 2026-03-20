@@ -4,7 +4,7 @@ import { TOAST_DURATION_MS, TOAST_ERROR_DURATION_MS } from '../constants'
 export interface Toast {
   id: string
   message: string
-  type: 'success' | 'error' | 'info'
+  type: 'success' | 'error' | 'info' | 'warning'
 }
 
 interface ToastState {

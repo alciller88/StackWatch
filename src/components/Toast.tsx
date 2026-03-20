@@ -1,9 +1,10 @@
 import { useToastStore } from '../store/toastStore'
 
-const typeStyles = {
+const typeStyles: Record<string, { border: string; text: string; icon: string }> = {
   success: { border: 'var(--color-success-muted)', text: 'var(--color-success)', icon: '✓' },
   error: { border: 'var(--color-danger-muted)', text: 'var(--color-danger)', icon: '✕' },
   info: { border: 'var(--color-border)', text: 'var(--color-text-secondary)', icon: 'ℹ' },
+  warning: { border: 'var(--color-warning)', text: 'var(--color-warning)', icon: '⚠' },
 }
 
 export const ToastContainer: React.FC = () => {
@@ -14,7 +15,7 @@ export const ToastContainer: React.FC = () => {
   return (
     <div className="fixed bottom-4 right-4 z-[200] flex flex-col gap-2" style={{ maxWidth: 320 }}>
       {toasts.map((toast) => {
-        const style = typeStyles[toast.type]
+        const style = typeStyles[toast.type] ?? typeStyles.info!
         return (
           <div
             key={toast.id}

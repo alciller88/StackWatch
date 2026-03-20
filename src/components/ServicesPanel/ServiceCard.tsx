@@ -260,8 +260,8 @@ export const ServiceCard: React.FC<ServiceCardProps> = React.memo(function Servi
         >
           {service.plan}
         </span>
-        {service.zombieStatus && service.zombieStatus !== 'active' && (() => {
-          const zStyle = zombieBadgeStyles[service.zombieStatus];
+        {service.zombieStatus && service.zombieStatus !== 'active' && zombieBadgeStyles[service.zombieStatus] && (() => {
+          const zStyle = zombieBadgeStyles[service.zombieStatus]!;
           const label = inactiveMonths != null && inactiveMonths > 0
             ? `Inactive ${inactiveMonths}mo`
             : service.zombieStatus === 'zombie' ? 'Zombie' : 'Stale';
