@@ -3,6 +3,19 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.13.1] - 2026-03-20
+
+### Fixes
+- **No project contamination**: scan no longer writes any files to the analyzed project directory
+- `stackwatch.config.json`, `.stackwatch/last-scan.json`, and `.stackwatch/score-history.json` are now stored in StackWatch's app data directory (`{userData}/projects/{hash}/`)
+- Existing `stackwatch.config.json` in repos is auto-imported to app data on first load (read-only — never written back)
+- CLI data stored in `~/.stackwatch/projects/{hash}/` instead of the scanned repo
+
+### Tests
+- 579+ tests across 43 suites (+3 new no-project-write verification tests)
+
+---
+
 ## [0.13.0] - 2026-03-20
 
 ### Features

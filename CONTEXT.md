@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.13.0
+# CONTEXT.md — StackWatch v0.13.1
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -16,10 +16,10 @@
 | State        | Zustand 5 (6 stores + 4 selector hooks), React Flow 11, Recharts 3 |
 | CLI          | `npx stackwatch [path]` — same heuristic engine, no Electron    |
 | GitHub Action| `alciller88/StackWatch@main` — posts PR comments with results   |
-| Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
+| Config       | `stackwatch.config.json` in app data (`{userData}/projects/{hash}/`), auto-imported from repo on first load |
 | Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
 | Validation   | `zod` schemas on all IPC handlers                                |
-| Tests        | 577 tests, 42 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 579 tests, 43 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -177,10 +177,10 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `electron/analyzers/flowInference.ts`   | 4-layer hierarchical graph with dagre layout                                     |
 | `electron/analyzers/monorepo.ts`        | Detects npm/pnpm/lerna/turbo/nx workspaces                                       |
 | `electron/analyzers/vulnScanner.ts`     | OSV.dev batch API (8 ecosystems, groups of 100)                                  |
-| `electron/analyzers/stackDiff.ts`       | Snapshot compare (.stackwatch/last-scan.json)                                    |
+| `electron/analyzers/stackDiff.ts`       | Snapshot compare (last-scan.json in app data)                                    |
 | `electron/analyzers/sbom.ts`            | CycloneDX 1.5 / SPDX 2.3 JSON from dependencies                                |
 | `electron/analyzers/zombieDetector.ts`  | Git log activity per service, stale/zombie classification                        |
-| `electron/analyzers/scoreHistory.ts`    | Persist health scores to .stackwatch/score-history.json                           |
+| `electron/analyzers/scoreHistory.ts`    | Persist health scores to score-history.json in app data                           |
 | `electron/ai/deepAnalyzer.ts`           | AI: filter, refine, context, hidden detection, edge types                        |
 | `electron/ai/alternativeSuggester.ts`   | AI: cheaper/open-source alternative suggestions                                  |
 | `electron/ai/sanitize.ts`              | Prompt injection prevention: `sanitizeForPrompt()`                               |
@@ -239,7 +239,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (577 tests, 42 suites)                      |
+| `npm test`           | vitest (579 tests, 43 suites)                      |
 | `npm run test:coverage` | vitest with v8 coverage (thresholds: 60/60/50/60) |
 
 ### Release flow
@@ -269,7 +269,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-577 tests across 42 suites.
+579 tests across 43 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -376,7 +376,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | OSV.dev for vulns                      | Free, no API key, 8 ecosystems                         |
 | @tanstack/react-virtual               | Handles 500+ rows efficiently                          |
 | Composite GitHub Action               | Faster than Docker, reuses CLI                         |
-| Score history in .stackwatch/          | Same directory as stack diff, consistent pattern       |
+| Score history in app data              | All project data in `{userData}/projects/{hash}/` — never writes to analyzed project |
 | HTML export as template literal        | No template engine deps, self-contained, XSS-escaped  |
 | SBOM without external deps             | CycloneDX/SPDX JSON generated directly                |
 | Config migrations                      | Explicit version field + migration chain for schema evolution |

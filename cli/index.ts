@@ -17,6 +17,21 @@ import {
 import { generateHtmlReport } from '../electron/exporters/htmlExporter'
 import type { AnalysisResult, UserConfig, Service, StackDiffResult, AlternativeSuggestion } from '../shared/types'
 import { loadConfigSync, saveConfigSync } from '../shared/configLoader'
+import os from 'os'
+import crypto from 'crypto'
+
+/** CLI data dir: ~/.stackwatch/projects/{hash}/ */
+function getCliProjectDataDir(repoPath: string): string {
+  const normalized = path.resolve(repoPath)
+  const hash = crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16)
+  return path.join(os.homedir(), '.stackwatch', 'projects', hash)
+}
+
+function ensureCliProjectDataDir(repoPath: string): string {
+  const dir = getCliProjectDataDir(repoPath)
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
 
 const args = process.argv.slice(2)
 
@@ -149,7 +164,7 @@ async function runScan() {
 
   try {
     // Load previous scan before running new one (needed for --diff)
-    const previousScan = flags.diff ? await loadPreviousScan(resolvedPath) : null
+    const previousScan = flags.diff ? await loadPreviousScan(getCliProjectDataDir(resolvedPath)) : null
 
     const result = await analyzeLocalRepo(resolvedPath)
 
@@ -193,7 +208,7 @@ async function runScan() {
 
     // Calculate health score and load history for trend display
     const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
-    const scoreHistory = await loadScoreHistory(resolvedPath)
+    const scoreHistory = await loadScoreHistory(getCliProjectDataDir(resolvedPath))
 
     if (flags.json) {
       const output = diff ? { ...result, diff } : result
@@ -228,12 +243,12 @@ async function runScan() {
       if (diff) printDiffSummary(diff)
     }
 
-    // Save snapshot for future comparisons (always, after output)
-    await saveScanSnapshot(resolvedPath, result)
+    // Save snapshot and score history to CLI data dir (never write to analyzed project)
+    const cliDataDir = ensureCliProjectDataDir(resolvedPath)
+    await saveScanSnapshot(cliDataDir, result)
 
-    // Append score history entry
     try {
-      await appendScoreEntry(resolvedPath, {
+      await appendScoreEntry(cliDataDir, {
         timestamp: new Date().toISOString(),
         score: healthResult.score,
         passingChecks: healthResult.passingChecks,

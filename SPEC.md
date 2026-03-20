@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.13.0 | Last updated: 2026-03-20 | Tests: 577+ across 42 suites
+> Version: v0.13.1 | Last updated: 2026-03-20 | Tests: 579+ across 43 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -20,7 +20,7 @@ Modern projects depend on dozens of external services spread across multiple acc
 - **Semantic inference**: detects services via heuristic scoring — no hardcoded service lists
 - **Optional AI**: enhances detection with any OpenAI-compatible provider (cloud or local)
 - **Triple delivery**: desktop app + CLI + GitHub Action
-- **Portable**: all data lives in the repo as versionable JSON
+- **Portable**: config read from repo (backward compat), all data stored in app data (`{userData}/projects/{hash}/`)
 - **CI gates**: fail pipelines on vulnerabilities or unreviewed services
 - **SBOM compliance**: CycloneDX 1.5 and SPDX 2.3 generation
 
@@ -62,7 +62,7 @@ Modern projects depend on dozens of external services spread across multiple acc
 │  ├── Vuln scanner (OSV.dev API)             │
 │  ├── SBOM generator (CycloneDX / SPDX)     │
 │  ├── Stack Diff / Zombie detector           │
-│  ├── Score history (.stackwatch/)           │
+│  ├── Score history (app data)               │
 │  ├── HTML exporter (self-contained report)  │
 │  └── CSP headers (production only)          │
 ├─────────────────────────────────────────────┤
@@ -114,7 +114,7 @@ Zombie detector  →  git log activity classification
     ↓
 Flow inference  →  FlowNode[] + FlowEdge[]  (dagre layout)
     ↓
-Merge with stackwatch.config.json
+Merge with stackwatch.config.json (read from repo, stored in app data)
     ↓
 Dashboard / CLI output / PR comment
 ```
@@ -219,7 +219,7 @@ Batch queries OSV.dev API. Maps 8 ecosystems (npm, PyPI, crates.io, Go, Packagis
 
 ### 4.7 Stack Diff (`stackDiff.ts`)
 
-Compares scan snapshots via `.stackwatch/last-scan.json`. Computes added/removed/changed services and dependencies.
+Compares scan snapshots via `last-scan.json` (stored in app data `{userData}/projects/{hash}/`, no longer in `.stackwatch/` inside the analyzed project). Computes added/removed/changed services and dependencies.
 
 ### 4.8 SBOM Generator (`sbom.ts`)
 
@@ -231,7 +231,7 @@ Cross-references services with `git log`. Classifies as **active** (<90d), **sta
 
 ### 4.10 Score History (`scoreHistory.ts`)
 
-Persists health scores to `.stackwatch/score-history.json`. Max 100 entries. Source: `'scan'` or `'manual'` (debounced 2s).
+Persists health scores to `score-history.json` in app data (`{userData}/projects/{hash}/`). Max 100 entries. Source: `'scan'` or `'manual'` (debounced 2s). No files written to the analyzed project.
 
 ### 4.11 Flow Inference (`flowInference.ts`)
 
@@ -544,7 +544,7 @@ interface StackWatchAPI {
 
   // Configuration
   loadConfig(repoPath: string): Promise<UserConfig | null>
-  saveConfig(repoPath: string, config: UserConfig): Promise<void>
+  saveConfig(repoPath: string, config: UserConfig): Promise<void>  // saves to app data, not repo
   importConfig(): Promise<UserConfig | null>
   checkLinkStatus(config: UserConfig): Promise<LinkStatus>
   relinkLocal(): Promise<string | null>
@@ -733,7 +733,13 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.13.0 (current)
+### v0.13.1 (current)
+- **Fix**: Scan no longer writes files to the analyzed project directory — all data stored in app data (`{userData}/projects/`)
+- **Fix**: `stackwatch.config.json` auto-imported from repo on first load, stored in app data thereafter
+- **Fix**: `.stackwatch/last-scan.json` and score history moved to app data
+- 579+ tests across 43 suites
+
+### v0.13.0
 - **Feature**: Universal Stack Analyzer — 10 dependency ecosystems supported: npm, pip, cargo, go, composer, gem, maven, gradle, pub, nuget
 - **Feature**: New extractors for .NET (*.csproj, appsettings*.json, web.config), Java (pom.xml, build.gradle, application.properties/yml), Ruby (Gemfile, config/database.yml), PHP (composer.json), and additional Python sources (Pipfile, setup.cfg)
 - **Feature**: Ecosystem detection badges shown in Services panel header (Node.js, .NET, Python, Java, Ruby, PHP, Go, Rust)

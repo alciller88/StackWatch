@@ -58,11 +58,10 @@ export function computeStackDiff(
 }
 
 export async function saveScanSnapshot(
-  repoPath: string,
+  dataDir: string,
   scanResult: AnalysisResult,
 ): Promise<void> {
-  const dirPath = path.join(repoPath, STACKWATCH_DIR)
-  const filePath = path.join(dirPath, SNAPSHOT_FILE)
+  const filePath = path.join(dataDir, SNAPSHOT_FILE)
 
   const snapshot: ScanSnapshot = {
     version: SNAPSHOT_VERSION,
@@ -71,14 +70,14 @@ export async function saveScanSnapshot(
     dependencies: scanResult.dependencies,
   }
 
-  await fs.mkdir(dirPath, { recursive: true })
+  await fs.mkdir(dataDir, { recursive: true })
   await fs.writeFile(filePath, JSON.stringify(snapshot, null, 2), 'utf-8')
 }
 
 export async function loadPreviousScan(
-  repoPath: string,
+  dataDir: string,
 ): Promise<ScanSnapshot | null> {
-  const filePath = path.join(repoPath, STACKWATCH_DIR, SNAPSHOT_FILE)
+  const filePath = path.join(dataDir, SNAPSHOT_FILE)
 
   try {
     const content = await fs.readFile(filePath, 'utf-8')

@@ -224,7 +224,7 @@ describe('IPC Handlers', () => {
   })
 
   describe('save-config', () => {
-    it('writes config file to disk for valid input', async () => {
+    it('writes config to app data (not to analyzed project)', async () => {
       const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sw-test-'))
       try {
         const handler = getHandler('save-config')
@@ -241,7 +241,13 @@ describe('IPC Handlers', () => {
           accounts: [],
         }
         await handler(fakeEvent, { repoPath: tmpDir, config })
-        const content = await fs.readFile(path.join(tmpDir, 'stackwatch.config.json'), 'utf-8')
+        // Config should NOT be in the project directory
+        const repoFiles = await fs.readdir(tmpDir)
+        expect(repoFiles).not.toContain('stackwatch.config.json')
+        // Config should be in app data (projects/{hash}/config.json)
+        const { getProjectDataDir } = await import('../projectData')
+        const projectDir = getProjectDataDir(tmpDir)
+        const content = await fs.readFile(path.join(projectDir, 'config.json'), 'utf-8')
         const parsed = JSON.parse(content)
         expect(parsed.version).toBe('1')
         expect(parsed.services).toHaveLength(1)
@@ -256,21 +262,6 @@ describe('IPC Handlers', () => {
         repoPath: '/tmp/test',
         config: { version: '1', services: [{ id: 'x' }] },
       })).rejects.toThrow(/Invalid arguments/)
-    })
-
-    it('throws descriptive error for path without permissions', async () => {
-      const handler = getHandler('save-config')
-      const config = {
-        version: '1',
-        services: [],
-        project: { name: 'Test', description: '' },
-        accounts: [],
-      }
-      // Non-existent deep path should fail with ENOENT
-      await expect(handler(fakeEvent, {
-        repoPath: '/nonexistent/deep/path/that/does/not/exist',
-        config,
-      })).rejects.toThrow()
     })
   })
 

@@ -13,6 +13,7 @@ import { SENSITIVE_FIELDS } from '../shared/types'
 import { schemas, validate } from './validation'
 import { rateLimiter } from './ipcRateLimiter'
 import { migrateConfig, needsMigration, CURRENT_CONFIG_VERSION } from './config/migrations'
+import { getProjectDataDir, ensureProjectDataDir } from './projectData'
 import type { UserConfig, AISettings, AIProvider, LinkStatus, Service } from './types'
 
 // --- Global error handlers (stability) ---
@@ -396,17 +397,18 @@ ipcMain.handle('analyze-local', async (_event, args) => {
       throw err
     }
 
-    // Save snapshot for future diff comparisons
+    // Save snapshot and score history to app data (never write to analyzed project)
+    const projectDir = await ensureProjectDataDir(safePath)
+
     try {
-      await saveScanSnapshot(safePath, result)
+      await saveScanSnapshot(projectDir, result)
     } catch (err) {
       console.warn('[Main] Could not save scan snapshot:', err)
     }
 
-    // Append score history entry
     try {
       const healthResult = calculateHealthScore(result.services, result.flowNodes, result.flowEdges)
-      await appendScoreEntry(safePath, {
+      await appendScoreEntry(projectDir, {
         timestamp: new Date().toISOString(),
         score: healthResult.score,
         passingChecks: healthResult.passingChecks,
@@ -429,14 +431,15 @@ ipcMain.handle('analyze-local', async (_event, args) => {
 ipcMain.handle('get-stack-diff', async (_event, args) => {
   const { folderPath } = validate(schemas.getStackDiff, typeof args === 'string' ? { folderPath: args } : args, 'get-stack-diff')
   const safePath = validateRepoPath(folderPath)
-  const previousScan = await loadPreviousScan(safePath)
+  const projectDir = getProjectDataDir(safePath)
+  const previousScan = await loadPreviousScan(projectDir)
   if (!previousScan) return null
 
   const aiSettings = getAISettings()
 
   let excludedServices: string[] = []
   try {
-    const configPath = path.join(safePath, 'stackwatch.config.json')
+    const configPath = path.join(projectDir, 'config.json')
     const content = await fs.readFile(configPath, 'utf-8')
     const config = JSON.parse(content) as UserConfig
     excludedServices = config.graph?.excludedServices ?? []
@@ -590,17 +593,35 @@ ipcMain.handle('load-config', async (_event, args) => {
   const { repoPath } = validate(schemas.loadConfig, typeof args === 'string' ? { repoPath: args } : args, 'load-config')
   try {
     const safePath = validateRepoPath(repoPath)
-    const configPath = path.join(safePath, 'stackwatch.config.json')
-    const content = await fs.readFile(configPath, 'utf-8')
-    let config = JSON.parse(content) as Record<string, unknown>
+    const projectDir = getProjectDataDir(safePath)
 
-    // Apply config migrations if needed
+    // 1. Try loading from app data (primary location)
+    const appDataConfigPath = path.join(projectDir, 'config.json')
+    try {
+      const content = await fs.readFile(appDataConfigPath, 'utf-8')
+      let config = JSON.parse(content) as Record<string, unknown>
+      if (needsMigration(config)) {
+        config = migrateConfig(config)
+        await ensureProjectDataDir(safePath)
+        await fs.writeFile(appDataConfigPath, JSON.stringify(config, null, 2), 'utf-8')
+      }
+      return decryptConfig(config as unknown as UserConfig)
+    } catch {
+      // Not in app data yet — try repo for backward compat
+    }
+
+    // 2. Fallback: import from repo's stackwatch.config.json (read-only — never write back)
+    const repoConfigPath = path.join(safePath, 'stackwatch.config.json')
+    const content = await fs.readFile(repoConfigPath, 'utf-8')
+    let config = JSON.parse(content) as Record<string, unknown>
     if (needsMigration(config)) {
       config = migrateConfig(config)
-      // Save migrated config
-      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8')
-      console.info('[Config] Config migrated and saved')
     }
+
+    // Migrate to app data for future reads
+    await ensureProjectDataDir(safePath)
+    await fs.writeFile(appDataConfigPath, JSON.stringify(config, null, 2), 'utf-8')
+    console.info('[Config] Imported config from repo to app data')
 
     return decryptConfig(config as unknown as UserConfig)
   } catch {
@@ -622,7 +643,8 @@ ipcMain.handle(
     const repoPath = validated.repoPath
     const config = validated.config as unknown as UserConfig
     const safePath = validateRepoPath(repoPath)
-    const configPath = path.join(safePath, 'stackwatch.config.json')
+    const projectDir = await ensureProjectDataDir(safePath)
+    const configPath = path.join(projectDir, 'config.json')
     const encrypted = encryptConfig(config)
     await fs.writeFile(configPath, JSON.stringify(encrypted, null, 2), 'utf-8')
   }
@@ -851,13 +873,15 @@ ipcMain.handle('check-renewals', async (_event, args) => {
 ipcMain.handle('get-score-history', async (_event, args) => {
   const { folderPath } = validate(schemas.getScoreHistory, typeof args === 'string' ? { folderPath: args } : args, 'get-score-history')
   const safePath = validateRepoPath(folderPath)
-  return loadScoreHistory(safePath)
+  const projectDir = getProjectDataDir(safePath)
+  return loadScoreHistory(projectDir)
 })
 
 ipcMain.handle('save-score-entry', async (_event, args) => {
   const { folderPath, entry } = validate(schemas.saveScoreEntry, args, 'save-score-entry')
   const safePath = validateRepoPath(folderPath)
-  await appendScoreEntry(safePath, entry)
+  const projectDir = await ensureProjectDataDir(safePath)
+  await appendScoreEntry(projectDir, entry)
 })
 
 // --- Vulnerability Scanning ---

@@ -93,7 +93,7 @@ describe('appendScoreEntry', () => {
     await appendScoreEntry('/repo', entry)
 
     expect(fs.mkdir).toHaveBeenCalledWith(
-      expect.stringContaining('.stackwatch'),
+      '/repo',
       { recursive: true },
     )
     expect(fs.writeFile).toHaveBeenCalledTimes(1)
