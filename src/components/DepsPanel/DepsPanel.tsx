@@ -23,6 +23,7 @@ const ecosystemUrls: Record<Dependency['ecosystem'], (name: string) => string> =
   maven: (name) => `https://search.maven.org/search?q=${name}`,
   gradle: (name) => `https://search.maven.org/search?q=${name}`,
   gem: (name) => `https://rubygems.org/gems/${name}`,
+  nuget: (name) => `https://www.nuget.org/packages/${name}`,
 };
 
 export const DepsPanel: React.FC = () => {
@@ -290,7 +291,7 @@ export const DepsPanel: React.FC = () => {
               <div>
                 <p className="font-mono text-sm text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">No dependencies found</p>
                 <p className="font-mono text-[11px] text-[var(--color-text-muted)] max-w-md leading-relaxed">
-                  Make sure the project has a package.json, requirements.txt, Cargo.toml, go.mod, or similar dependency file.
+                  No recognized dependencies found. StackWatch supports: package.json, requirements.txt, Cargo.toml, go.mod, *.csproj, pom.xml, build.gradle, Gemfile, composer.json, and more.
                 </p>
               </div>
             </div>

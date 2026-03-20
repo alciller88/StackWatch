@@ -112,6 +112,7 @@ interface ExtractionResult {
   evidences: Evidence[]
   dependencies: Dependency[]
   projectName: string
+  ecosystems: string[]
 }
 
 export async function extractEvidences(
@@ -221,6 +222,90 @@ export async function extractEvidences(
         continue
       }
 
+      // .NET — *.csproj (NuGet packages)
+      if (ext === '.csproj') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromCsproj(content, relPath, evidences, dependencies)
+        continue
+      }
+
+      // .NET — appsettings*.json (connection strings, service config)
+      if (basename.startsWith('appsettings') && ext === '.json') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromAppsettings(content, relPath, evidences)
+        continue
+      }
+
+      // .NET — web.config (connection strings, endpoints)
+      if (basename === 'web.config') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromWebConfig(content, relPath, evidences)
+        continue
+      }
+
+      // Java — pom.xml (Maven dependencies)
+      if (basename === 'pom.xml') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromPomXml(content, relPath, evidences, dependencies)
+        continue
+      }
+
+      // Java — build.gradle / build.gradle.kts (Gradle dependencies)
+      if (basename === 'build.gradle' || basename === 'build.gradle.kts') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromBuildGradle(content, relPath, evidences, dependencies)
+        continue
+      }
+
+      // Java — application.properties / application-*.properties
+      if (/^application(-\w+)?\.properties$/.test(basename)) {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromApplicationProperties(content, relPath, evidences)
+        continue
+      }
+
+      // Java — application.yml / application-*.yml
+      if (/^application(-\w+)?\.ya?ml$/.test(basename)) {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromApplicationYml(content, relPath, evidences)
+        continue
+      }
+
+      // Ruby — Gemfile
+      if (basename === 'Gemfile') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromGemfile(content, relPath, evidences, dependencies)
+        continue
+      }
+
+      // Ruby — config/database.yml
+      if (basename === 'database.yml' && relPath.includes('config')) {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromDatabaseYml(content, relPath, evidences)
+        continue
+      }
+
+      // PHP — composer.json
+      if (basename === 'composer.json') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromComposerJson(content, relPath, evidences, dependencies)
+        continue
+      }
+
+      // Python — Pipfile
+      if (basename === 'Pipfile') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromPipfile(content, relPath, dependencies)
+        continue
+      }
+
+      // Python — setup.cfg
+      if (basename === 'setup.cfg') {
+        const content = await readFileSafe(filePath)
+        if (content) extractFromSetupCfg(content, relPath, dependencies)
+        continue
+      }
+
       // Terraform files
       if (ext === '.tf') {
         const content = await readFileSafe(filePath)
@@ -238,7 +323,10 @@ export async function extractEvidences(
     }
   }
 
-  return { evidences, dependencies, projectName }
+  // Detect ecosystems from dependencies
+  const ecosystems = detectEcosystems(dependencies, files)
+
+  return { evidences, dependencies, projectName, ecosystems }
 }
 
 const MAX_WALK_DEPTH = 15
@@ -678,8 +766,69 @@ export async function extractEvidencesFromGitHub(
   const goModContent = await fetchFile('go.mod')
   if (goModContent) extractFromGoMod(goModContent, 'go.mod', dependencies)
 
-  // Terraform
+  // .NET deps
   const rootFiles = await listDir('.')
+  for (const file of rootFiles) {
+    if (file.endsWith('.csproj')) {
+      const content = await fetchFile(file)
+      if (content) extractFromCsproj(content, file, evidences, dependencies)
+    }
+  }
+  // .NET config
+  for (const cfgFile of ['appsettings.json', 'appsettings.Development.json', 'web.config']) {
+    const content = await fetchFile(cfgFile)
+    if (content) {
+      if (cfgFile === 'web.config') extractFromWebConfig(content, cfgFile, evidences)
+      else extractFromAppsettings(content, cfgFile, evidences)
+    }
+  }
+
+  // Java — Maven
+  const pomContent = await fetchFile('pom.xml')
+  if (pomContent) extractFromPomXml(pomContent, 'pom.xml', evidences, dependencies)
+
+  // Java — Gradle
+  for (const gradleFile of ['build.gradle', 'build.gradle.kts']) {
+    const content = await fetchFile(gradleFile)
+    if (content) extractFromBuildGradle(content, gradleFile, evidences, dependencies)
+  }
+
+  // Java — Spring config
+  const springConfigDirs = ['src/main/resources', 'src/main/resources']
+  for (const dir of springConfigDirs) {
+    for (const propFile of ['application.properties', 'application.yml', 'application.yaml']) {
+      const content = await fetchFile(`${dir}/${propFile}`)
+      if (content) {
+        if (propFile.endsWith('.properties')) extractFromApplicationProperties(content, `${dir}/${propFile}`, evidences)
+        else extractFromApplicationYml(content, `${dir}/${propFile}`, evidences)
+      }
+    }
+  }
+
+  // Ruby — Gemfile
+  const gemfileContent = await fetchFile('Gemfile')
+  if (gemfileContent) extractFromGemfile(gemfileContent, 'Gemfile', evidences, dependencies)
+
+  // Ruby — config files
+  for (const rbConfig of ['config/database.yml', 'config/application.yml']) {
+    const content = await fetchFile(rbConfig)
+    if (content) {
+      if (rbConfig.includes('database')) extractFromDatabaseYml(content, rbConfig, evidences)
+      else extractFromApplicationYml(content, rbConfig, evidences)
+    }
+  }
+
+  // PHP — Composer
+  const composerContent = await fetchFile('composer.json')
+  if (composerContent) extractFromComposerJson(composerContent, 'composer.json', evidences, dependencies)
+
+  // Python — Pipfile, setup.cfg
+  const pipfileContent = await fetchFile('Pipfile')
+  if (pipfileContent) extractFromPipfile(pipfileContent, 'Pipfile', dependencies)
+  const setupCfgContent = await fetchFile('setup.cfg')
+  if (setupCfgContent) extractFromSetupCfg(setupCfgContent, 'setup.cfg', dependencies)
+
+  // Terraform
   for (const file of rootFiles) {
     if (file.endsWith('.tf')) {
       const content = await fetchFile(file)
@@ -700,7 +849,11 @@ export async function extractEvidencesFromGitHub(
     }
   }
 
-  return { evidences, dependencies, projectName }
+  // Detect ecosystems
+  const allFetchedFiles = [...rootFiles]
+  const ecosystems = detectEcosystems(dependencies, allFetchedFiles)
+
+  return { evidences, dependencies, projectName, ecosystems }
 }
 
 // --- Project domain detection (filters own domain from services) ---
@@ -822,4 +975,465 @@ function formatProjectName(raw: string): string {
     .replace(/\b\w/g, c => c.toUpperCase())
     .replace(/\s*(temp|dev|test|local)\s*/gi, '')
     .trim() || 'App'
+}
+
+// --- Ecosystem detection ---
+
+/** Ecosystem markers: file basenames/extensions that identify a project's technology */
+const ECOSYSTEM_FILE_MARKERS: Record<string, string> = {
+  'package.json': 'node',
+  'requirements.txt': 'python',
+  'pyproject.toml': 'python',
+  'Pipfile': 'python',
+  'setup.py': 'python',
+  'setup.cfg': 'python',
+  'Cargo.toml': 'rust',
+  'go.mod': 'go',
+  'Gemfile': 'ruby',
+  'composer.json': 'php',
+  'pom.xml': 'java',
+  'build.gradle': 'java',
+  'build.gradle.kts': 'java',
+}
+
+const ECOSYSTEM_EXT_MARKERS: Record<string, string> = {
+  '.csproj': 'dotnet',
+  '.sln': 'dotnet',
+}
+
+function detectEcosystems(deps: Dependency[], files: string[]): string[] {
+  const ecosystems = new Set<string>()
+
+  // From dependencies
+  const depEcoMap: Record<string, string> = {
+    npm: 'node', pip: 'python', cargo: 'rust', go: 'go',
+    gem: 'ruby', composer: 'php', maven: 'java', gradle: 'java',
+    nuget: 'dotnet', dart: 'dart',
+  }
+  for (const d of deps) {
+    const eco = depEcoMap[d.ecosystem]
+    if (eco) ecosystems.add(eco)
+  }
+
+  // From file markers
+  for (const f of files) {
+    const basename = path.basename(f)
+    const ext = path.extname(f)
+    const byName = ECOSYSTEM_FILE_MARKERS[basename]
+    if (byName) ecosystems.add(byName)
+    const byExt = ECOSYSTEM_EXT_MARKERS[ext]
+    if (byExt) ecosystems.add(byExt)
+  }
+
+  return Array.from(ecosystems).sort()
+}
+
+// --- .NET parsers ---
+
+function extractFromCsproj(content: string, file: string, evidences: Evidence[], deps: Dependency[]): void {
+  // Parse <PackageReference Include="PackageName" Version="1.0.0" />
+  const pkgRefRegex = /<PackageReference\s+Include="([^"]+)"(?:\s+Version="([^"]*)")?/gi
+  let match
+  while ((match = pkgRefRegex.exec(content)) !== null) {
+    const name = match[1]!
+    const version = match[2] ?? '*'
+    deps.push({ name, version, type: 'production', ecosystem: 'nuget' })
+    // Generate evidence for heuristic classification
+    evidences.push({ type: 'import', value: name, file })
+  }
+
+  // Also handle <DotNetCliToolReference> and <PackageVersion>
+  const toolRefRegex = /<DotNetCliToolReference\s+Include="([^"]+)"(?:\s+Version="([^"]*)")?/gi
+  while ((match = toolRefRegex.exec(content)) !== null) {
+    deps.push({ name: match[1]!, version: match[2] ?? '*', type: 'development', ecosystem: 'nuget' })
+  }
+}
+
+function extractFromAppsettings(content: string, file: string, evidences: Evidence[]): void {
+  try {
+    const config = JSON.parse(content)
+    extractFromJsonConfig(config, file, evidences, '')
+  } catch {
+    // Invalid JSON — skip
+  }
+}
+
+/** Recursively extract evidences from JSON config objects (appsettings.json, etc.) */
+function extractFromJsonConfig(obj: unknown, file: string, evidences: Evidence[], prefix: string): void {
+  if (obj === null || obj === undefined || typeof obj !== 'object') return
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      extractFromJsonConfig(item, file, evidences, prefix)
+    }
+    return
+  }
+
+  const record = obj as Record<string, unknown>
+  for (const [key, value] of Object.entries(record)) {
+    const fullKey = prefix ? `${prefix}:${key}` : key
+
+    if (typeof value === 'string' && value.length > 0) {
+      // Connection strings — detect database protocols
+      if (/^(ConnectionStrings?|connectionString)/i.test(prefix) || /^(ConnectionStrings?)/i.test(key)) {
+        if (/Server=|Data Source=/i.test(value)) {
+          evidences.push({ type: 'domain', value: 'sqlserver', file })
+        } else if (value.startsWith('mongodb')) {
+          evidences.push({ type: 'domain', value: 'mongodb', file })
+        } else if (value.startsWith('postgres')) {
+          evidences.push({ type: 'domain', value: 'postgresql', file })
+        } else if (value.startsWith('mysql')) {
+          evidences.push({ type: 'domain', value: 'mysql', file })
+        } else if (value.startsWith('redis')) {
+          evidences.push({ type: 'domain', value: 'redis', file })
+        } else if (/amqp:\/\//i.test(value)) {
+          evidences.push({ type: 'domain', value: 'rabbitmq', file })
+        }
+      }
+
+      // URLs in config values
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        const domain = extractDomainFromUrl(value)
+        if (domain && !IGNORED_DOMAINS.has(domain)) {
+          evidences.push({ type: 'url', value, file })
+        }
+      }
+
+      // Treat config keys that look like API key / secret / token as env_var evidence
+      const upperKey = key.toUpperCase()
+      if (/_KEY$|_SECRET$|_TOKEN$|KEY$|SECRET$|TOKEN$|DSN$/i.test(key) && value.length > 5) {
+        evidences.push({ type: 'env_var', value: fullKey.replace(/:/g, '_').toUpperCase(), file })
+      }
+      // Treat keys named after services as config_file evidence
+      if (/^(ApiKey|SecretKey|AccessKey|ConnectionString)$/i.test(key) && prefix) {
+        evidences.push({ type: 'env_var', value: `${prefix.replace(/:/g, '_').toUpperCase()}_${upperKey}`, file })
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      extractFromJsonConfig(value, file, evidences, fullKey)
+    }
+  }
+}
+
+function extractFromWebConfig(content: string, file: string, evidences: Evidence[]): void {
+  // Connection strings: <add name="..." connectionString="..." />
+  const connStrRegex = /connectionString="([^"]+)"/gi
+  let match
+  while ((match = connStrRegex.exec(content)) !== null) {
+    const cs = match[1]!
+    if (/Server=|Data Source=/i.test(cs)) {
+      evidences.push({ type: 'domain', value: 'sqlserver', file })
+    } else if (cs.startsWith('mongodb')) {
+      evidences.push({ type: 'domain', value: 'mongodb', file })
+    } else if (cs.startsWith('postgres')) {
+      evidences.push({ type: 'domain', value: 'postgresql', file })
+    }
+  }
+
+  // appSettings keys
+  const appSettingRegex = /<add\s+key="([^"]+)"\s+value="([^"]*)"\s*\/>/gi
+  while ((match = appSettingRegex.exec(content)) !== null) {
+    const key = match[1]!
+    const value = match[2] ?? ''
+    if (/_KEY$|_SECRET$|_TOKEN$|_URL$|_DSN$/i.test(key)) {
+      evidences.push({ type: 'env_var', value: key, file })
+    }
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      const domain = extractDomainFromUrl(value)
+      if (domain && !IGNORED_DOMAINS.has(domain)) {
+        evidences.push({ type: 'url', value, file })
+      }
+    }
+  }
+}
+
+// --- Java parsers ---
+
+function extractFromPomXml(content: string, file: string, evidences: Evidence[], deps: Dependency[]): void {
+  // Parse <dependency> blocks: <groupId>...</groupId> <artifactId>...</artifactId> <version>...</version>
+  const depBlockRegex = /<dependency>\s*([\s\S]*?)<\/dependency>/gi
+  let match
+  while ((match = depBlockRegex.exec(content)) !== null) {
+    const block = match[1]!
+    const groupId = block.match(/<groupId>([^<]+)<\/groupId>/)?.[1]
+    const artifactId = block.match(/<artifactId>([^<]+)<\/artifactId>/)?.[1]
+    const version = block.match(/<version>([^<]+)<\/version>/)?.[1] ?? '*'
+    const scope = block.match(/<scope>([^<]+)<\/scope>/)?.[1]
+
+    if (artifactId) {
+      const depType = scope === 'test' ? 'development' : 'production'
+      deps.push({ name: groupId ? `${groupId}:${artifactId}` : artifactId, version, type: depType, ecosystem: 'maven' })
+      // Generate evidence from artifactId (more meaningful than groupId:artifactId)
+      evidences.push({ type: 'import', value: artifactId, file })
+    }
+  }
+}
+
+function extractFromBuildGradle(content: string, file: string, evidences: Evidence[], deps: Dependency[]): void {
+  // Gradle dependency patterns:
+  // implementation 'group:artifact:version'
+  // implementation("group:artifact:version")
+  // implementation "group:artifact:version"
+  // testImplementation ...
+  // api ...
+  const depRegex = /(?:implementation|api|compileOnly|runtimeOnly|testImplementation|testRuntimeOnly|kapt|annotationProcessor)\s*[\("']([^)"']+)[\)"']/gi
+  let match
+  while ((match = depRegex.exec(content)) !== null) {
+    const parts = match[1]!.split(':')
+    if (parts.length >= 2) {
+      const groupId = parts[0]!
+      const artifactId = parts[1]!
+      const version = parts[2] ?? '*'
+      const isTest = /^test/i.test(match[0]!)
+      deps.push({
+        name: `${groupId}:${artifactId}`,
+        version,
+        type: isTest ? 'development' : 'production',
+        ecosystem: 'gradle',
+      })
+      evidences.push({ type: 'import', value: artifactId, file })
+    }
+  }
+}
+
+function extractFromApplicationProperties(content: string, file: string, evidences: Evidence[]): void {
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eqIndex = trimmed.indexOf('=')
+    if (eqIndex <= 0) continue
+    const key = trimmed.substring(0, eqIndex).trim()
+    const value = trimmed.substring(eqIndex + 1).trim()
+
+    // Database URLs
+    if (key.includes('datasource.url') || key.includes('database.url')) {
+      if (value.includes('postgresql') || value.includes('postgres')) {
+        evidences.push({ type: 'domain', value: 'postgresql', file })
+      } else if (value.includes('mysql')) {
+        evidences.push({ type: 'domain', value: 'mysql', file })
+      } else if (value.includes('mongodb')) {
+        evidences.push({ type: 'domain', value: 'mongodb', file })
+      } else if (value.includes('sqlserver') || value.includes('mssql')) {
+        evidences.push({ type: 'domain', value: 'sqlserver', file })
+      } else if (value.includes('h2') || value.includes('hsqldb')) {
+        // In-memory DB — skip
+      }
+    }
+
+    // Redis
+    if (key.includes('redis.host') || key.includes('redis.url')) {
+      evidences.push({ type: 'domain', value: 'redis', file })
+    }
+
+    // RabbitMQ / AMQP
+    if (key.includes('rabbitmq.host') || key.includes('amqp')) {
+      evidences.push({ type: 'domain', value: 'rabbitmq', file })
+    }
+
+    // Kafka
+    if (key.includes('kafka.bootstrap')) {
+      evidences.push({ type: 'env_var', value: 'KAFKA_BOOTSTRAP_SERVERS', file })
+    }
+
+    // MongoDB
+    if (key.includes('mongodb.uri') || key.includes('mongo.uri')) {
+      evidences.push({ type: 'domain', value: 'mongodb', file })
+    }
+
+    // Generic: API keys, tokens, secrets in properties
+    if (/\.(api-key|api_key|secret|token|key)$/i.test(key)) {
+      const servicePart = key.split('.').slice(-2, -1)[0] ?? ''
+      if (servicePart.length >= 2) {
+        evidences.push({ type: 'env_var', value: `${servicePart.toUpperCase()}_KEY`, file })
+      }
+    }
+
+    // URLs
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      const domain = extractDomainFromUrl(value)
+      if (domain && !IGNORED_DOMAINS.has(domain)) {
+        evidences.push({ type: 'url', value, file })
+      }
+    }
+  }
+}
+
+function extractFromApplicationYml(content: string, file: string, evidences: Evidence[]): void {
+  // Simple YAML key:value parsing (avoids adding a YAML parser dependency)
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+
+    // Database URL patterns
+    if (/url:\s*jdbc:(postgresql|mysql|sqlserver|oracle|mariadb)/i.test(trimmed)) {
+      const dbMatch = trimmed.match(/jdbc:(\w+)/i)
+      if (dbMatch) {
+        const db = dbMatch[1]!.toLowerCase()
+        if (db === 'postgresql' || db === 'postgres') evidences.push({ type: 'domain', value: 'postgresql', file })
+        else if (db === 'mysql' || db === 'mariadb') evidences.push({ type: 'domain', value: 'mysql', file })
+        else if (db === 'sqlserver') evidences.push({ type: 'domain', value: 'sqlserver', file })
+      }
+    }
+
+    // Redis host
+    if (/redis:\s*$/.test(trimmed) || /host:\s*\S+/.test(trimmed) && line.includes('redis')) {
+      evidences.push({ type: 'domain', value: 'redis', file })
+    }
+
+    // MongoDB URI
+    if (/mongodb(\+srv)?:\/\//i.test(trimmed)) {
+      evidences.push({ type: 'domain', value: 'mongodb', file })
+    }
+
+    // RabbitMQ
+    if (/rabbitmq:/i.test(trimmed)) {
+      evidences.push({ type: 'domain', value: 'rabbitmq', file })
+    }
+
+    // Kafka
+    if (/kafka:/i.test(trimmed) && /bootstrap/i.test(trimmed)) {
+      evidences.push({ type: 'env_var', value: 'KAFKA_BOOTSTRAP_SERVERS', file })
+    }
+
+    // URLs in values
+    const urlMatch = trimmed.match(/:\s*(https?:\/\/\S+)/i)
+    if (urlMatch) {
+      const domain = extractDomainFromUrl(urlMatch[1]!)
+      if (domain && !IGNORED_DOMAINS.has(domain)) {
+        evidences.push({ type: 'url', value: urlMatch[1]!, file })
+      }
+    }
+  }
+}
+
+// --- Ruby parsers ---
+
+function extractFromGemfile(content: string, file: string, evidences: Evidence[], deps: Dependency[]): void {
+  // gem 'name', '~> 1.0'
+  // gem "name", ">= 2.0", "< 3.0"
+  // gem 'name', group: :development
+  const gemRegex = /^\s*gem\s+['"]([^'"]+)['"]\s*(?:,\s*['"]([^'"]*)['"]\s*)?(?:,\s*['"]([^'"]*)['"]\s*)?/gm
+  let match
+  while ((match = gemRegex.exec(content)) !== null) {
+    const name = match[1]!
+    const version = match[2] ?? '*'
+    // Check if it's a dev/test group
+    const lineEnd = content.substring(match.index!, content.indexOf('\n', match.index!))
+    const isDev = /group:\s*(?::development|:test|\[:development|:dev)/i.test(lineEnd)
+    deps.push({ name, version, type: isDev ? 'development' : 'production', ecosystem: 'gem' })
+    evidences.push({ type: 'import', value: name, file })
+  }
+
+  // group :development block
+  const groupBlockRegex = /group\s+(?::development|:test)\s+do\s*([\s\S]*?)end/gi
+  while ((match = groupBlockRegex.exec(content)) !== null) {
+    const block = match[1]!
+    const innerGemRegex = /gem\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]*)['"]\s*)?/g
+    let innerMatch
+    while ((innerMatch = innerGemRegex.exec(block)) !== null) {
+      const name = innerMatch[1]!
+      // Mark as dev if not already added
+      const existing = deps.find(d => d.name === name && d.ecosystem === 'gem')
+      if (!existing) {
+        deps.push({ name, version: innerMatch[2] ?? '*', type: 'development', ecosystem: 'gem' })
+        evidences.push({ type: 'import', value: name, file })
+      }
+    }
+  }
+}
+
+function extractFromDatabaseYml(content: string, file: string, evidences: Evidence[]): void {
+  // Rails database.yml — detect adapter types
+  const adapterRegex = /adapter:\s*['"]?(\w+)['"]?/gi
+  let match
+  while ((match = adapterRegex.exec(content)) !== null) {
+    const adapter = match[1]!.toLowerCase()
+    if (adapter === 'postgresql' || adapter === 'postgres') {
+      evidences.push({ type: 'domain', value: 'postgresql', file })
+    } else if (adapter === 'mysql2' || adapter === 'mysql') {
+      evidences.push({ type: 'domain', value: 'mysql', file })
+    } else if (adapter === 'sqlite3') {
+      // SQLite is local — skip
+    } else if (adapter === 'mongodb' || adapter === 'mongoid') {
+      evidences.push({ type: 'domain', value: 'mongodb', file })
+    }
+  }
+
+  // URLs in database.yml
+  const urlRegex = /url:\s*['"]?((?:postgres|mysql|mongodb)\w*:\/\/[^\s'"]+)/gi
+  while ((match = urlRegex.exec(content)) !== null) {
+    const url = match[1]!
+    if (url.startsWith('postgres')) evidences.push({ type: 'domain', value: 'postgresql', file })
+    else if (url.startsWith('mysql')) evidences.push({ type: 'domain', value: 'mysql', file })
+    else if (url.startsWith('mongodb')) evidences.push({ type: 'domain', value: 'mongodb', file })
+  }
+
+  // Redis URL in database config
+  if (/redis:\/\//i.test(content)) {
+    evidences.push({ type: 'domain', value: 'redis', file })
+  }
+}
+
+// --- PHP parsers ---
+
+function extractFromComposerJson(content: string, file: string, evidences: Evidence[], deps: Dependency[]): void {
+  try {
+    const composer = JSON.parse(content)
+    const processGroup = (group: Record<string, string> | undefined, type: Dependency['type']) => {
+      if (!group || typeof group !== 'object') return
+      for (const [name, version] of Object.entries(group)) {
+        // Skip PHP platform requirements
+        if (name === 'php' || name.startsWith('ext-')) continue
+        deps.push({ name, version, type, ecosystem: 'composer' })
+        // Use the package part after vendor/ for evidence
+        const pkgName = name.includes('/') ? name.split('/')[1]! : name
+        evidences.push({ type: 'import', value: pkgName, file })
+        // Also push full vendor/package as import for better brand matching
+        evidences.push({ type: 'import', value: name, file })
+      }
+    }
+    processGroup(composer.require, 'production')
+    processGroup(composer['require-dev'], 'development')
+  } catch {
+    // Invalid JSON
+  }
+}
+
+// --- Additional Python parsers ---
+
+function extractFromPipfile(content: string, file: string, deps: Dependency[]): void {
+  let currentSection: 'packages' | 'dev-packages' | null = null
+
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (trimmed === '[packages]') { currentSection = 'packages'; continue }
+    if (trimmed === '[dev-packages]') { currentSection = 'dev-packages'; continue }
+    if (trimmed.startsWith('[')) { currentSection = null; continue }
+
+    if (currentSection && trimmed && !trimmed.startsWith('#')) {
+      const match = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=/)
+      if (match) {
+        deps.push({
+          name: match[1]!,
+          version: '*',
+          type: currentSection === 'dev-packages' ? 'development' : 'production',
+          ecosystem: 'pip',
+        })
+      }
+    }
+  }
+}
+
+function extractFromSetupCfg(content: string, file: string, deps: Dependency[]): void {
+  // Look for install_requires section
+  const installReqMatch = content.match(/install_requires\s*=\s*([\s\S]*?)(?=\n\[|\n\S+\s*=|$)/)
+  if (!installReqMatch) return
+
+  for (const line of installReqMatch[1]!.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const match = trimmed.match(/^([a-zA-Z0-9_.-]+)/)
+    if (match) {
+      deps.push({ name: match[1]!, version: '*', type: 'production', ecosystem: 'pip' })
+    }
+  }
 }

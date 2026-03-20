@@ -274,7 +274,7 @@ function classifyNpmPackage(pkg: string): HeuristicResult | null {
   const name = pkg
     .replace(/^@/, '')
     .split('/')[0]!
-    .replace(/[-_](js|sdk|client|node|api|react|vue|next|browser|web|server|core|utils|helpers|lib|plugin)$/i, '')
+    .replace(/[-_](js|sdk|client|node|api|react|vue|next|browser|web|server|core|utils|helpers|lib|plugin|java|python|py|ruby|rb|php|go|golang|rust|dotnet|csharp|cs|net|swift|kotlin|kt|dart|flutter|laravel|spring|rails|django)$/i, '')
 
   if (name.length < 2) return null
   if (isGenericName(name.replace(/[-_]/g, ' '))) return null
@@ -464,6 +464,9 @@ function classifyDomain(value: string): HeuristicResult | null {
   }
   if (n === 'redis') {
     return { serviceName: 'Redis', category: 'database', confidence: 'high', reason: 'Redis detected', score: 10, evidenceType: 'domain' }
+  }
+  if (n === 'sqlserver' || n === 'mssql') {
+    return { serviceName: 'SQL Server', category: 'database', confidence: 'high', reason: 'SQL Server detected from connection string', score: 10, evidenceType: 'domain' }
   }
   if (n === 'nginx') {
     return { serviceName: 'Nginx', category: 'cdn', confidence: 'high', reason: 'Nginx reverse proxy detected', score: 10, evidenceType: 'domain' }

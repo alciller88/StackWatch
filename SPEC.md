@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.12.1 | Last updated: 2026-03-19 | Tests: 548+ across 41 suites
+> Version: v0.13.0 | Last updated: 2026-03-20 | Tests: 577+ across 42 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -137,7 +137,19 @@ Walks the repo recursively (max 15 levels, respects `.gitignore`) and extracts r
 
 **Supported languages**: `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.go`, `.rs`, `.rb`, `.java`, `.kt`, `.swift`, `.dart`, `.cs`, `.php`
 
-**Dependency ecosystems (9)**: npm, pip, cargo, go, composer, gem, maven, gradle, pub
+**Dependency ecosystems (10)**: npm, pip, cargo, go, composer, gem, maven, gradle, pub, nuget
+
+**Multi-ecosystem config file scanning:**
+- `*.csproj` — NuGet package references (.NET)
+- `appsettings*.json` — connection strings, API keys (.NET)
+- `pom.xml` — Maven dependencies (Java)
+- `build.gradle` / `build.gradle.kts` — Gradle dependencies (Java)
+- `application.properties` / `application.yml` — Spring config (Java)
+- `Gemfile` — Ruby gems
+- `config/database.yml` — Rails database config
+- `composer.json` — PHP Composer packages
+- `Pipfile`, `setup.cfg` — additional Python dependency files
+- `web.config` — .NET IIS configuration
 
 **Exclusions**: `node_modules`, `dist`, `.next`, `build`, `.git`, `coverage`, `vendor` + `.gitignore`
 
@@ -293,7 +305,7 @@ interface Evidence {
 interface Dependency {
   name: string
   version: string
-  type: 'npm' | 'pip' | 'cargo' | 'go' | 'composer' | 'gem' | 'maven' | 'gradle' | 'pub'
+  type: 'npm' | 'pip' | 'cargo' | 'go' | 'composer' | 'gem' | 'maven' | 'gradle' | 'pub' | 'nuget'
   dev?: boolean
 }
 
@@ -721,7 +733,16 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.12.1 (current)
+### v0.13.0 (current)
+- **Feature**: Universal Stack Analyzer — 10 dependency ecosystems supported: npm, pip, cargo, go, composer, gem, maven, gradle, pub, nuget
+- **Feature**: New extractors for .NET (*.csproj, appsettings*.json, web.config), Java (pom.xml, build.gradle, application.properties/yml), Ruby (Gemfile, config/database.yml), PHP (composer.json), and additional Python sources (Pipfile, setup.cfg)
+- **Feature**: Ecosystem detection badges shown in Services panel header (Node.js, .NET, Python, Java, Ruby, PHP, Go, Rust)
+- **Feature**: Helpful message when no recognized ecosystem is detected, listing all supported technologies
+- **Feature**: Heuristic package name normalization extended with language-specific suffixes (-java, -python, -ruby, -php, -go, -rust, etc.)
+- **Feature**: SQL Server detection from .NET connection strings
+- 577+ tests across 42 suites
+
+### v0.12.1
 - **Fix**: Drag & drop now shows ScanProgress and Cancel button — scan progress takes priority over active panel
 - **Fix**: Progress bar no longer regresses — forward-only interpolation at 20fps with smooth easing
 - **Fix**: Phase messages display for minimum 800ms to be readable

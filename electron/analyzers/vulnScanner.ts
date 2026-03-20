@@ -10,6 +10,7 @@ const ecosystemMap: Record<string, string> = {
   maven: 'Maven',
   gradle: 'Maven',
   dart: 'Pub',
+  nuget: 'NuGet',
 }
 
 const BATCH_SIZE = 100

@@ -62,7 +62,8 @@ export interface Dependency {
     | 'dart'
     | 'maven'
     | 'gradle'
-    | 'gem';
+    | 'gem'
+    | 'nuget';
   relatedService?: string;
 }
 
@@ -98,6 +99,7 @@ export interface AnalysisResult {
   aiError?: string;
   aiFilteredCount?: number;
   discardedItems?: DiscardedItem[];
+  ecosystems?: string[];
   monorepo?: {
     type: string;
     packages: string[];

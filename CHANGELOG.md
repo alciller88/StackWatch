@@ -3,6 +3,21 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.13.0] - 2026-03-20
+
+### Features
+- **Universal Stack Analyzer**: support for 10 dependency ecosystems — npm, pip, cargo, go, composer, gem, maven, gradle, pub, nuget
+- **New extractors**: .NET (*.csproj, appsettings*.json, web.config), Java (pom.xml, build.gradle/kts, application.properties/yml), Ruby (Gemfile, config/database.yml), PHP (composer.json), Python (Pipfile, setup.cfg)
+- **Ecosystem badges**: detected ecosystems shown as badges in Services panel header (Node.js, .NET, Python, Java, Ruby, PHP, Go, Rust)
+- **Unsupported ecosystem message**: clear guidance when no recognized ecosystem is found, listing all supported technologies
+- **SQL Server detection**: from .NET connection strings (appsettings.json, web.config)
+- **Heuristic suffix normalization**: package names with language-specific suffixes (-java, -python, -ruby, -php, -go, -rust, -laravel, -spring, -rails, -django) now correctly map to base service names
+
+### Tests
+- 577+ tests across 42 suites (+28 new ecosystem tests)
+
+---
+
 ## [0.12.1](https://github.com/alciller88/StackWatch/compare/v0.12.0...v0.12.1) (2026-03-19)
 
 ### Fixed

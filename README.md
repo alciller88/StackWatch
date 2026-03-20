@@ -3,12 +3,12 @@
 > Know your stack, own your stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
+[![Version](https://img.shields.io/badge/version-0.13.0-blue.svg)](https://github.com/alciller88/StackWatch/releases/latest)
 [![Tests](https://img.shields.io/badge/tests-520%20passing-brightgreen)]()
 [![Security Policy](https://img.shields.io/badge/security-policy-brightgreen)](SECURITY.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-StackWatch scans your codebase and automatically maps every service, API, database, and paid account your project depends on -- with costs, renewal dates, and an interactive architecture graph. Zero config, works offline, and delivers results in seconds.
+StackWatch scans your codebase across 9 ecosystems and automatically maps every service, API, database, and paid account your project depends on -- with costs, renewal dates, and an interactive architecture graph. Zero config, works offline, and delivers results in seconds.
 
 <p align="center">
   <img src="docs/screenshots/StackWatch1.png" alt="StackWatch Dashboard" width="800" />
@@ -56,10 +56,10 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 |---------|-------------|
 | **Heuristic Detection** | Detects services from env vars, imports, URLs, configs, and CI secrets -- no hardcoded service maps |
 | **19 Categories** | Domain, hosting, CI/CD, database, auth, payments, email, analytics, monitoring, CDN, storage, infra, AI, mobile, gaming, data, messaging, support, other |
-| **9 Ecosystems** | npm, pip, Cargo, Go, Composer, Gem, Maven, Gradle, Pub |
+| **9 Ecosystems** | Node.js (npm), Python (pip), Rust (Cargo), Go, .NET (NuGet), Java (Maven/Gradle), Ruby (gems), PHP (Composer), Dart (pub) |
 | **Interactive Flow Graph** | Draggable architecture visualization with auto-layout, context menus, custom connections, and node editing |
 | **Billing & Costs** | ServiceBilling model (manual/automatic/free), renewal tracking with per-type thresholds, bar chart, budget mode |
-| **Vulnerability Scanning** | Batch queries OSV.dev across 8 ecosystems with severity classification |
+| **Vulnerability Scanning** | Batch queries OSV.dev across 9 ecosystems with severity classification |
 | **Zombie Detection** | Cross-references services with git log to find abandoned dependencies (6+ months inactive) |
 | **Stack Score** | 8 binary checks (security + completeness), score = passing/applicable × 100 |
 | **SBOM Generation** | CycloneDX 1.5 and SPDX 2.3 output from detected dependencies |
@@ -75,7 +75,7 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 
 | Panel | What You See |
 |-------|-------------|
-| **Services** | Detected + manual services with cost, confidence badges, evidence breakdown, and AI-generated context |
+| **Services** | Detected + manual services with cost, confidence badges, ecosystem badges, evidence breakdown, and AI-generated context |
 | **Dependencies** | Full dependency tree with vulnerability scanning |
 | **Discarded** | Items filtered during analysis -- searchable, filterable, restorable |
 | **Flow Graph** | Interactive architecture graph with drag-and-drop, custom connections, and context menus |
@@ -201,6 +201,12 @@ Full schema and all available fields are documented in [`SPEC.md`](./SPEC.md).
 ## Detection
 
 StackWatch uses **semantic evidence scoring** to detect services. Each evidence type receives a quality score, and the deduplicator sums the best score per unique evidence type to determine confidence.
+
+**Dependency files scanned:** `package.json`, `requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py`, `setup.cfg`, `Cargo.toml`, `go.mod`, `*.csproj`, `pom.xml`, `build.gradle`, `Gemfile`, `composer.json`
+
+**Config files scanned for service detection:** `appsettings*.json`, `web.config`, `application.properties`, `application.yml`, `config/database.yml`
+
+Ecosystem badges are shown in the Services panel header. If no ecosystem is detected, a helpful message lists supported technologies.
 
 | Evidence Type | Score | Example |
 |---------------|-------|---------|

@@ -31,9 +31,11 @@ export async function analyzeLocalRepo(
   // Single repo — extraction is the longest phase, give it 5-45% range
   onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
-  const { evidences, dependencies, projectName } = await extractEvidences(folderPath, onProgress, signal)
+  const { evidences, dependencies, projectName, ecosystems } = await extractEvidences(folderPath, onProgress, signal)
   onProgress?.({ phase: 'Extracting evidences...', percent: 45, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
-  return runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath, onProgress, signal)
+  const result = await runPipeline(evidences, dependencies, aiSettings, projectName, excludedServices, folderPath, onProgress, signal)
+  result.ecosystems = ecosystems
+  return result
 }
 
 async function analyzeMonorepo(
@@ -55,6 +57,8 @@ async function analyzeMonorepo(
   // Scan each package
   const allEvidences: Evidence[] = [...rootResult.evidences]
   const allDeps: Dependency[] = [...rootResult.dependencies]
+  // Collect all ecosystems from root + packages
+  const allEcosystems = new Set(rootResult.ecosystems ?? [])
 
   for (let i = 0; i < packagePaths.length; i++) {
     const pkgPath = packagePaths[i]! // bounded by i < packagePaths.length
@@ -70,6 +74,7 @@ async function analyzeMonorepo(
       }
       allEvidences.push(...pkgResult.evidences)
       allDeps.push(...pkgResult.dependencies)
+      for (const eco of pkgResult.ecosystems) allEcosystems.add(eco)
     } catch (err: any) {
       // Re-throw cancellation, skip other failures
       if (err?.name === 'AbortError') throw err
@@ -80,7 +85,9 @@ async function analyzeMonorepo(
   const uniqueDeps = deduplicateDeps(allDeps)
 
   onProgress?.({ phase: 'Extracting evidences...', percent: 45, counts: { evidences: allEvidences.length, services: 0, vulns: 0 } })
+
   const result = await runPipeline(allEvidences, uniqueDeps, aiSettings, rootName, excludedServices, rootPath, onProgress, signal)
+  result.ecosystems = Array.from(allEcosystems).sort()
   result.monorepo = {
     type: monoType,
     packages: packagePaths.map(p => path.basename(p)),
@@ -112,9 +119,11 @@ export async function analyzeGitHubRepo(
 ): Promise<AnalysisResult> {
   onProgress?.({ phase: 'Extracting evidences...', percent: 5, counts: { evidences: 0, services: 0, vulns: 0 } })
   if (signal?.aborted) throw new DOMException('Scan cancelled', 'AbortError')
-  const { evidences, dependencies, projectName } = await extractEvidencesFromGitHub(fetchFile, listDir)
+  const { evidences, dependencies, projectName, ecosystems } = await extractEvidencesFromGitHub(fetchFile, listDir)
   onProgress?.({ phase: 'Extracting evidences...', percent: 45, counts: { evidences: evidences.length, services: 0, vulns: 0 } })
-  return runPipeline(evidences, dependencies, aiSettings, projectName, undefined, undefined, onProgress, signal)
+  const result = await runPipeline(evidences, dependencies, aiSettings, projectName, undefined, undefined, onProgress, signal)
+  result.ecosystems = ecosystems
+  return result
 }
 
 async function runPipeline(

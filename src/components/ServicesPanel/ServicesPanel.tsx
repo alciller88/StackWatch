@@ -11,8 +11,20 @@ const categories = SERVICE_CATEGORIES;
 
 const planTypes: Service['plan'][] = ['free', 'paid', 'trial', 'unknown'];
 
+const ECOSYSTEM_LABELS: Record<string, string> = {
+  node: 'Node.js',
+  dotnet: '.NET',
+  python: 'Python',
+  java: 'Java',
+  ruby: 'Ruby',
+  php: 'PHP',
+  go: 'Go',
+  rust: 'Rust',
+  dart: 'Dart',
+};
+
 export const ServicesPanel: React.FC = () => {
-  const { services, deepAnalysis, repoPath } = useStore();
+  const { services, deepAnalysis, repoPath, ecosystems } = useStore();
 
   // Build context map from deep analysis
   const contextMap = useMemo(() => {
@@ -76,12 +88,26 @@ export const ServicesPanel: React.FC = () => {
       {/* Header */}
       <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: 'var(--color-border)' }}>
         <div className="flex items-center justify-between">
-          <h2 className="font-mono uppercase tracking-widest text-sm font-medium text-[var(--color-text-primary)]">
-            Services
-            <span className="ml-2 font-mono text-[11px] text-[var(--color-text-muted)] font-normal">
-              ({filtered.length})
-            </span>
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-mono uppercase tracking-widest text-sm font-medium text-[var(--color-text-primary)]">
+              Services
+              <span className="ml-2 font-mono text-[11px] text-[var(--color-text-muted)] font-normal">
+                ({filtered.length})
+              </span>
+            </h2>
+            {ecosystems.length > 0 && (
+              <div className="flex gap-1.5">
+                {ecosystems.map((eco) => (
+                  <span
+                    key={eco}
+                    className="px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest bg-[var(--color-info-bg)] text-[var(--color-info)] border border-[var(--color-info-border)] rounded-sm"
+                  >
+                    {ECOSYSTEM_LABELS[eco] ?? eco}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => { setEditingService(null); setShowAddForm(!showAddForm); }}
             className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors"
@@ -223,6 +249,7 @@ export const ServicesPanel: React.FC = () => {
         activeCategory={activeCategory}
         activePlan={activePlan}
         activeActivity={activeActivity}
+        ecosystems={ecosystems}
         onEdit={handleEdit}
         onShowAddForm={() => { setEditingService(null); setShowAddForm(true); }}
       />
@@ -246,9 +273,10 @@ const VirtualizedServiceGrid: React.FC<{
   activeCategory: ServiceCategory | 'all';
   activePlan: Service['plan'] | 'all';
   activeActivity: string;
+  ecosystems: string[];
   onEdit: (service: Service) => void;
   onShowAddForm: () => void;
-}> = ({ filtered, services, repoPath, contextMap, needsReview, zombieCounts, search, activeCategory, activePlan, activeActivity, onEdit, onShowAddForm }) => {
+}> = ({ filtered, services, repoPath, contextMap, needsReview, zombieCounts, search, activeCategory, activePlan, activeActivity, ecosystems, onEdit, onShowAddForm }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Use 4 columns as default — responsive would require ResizeObserver
@@ -323,7 +351,9 @@ const VirtualizedServiceGrid: React.FC<{
               <div>
                 <p className="font-mono text-sm text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">No services detected</p>
                 <p className="font-mono text-[11px] text-[var(--color-text-muted)] max-w-md leading-relaxed">
-                  This could mean the project uses only local dependencies, or services are configured in ways StackWatch doesn't recognize yet.
+                  {ecosystems.length === 0
+                    ? 'No recognized dependencies found. StackWatch supports: Node.js, .NET, Python, Java, Ruby, PHP, Go, Rust. You can add services manually.'
+                    : 'This could mean the project uses only local dependencies, or services are configured in ways StackWatch doesn\'t recognize yet.'}
                 </p>
               </div>
               <button onClick={onShowAddForm} className="mt-2 px-4 py-2 font-mono text-[11px] uppercase tracking-widest bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-bg-primary)] rounded-none transition-colors">

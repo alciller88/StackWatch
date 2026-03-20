@@ -55,6 +55,7 @@ interface StoreState {
   showScoreBreakdown: boolean;
   showDoctor: boolean;
   discardedItems: DiscardedItem[];
+  ecosystems: string[];
   /** Service IDs added in last scan (for graph diff highlight). Cleared after 3s. */
   scanDiffAdded: Set<string>;
   /** Service IDs removed in last scan (for graph diff highlight). Cleared after 3s. */
@@ -203,6 +204,7 @@ export const useStore = create<StoreState>((set, get) => ({
   showScoreBreakdown: false,
   showDoctor: false,
   discardedItems: [],
+  ecosystems: [],
   scanDiffAdded: new Set<string>(),
   scanDiffRemoved: new Set<string>(),
   stackScore: 0,
@@ -322,6 +324,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: [...result.flowEdges, ...extraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
         discardedItems: result.discardedItems ?? [],
+        ecosystems: result.ecosystems ?? [],
         scanDiffAdded: diff.added,
         scanDiffRemoved: diff.removed,
         isAnalyzing: false,
@@ -459,6 +462,7 @@ export const useStore = create<StoreState>((set, get) => ({
         flowEdges: [...result.flowEdges, ...ghExtraEdges],
         deepAnalysis: result.deepAnalysis ?? null,
         discardedItems: result.discardedItems ?? [],
+        ecosystems: result.ecosystems ?? [],
         scanDiffAdded: diff.added,
         scanDiffRemoved: diff.removed,
         isAnalyzing: false,
@@ -825,6 +829,7 @@ export const useStore = create<StoreState>((set, get) => ({
       config: null,
       deepAnalysis: null,
       discardedItems: [],
+      ecosystems: [],
       linkStatus: 'unknown',
       activePanel: 'flow',
       error: null,
@@ -849,6 +854,7 @@ export const useStore = create<StoreState>((set, get) => ({
       config: blankConfig,
       deepAnalysis: null,
       discardedItems: [],
+      ecosystems: [],
       linkStatus: 'unknown',
       activePanel: 'flow',
       error: null,
@@ -937,6 +943,7 @@ export const useStore = create<StoreState>((set, get) => ({
       config: null,
       deepAnalysis: null,
       discardedItems: [],
+      ecosystems: [],
       scanDiffAdded: new Set(),
       scanDiffRemoved: new Set(),
       stackScore: 0,

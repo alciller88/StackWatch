@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.12.1
+# CONTEXT.md — StackWatch v0.13.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -19,7 +19,7 @@
 | Config       | `stackwatch.config.json` in scanned repo (not this repo)        |
 | Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
 | Validation   | `zod` schemas on all IPC handlers                                |
-| Tests        | 487 tests, 36 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 577 tests, 42 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -42,7 +42,7 @@ Dashboard is always accessible from Sidebar as first nav item. "Close Stack" in 
 extractor.ts → heuristic.ts → deduplicator.ts → [AI filter] → [AI refine] → [AI deep + alternatives] → zombieDetector.ts → flowInference.ts
      │                                                                                                        │
      ├── Evidences (env vars, imports, URLs, configs)                                                         ├── FlowNodes
-     ├── Dependencies (npm, pip, cargo, go, etc.)                                                             └── FlowEdges
+     ├── Dependencies (npm, pip, cargo, go, nuget, maven, gradle, gem, composer, etc.)                                                             └── FlowEdges
      └── Monorepo detection (workspaces, pnpm, lerna, turbo, nx)
 ```
 
@@ -171,7 +171,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `electron/splash.html`                  | Splash screen — standalone HTML with inline SVG, no external deps                |
 | `electron/preload.ts`                   | IPC bridge via contextBridge (StackWatchAPI)                                      |
 | `electron/analyzers/index.ts`           | Pipeline orchestrator. Monorepo-aware. Emits scan-progress. AbortSignal support. |
-| `electron/analyzers/extractor.ts`       | Evidence extraction: env vars, imports, URLs, configs, deps                      |
+| `electron/analyzers/extractor.ts`       | Evidence extraction: env vars, imports, URLs, configs, deps (10 ecosystems)      |
 | `electron/analyzers/heuristic.ts`       | Semantic scoring, 19 categories, hard filters, penalties                         |
 | `electron/analyzers/deduplicator.ts`    | Service grouping, best-score-per-type, brand collapse, discarded tracking        |
 | `electron/analyzers/flowInference.ts`   | 4-layer hierarchical graph with dagre layout                                     |
@@ -239,7 +239,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (487 tests, 36 suites)                      |
+| `npm test`           | vitest (577 tests, 42 suites)                      |
 | `npm run test:coverage` | vitest with v8 coverage (thresholds: 60/60/50/60) |
 
 ### Release flow
@@ -269,7 +269,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-487 tests across 36 suites.
+577 tests across 42 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -290,7 +290,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | DiscardedPanel          | 7     | Dagre Cache            | 6     |
 | IPC RateLimiter         | 6     | PanelErrorBoundary     | 5     |
 | AsyncMutex              | 5     | Pipeline Integration   | 4     |
-| daysUntil               | 3     |                        |       |
+| Ecosystems              | 28    | daysUntil              | 3     |
 
 ---
 
