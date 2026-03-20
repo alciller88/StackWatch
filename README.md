@@ -62,6 +62,7 @@ Requires [Node.js](https://nodejs.org/) 20+ and [Git](https://git-scm.com/). The
 | **Vulnerability Scanning** | Batch queries OSV.dev across 9 ecosystems with severity classification |
 | **Zombie Detection** | Cross-references services with git log to find abandoned dependencies (6+ months inactive) |
 | **Stack Score** | 8 binary checks (security + completeness), score = passing/applicable × 100 |
+| **Export as PDF** | A4 landscape PDF with Flow Graph capture and Stack Score breakdown |
 | **SBOM Generation** | CycloneDX 1.5 and SPDX 2.3 output from detected dependencies |
 | **Stack Diff** | Compare scans to track how your stack changes over time |
 | **Monorepo Support** | npm workspaces, pnpm, Lerna, Turborepo, Nx |

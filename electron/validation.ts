@@ -121,6 +121,13 @@ export const schemas = {
       projectName: z.string(),
     }).passthrough(), // .passthrough() required — HtmlExportData has many optional fields (services, deps, scores, etc.)
   }),
+  exportPdf: z.object({
+    data: z.object({
+      projectName: z.string(),
+      graphImageBase64: z.string(),
+      score: z.number(),
+    }).passthrough(), // .passthrough() required — PdfExportData has checks array and other fields
+  }),
   checkLinkStatus: z.object({
     config: z.object({
       version: z.string(),

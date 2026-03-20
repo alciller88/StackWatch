@@ -1,7 +1,7 @@
 # SPEC.md — StackWatch
 
 > Technical specification. Source of truth for data model, API contracts, and feature behavior.
-> Version: v0.13.1 | Last updated: 2026-03-20 | Tests: 579+ across 43 suites
+> Version: v0.14.0 | Last updated: 2026-03-20 | Tests: 590+ across 44 suites
 >
 > Release: [v0.8.0](https://github.com/alciller88/StackWatch/releases/tag/v0.8.0)
 
@@ -541,6 +541,7 @@ interface StackWatchAPI {
   exportConfig(content: string): Promise<boolean>
   exportServicesMd(content: string): Promise<boolean>
   exportHtml(data: HtmlExportData): Promise<boolean>
+  exportPdf(data: PdfExportData): Promise<boolean>
 
   // Configuration
   loadConfig(repoPath: string): Promise<UserConfig | null>
@@ -733,7 +734,13 @@ CI builds on push to main and PRs. 29-point validation script checks production 
 
 ## 16. Version History
 
-### v0.13.1 (current)
+### v0.14.0 (current)
+- **Feature**: Export as PDF — A4 landscape with Flow Graph capture and Stack Score breakdown
+- **Feature**: New IPC handler `export-pdf` with rate limiting and Zod validation
+- **Dependencies**: Added `jspdf` and `html-to-image`
+- 590+ tests across 44 suites
+
+### v0.13.1
 - **Fix**: Scan no longer writes files to the analyzed project directory — all data stored in app data (`{userData}/projects/`)
 - **Fix**: `stackwatch.config.json` auto-imported from repo on first load, stored in app data thereafter
 - **Fix**: `.stackwatch/last-scan.json` and score history moved to app data

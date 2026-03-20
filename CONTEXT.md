@@ -1,4 +1,4 @@
-# CONTEXT.md — StackWatch v0.13.1
+# CONTEXT.md — StackWatch v0.14.0
 
 > Operational context for AI agents. NOT a changelog, NOT user documentation.
 > Read this before writing any code. Update after structural changes.
@@ -19,7 +19,7 @@
 | Config       | `stackwatch.config.json` in app data (`{userData}/projects/{hash}/`), auto-imported from repo on first load |
 | Persistence  | `electron-store` + `safeStorage` (OS keychain: DPAPI/Keychain/libsecret) |
 | Validation   | `zod` schemas on all IPC handlers                                |
-| Tests        | 579 tests, 43 suites — vitest + @testing-library/react + jsdom  |
+| Tests        | 590 tests, 44 suites — vitest + @testing-library/react + jsdom  |
 
 ---
 
@@ -187,6 +187,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `electron/ai/provider.ts`              | OpenAI-compatible client + 3 provider presets                                    |
 | `electron/config/migrations.ts`         | Config schema migration chain — auto-applied on load                             |
 | `electron/exporters/htmlExporter.ts`    | Self-contained HTML report (dark theme, print-friendly)                          |
+| `electron/exporters/pdfExporter.ts`     | PDF export: A4 landscape with Flow Graph + Stack Score                           |
 
 ### Renderer (src/)
 
@@ -239,7 +240,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | `npm run build:cli`  | Build CLI to `dist-cli/`                           |
 | `npm run validate`   | 29-point build validation                          |
 | `npm run release`    | Validate, create git tag from package.json, push   |
-| `npm test`           | vitest (579 tests, 43 suites)                      |
+| `npm test`           | vitest (590 tests, 44 suites)                      |
 | `npm run test:coverage` | vitest with v8 coverage (thresholds: 60/60/50/60) |
 
 ### Release flow
@@ -269,7 +270,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 
 ## Tests
 
-579 tests across 43 suites.
+590 tests across 44 suites.
 
 | Suite                   | Count | Suite                  | Count |
 |-------------------------|:-----:|------------------------|:-----:|
@@ -291,6 +292,7 @@ shared/types.ts          ← canonical: SERVICE_CATEGORIES const, all interfaces
 | IPC RateLimiter         | 6     | PanelErrorBoundary     | 5     |
 | AsyncMutex              | 5     | Pipeline Integration   | 4     |
 | Ecosystems              | 28    | daysUntil              | 3     |
+| pdfExporter             | 9     |                        |       |
 
 ---
 

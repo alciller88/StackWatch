@@ -767,6 +767,27 @@ ipcMain.handle('export-html', async (_event, args) => {
   return true
 })
 
+ipcMain.handle('export-pdf', async (_event, args) => {
+  if (!rateLimiter.isAllowed('export-pdf', { maxCalls: 5, windowMs: 10000 })) {
+    throw new Error('Rate limited — please wait before exporting again')
+  }
+  const validated = validate(schemas.exportPdf, typeof args === 'object' && args !== null && 'data' in args ? args : { data: args }, 'export-pdf')
+  const data = validated.data as unknown as import('./types').PdfExportData
+  if (!mainWindow) return false
+  const { generatePdfBuffer } = await import('./exporters/pdfExporter')
+  const pdfBuffer = generatePdfBuffer(data)
+  const safeName = data.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  const date = data.generatedAt.split('T')[0] ?? new Date().toISOString().split('T')[0]
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export stack as PDF',
+    defaultPath: `${safeName}-stack-${date}.pdf`,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  })
+  if (!filePath) return false
+  await fs.writeFile(filePath, Buffer.from(pdfBuffer), 'binary')
+  return true
+})
+
 // --- Link Status ---
 
 async function checkLinkStatus(config: UserConfig): Promise<LinkStatus> {

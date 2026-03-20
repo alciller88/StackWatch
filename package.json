@@ -1,6 +1,6 @@
 {
   "name": "stackwatch",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "Know your stack, own your stack. Visualize every service, dependency, and account your project depends on.",
   "main": "dist-electron/electron/main.js",
   "bin": {
@@ -36,8 +36,10 @@
     "@tanstack/react-virtual": "^3.13.23",
     "dotenv": "^16.4.7",
     "electron-store": "^10.0.1",
+    "html-to-image": "^1.11.13",
     "ignore": "^7.0.5",
     "js-yaml": "^4.1.0",
+    "jspdf": "^4.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "reactflow": "^11.11.4",

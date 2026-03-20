@@ -40,6 +40,9 @@ const api: StackWatchAPI = {
   exportHtml: (data: import('../shared/types').HtmlExportData) =>
     ipcRenderer.invoke('export-html', data),
 
+  exportPdf: (data: import('../shared/types').PdfExportData) =>
+    ipcRenderer.invoke('export-pdf', data),
+
   checkLinkStatus: (config) =>
     ipcRenderer.invoke('check-link-status', config),
 

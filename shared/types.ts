@@ -354,6 +354,16 @@ export interface ScanProgressData {
 
 export type ProgressCallback = (data: ScanProgressData) => void;
 
+export interface PdfExportData {
+  projectName: string;
+  graphImageBase64: string;
+  score: number;
+  passingChecks: number;
+  totalChecks: number;
+  checks: StackCheck[];
+  generatedAt: string;
+}
+
 export interface HtmlExportData {
   projectName: string;
   services: Service[];
@@ -389,6 +399,7 @@ export interface StackWatchAPI {
   saveScoreEntry(folderPath: string, entry: ScoreHistoryEntry): Promise<void>;
   checkRenewals(services: Service[]): Promise<void>;
   exportHtml(data: HtmlExportData): Promise<boolean>;
+  exportPdf(data: PdfExportData): Promise<boolean>;
   onScanProgress(callback: (data: ScanProgressData) => void): () => void;
   cancelScan(): void;
   openExternalUrl(url: string): Promise<boolean>;

@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { useGraphStore } from '../../store/graphStore';
 import { useDialogStore } from '../../store/dialogStore';
+import { useToastStore } from '../../store/toastStore';
 import { GitHubModal } from '../GitHubModal';
 import { getScoreBadgeMarkdown, getScoreBadgeHtml, generateScoreBadgeSvg } from '../../utils/badge';
 import { calculateHealthScore } from '../../utils/healthScore';
-import type { Service, UserConfig, ServiceCategory, FlowEdge, HtmlExportData } from '../../types';
+import { toPng } from 'html-to-image';
+import type { Service, UserConfig, ServiceCategory, FlowEdge, HtmlExportData, PdfExportData } from '../../types';
 
 function generateServicesMd(services: Service[], projectName: string): string {
   const date = new Date().toISOString().split('T')[0];
@@ -84,6 +86,7 @@ export const TopBar: React.FC = () => {
 
   const [showGitHub, setShowGitHub] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareCopied, setShareCopied] = useState<string | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -172,6 +175,59 @@ export const TopBar: React.FC = () => {
     await window.stackwatch.exportHtml(data);
   };
 
+  const handleExportPdf = async () => {
+    if (!window.stackwatch) return;
+    setShowExportMenu(false);
+    setExportingPdf(true);
+    try {
+      const projectName = config?.project?.name || repoPath?.split(/[/\\]/).pop() || 'Project';
+
+      // Capture the Flow Graph as PNG from the DOM
+      let graphImageBase64 = '';
+      const flowElement = document.querySelector('.react-flow') as HTMLElement | null;
+      if (flowElement) {
+        try {
+          graphImageBase64 = await toPng(flowElement, {
+            backgroundColor: '#ffffff',
+            quality: 0.95,
+            pixelRatio: 2,
+          });
+        } catch {
+          console.warn('[TopBar] Could not capture flow graph as image');
+        }
+      }
+
+      // Compute health score
+      const fNodes = graphNodes.map(n => ({
+        id: n.id, label: n.data.label, type: n.data.nodeType ?? 'external' as const, serviceId: n.data.serviceId,
+      }));
+      const fEdges = graphEdges.map(e => ({
+        source: e.source, target: e.target, label: e.data?.label, flowType: (e.data?.flowType as FlowEdge['flowType']) ?? 'data',
+      }));
+      const health = calculateHealthScore(services, fNodes, fEdges);
+
+      const data: PdfExportData = {
+        projectName,
+        graphImageBase64,
+        score: health.score,
+        passingChecks: health.passingChecks,
+        totalChecks: health.totalChecks,
+        checks: health.checks,
+        generatedAt: new Date().toISOString(),
+      };
+
+      const success = await window.stackwatch.exportPdf(data);
+      if (success) {
+        useToastStore.getState().addToast('PDF exported successfully', 'success');
+      }
+    } catch (err) {
+      useToastStore.getState().addToast('PDF export failed', 'error');
+      console.error('[TopBar] PDF export error:', err);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const handleShareCopy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setShareCopied(key);
@@ -253,6 +309,14 @@ export const TopBar: React.FC = () => {
                 role="menuitem"
               >
                 Dashboard (.html)
+              </button>
+              <button
+                onClick={handleExportPdf}
+                disabled={exportingPdf}
+                className="w-full text-left px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border-t border-[var(--color-border)] disabled:opacity-50"
+                role="menuitem"
+              >
+                {exportingPdf ? 'Generating PDF...' : 'Export as PDF'}
               </button>
             </div>
           )}

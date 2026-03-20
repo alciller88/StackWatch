@@ -34,6 +34,10 @@ vi.mock('../../../store/dialogStore', () => ({
   })),
 }))
 
+vi.mock('html-to-image', () => ({
+  toPng: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
+}))
+
 // Mock window.stackwatch
 Object.defineProperty(window, 'stackwatch', {
   value: {
@@ -135,5 +139,20 @@ describe('TopBar', () => {
     render(<TopBar />)
     await user.click(screen.getByText('x'))
     expect(mockStore.clearError).toHaveBeenCalled()
+  })
+
+  it('shows Export as PDF option in export menu when services exist', async () => {
+    const user = userEvent.setup()
+    mockStore.services = [{ id: '1', name: 'Test', category: 'hosting', plan: 'free', source: 'inferred' }]
+    render(<TopBar />)
+    await user.click(screen.getByText('Export'))
+    expect(screen.getByText('Export as PDF')).toBeInTheDocument()
+  })
+
+  it('export menu disabled when no services', () => {
+    mockStore.services = []
+    render(<TopBar />)
+    const exportBtn = screen.getByText('Export').closest('button')
+    expect(exportBtn).toBeDisabled()
   })
 })

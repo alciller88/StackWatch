@@ -3,6 +3,25 @@
 All notable changes to StackWatch are documented here.
 See [SPEC.md](./SPEC.md) for full technical details.
 
+## [0.14.0] - 2026-03-20
+
+### Features
+- **Export as PDF**: new option in the Export menu — generates A4 landscape PDF with Flow Graph and Stack Score
+- Flow Graph captured as PNG from the live React Flow canvas with white background
+- Stack Score section shows score circle, passing checks count, and full check breakdown
+- Native save dialog with default filename `{project}-stack-{date}.pdf`
+- Loading state shown in menu while PDF is being generated
+- Toast notifications on success/error
+
+### Dependencies
+- Added `jspdf` for PDF generation
+- Added `html-to-image` for Flow Graph capture
+
+### Tests
+- 590+ tests across 44 suites (+9 PDF exporter tests, +2 TopBar export menu tests)
+
+---
+
 ## [0.13.1] - 2026-03-20
 
 ### Fixes
